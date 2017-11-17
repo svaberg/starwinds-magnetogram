@@ -6,3 +6,4 @@
 *.avi
 *.mov
 *.log
+__pycache__

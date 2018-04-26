@@ -2,7 +2,6 @@ import numpy as np
 import logging
 
 log = logging.getLogger(__name__)
-log.setLevel(logging.DEBUG)
 
 
 def read_zdipy(fname):
@@ -22,7 +21,7 @@ def read_zdipy(fname):
     Only the radial coefficients are (currently) read as they are the only ones used.
     """
 
-    log.debug("Begin reading input magnetogram file \"%s\"." % input)
+    log.debug("Begin reading magnetogram file \"%s\"..." % fname)
     with open(fname) as f:
         content = f.readlines()
         # you may also want to remove whitespace characters like `\n` at the end of each line
@@ -31,16 +30,15 @@ def read_zdipy(fname):
     assert(content[0] == 'General poloidal plus toroidal field')
 
     line1_tokens = content[1].split()
-    print(line1_tokens)
 
-    n_lines = 1000
     try:
         line1_values = list(map(int, line1_tokens))
-        n_lines = line1_values[0]
-        log.info("Read number of lines: %d." % n_lines)
+        #n_lines = line1_values[0]
+        #log.info("Read number of lines: %d." % n_lines)
         assert(line1_values[1:] == [3, -3])
     except:
         log.warning("Unexpected file format on line %d: %s" % (1, contents[1]))
+        n_lines = 1000
         pass
 
 
@@ -68,12 +66,14 @@ def read_zdipy(fname):
     for l_id,_ in enumerate(l):
         log.debug("%d\t%d\t%e\t%e" %(l[l_id], m[l_id], g_lm[l_id], h_lm[l_id]))
 
-    return l, m, g_lm, h_lm
+    log.info("Finished reading magnetogram file \"%s\"." % fname)
 
-    log.debug("End reading input magnetogram file \"%s\"." % input)
+    return l, m, g_lm, h_lm
 
 
 def write_wso(l, m, g_lm, h_lm, fname="test_field_wso.dat"):
+    log.debug("Begin writing magnetogram file \"%s\"..." % fname)
+
     with open(fname, 'w') as f:
         f.write("Output of %s\n" % __file__)
         f.write("%d\n" % len(l))
@@ -81,6 +81,7 @@ def write_wso(l, m, g_lm, h_lm, fname="test_field_wso.dat"):
         for l_id in range(len(l)):
             f.write("%d %d %e %e\n" % (l[l_id], m[l_id], g_lm[l_id], h_lm[l_id]))
 
+    log.info("Finished writing magnetogram file \"%s\"." % fname)
 
 
 def convert(m, g_lm, h_lm):
@@ -92,6 +93,8 @@ def convert(m, g_lm, h_lm):
     :param h_lm:
     :return:
     """
+    log.debug("Begin converting zdipy coefficients to wso coefficients...")
+
 
     m = np.array(m)
     g_lm = np.array(g_lm)
@@ -101,6 +104,7 @@ def convert(m, g_lm, h_lm):
     g_lm_out = conversion_factor * g_lm
     h_lm_out = conversion_factor * h_lm
 
+    log.info("Finished converting zdipy coefficients to wso coefficients.")
     return g_lm_out, h_lm_out
 
 
@@ -112,10 +116,13 @@ def convert_inv(m, g_lm, h_lm):
     :param h_lm:
     :return:
     """
+    log.debug("Begin converting wso coefficients to zdipy coefficients...")
+
     conversion_factor = 1.0 / forward_conversion_factor(m)
     g_lm_out = conversion_factor * g_lm
     h_lm_out = conversion_factor * h_lm
 
+    log.info("Finished converting wso coefficients to zdipy coefficients.")
     return g_lm_out, h_lm_out
 
 
@@ -207,7 +214,12 @@ def test_read(fname='test_field_zdipy.dat'):
 def convert_magnetogram(input, output, inverse=False):
     l, m, g_lm, h_lm = read_zdipy(input)
 
-    log.debug(co)
+    if inverse:
+        log.error("Not ready")
+    else:
+        result = convert(m, g_lm, h_lm)
+        write_wso(l, m, *result, 'test_field_wso.dat')
+
 
 if __name__ == "__main__":
 

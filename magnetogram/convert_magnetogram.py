@@ -41,9 +41,8 @@ def read_zdipy(fname):
         n_lines = 1000
         pass
 
-
-    l = []
-    m = []
+    degree_l = []
+    order_m = []
     g_lm = []
     h_lm = []
     for line in content[2:]:
@@ -53,54 +52,55 @@ def read_zdipy(fname):
             if len(line_tokens) < 4:
                 break
 
-            l.append(int(line_tokens[0]))
-            m.append(int(line_tokens[1]))
+            degree_l.append(int(line_tokens[0]))
+            order_m.append(int(line_tokens[1]))
 
             g_lm.append(float(line_tokens[2]))
             h_lm.append(float(line_tokens[3]))
 
         except:
-            print("Warning: Unexpected file format on line %s" % (line))
+            print("Warning: Unexpected file format on line %s" % line)
 
     log.debug("l\tm\tg_lm\th_lm")
-    for l_id,_ in enumerate(l):
-        log.debug("%d\t%d\t%e\t%e" %(l[l_id], m[l_id], g_lm[l_id], h_lm[l_id]))
+    for line_id,_ in enumerate(degree_l):
+        log.debug("%d\t%d\t%e\t%e" %(degree_l[line_id], order_m[line_id], g_lm[line_id], h_lm[line_id]))
 
     log.info("Finished reading magnetogram file \"%s\"." % fname)
 
-    return l, m, g_lm, h_lm
+    return degree_l, order_m, g_lm, h_lm
 
 
-def write_wso(l, m, g_lm, h_lm, fname="test_field_wso.dat"):
+def write_wso(degree_l, order_m, g_lm, h_lm, fname="test_field_wso.dat"):
     log.debug("Begin writing magnetogram file \"%s\"..." % fname)
 
     with open(fname, 'w') as f:
         f.write("Output of %s\n" % __file__)
-        f.write("Order:%d\n" % np.max(l))
+        f.write("Order:%d\n" % np.max(degree_l))
 
-        for l_id in range(len(l)):
-            f.write("%d %d %e %e\n" % (l[l_id], m[l_id], g_lm[l_id], h_lm[l_id]))
+        for l_id in range(len(degree_l)):
+            f.write("%d %d %e %e\n" % (degree_l[l_id], order_m[l_id], g_lm[l_id], h_lm[l_id]))
 
     log.info("Finished writing magnetogram file \"%s\"." % fname)
 
 
-def convert(m, g_lm, h_lm):
+def convert(degree_l, order_m, g_lm, h_lm):
     r"""
     Convert Donati et al. (2006) normalized harmonic coefficients to magnetogram to
     The Wilcox Solar Observatory style
-    :param m:
+    :param degree_l:
+    :param order_m:
     :param g_lm:
     :param h_lm:
     :return:
     """
     log.debug("Begin converting zdipy coefficients to wso coefficients...")
 
-
-    m = np.array(m)
+    degree_l = np.array(degree_l)
+    order_m = np.array(order_m)
     g_lm = np.array(g_lm)
     h_lm = np.array(h_lm)
 
-    conversion_factor = forward_conversion_factor(m)
+    conversion_factor = forward_conversion_factor(degree_l, order_m)
     g_lm_out = conversion_factor * g_lm
     h_lm_out = conversion_factor * h_lm
 
@@ -108,17 +108,17 @@ def convert(m, g_lm, h_lm):
     return g_lm_out, h_lm_out
 
 
-def convert_inv(m, g_lm, h_lm):
+def convert_inv(order_m, g_lm, h_lm):
     r"""
     Inverse of convert
-    :param m:
+    :param order_m:
     :param g_lm:
     :param h_lm:
     :return:
     """
     log.debug("Begin converting wso coefficients to zdipy coefficients...")
 
-    conversion_factor = 1.0 / forward_conversion_factor(m)
+    conversion_factor = 1.0 / forward_conversion_factor(order_m)
     g_lm_out = conversion_factor * g_lm
     h_lm_out = conversion_factor * h_lm
 
@@ -126,7 +126,7 @@ def convert_inv(m, g_lm, h_lm):
     return g_lm_out, h_lm_out
 
 
-def forward_conversion_factor(m_val):
+def forward_conversion_factor(degree_l, order_m):
 
     #
     # Calculate the complex-to-real rescaling factor $\sqrt{2-\delta_{m,0}$
@@ -134,25 +134,36 @@ def forward_conversion_factor(m_val):
     #  The Dirac delta function $\delta_{m0}$ has
     # $\delta_{m,0} = 1$ for $m = 0$ and
     # $\delta_{m,0} = 0$ for $m \neq 0$
-    delta_m0 = np.where(m_val == 0, 1, 0)
+    delta_m0 = np.where(order_m == 0, 1, 0)
     complex_to_real_rescaling = np.sqrt(-delta_m0+2)
 
     #
     # Calculate the value of the Corton-Shortley phase, $(-1)^m$
     #
-    corton_shortley_phase = (-1)**(m_val % 2)
+    corton_shortley_phase = (-1)**(order_m % 2)
 
     #
-    # Calculate the unit sphere area compensation $\frac{1}{\sqrt{4\pi}}$
+    # Calculate the unit sphere area compensation $\sqrt{4\pi}$
     #
     unit_sphere_factor = np.sqrt(4.0 * np.pi)
 
     #
     # Calculate the Schmidt scaling factor $\sqrt{2m+1}$
     #
-    schmidt_scaling = np.sqrt(2*m_val + 1)
+    schmidt_scaling = np.sqrt(2 * order_m + 1)
 
-    return schmidt_scaling / (corton_shortley_phase * complex_to_real_rescaling * unit_sphere_factor)
+    #
+    conversion_factor = schmidt_scaling / (corton_shortley_phase * complex_to_real_rescaling * unit_sphere_factor)
+
+    log.info("l m \t     ctr\t      csp\t     usf\t      ss \t       cf")
+    for line_id in range(len(degree_l)):
+        log.info("%d %d\t%f\t%f\t%f\t%f\t%f" % (degree_l[line_id], order_m[line_id],
+                                                complex_to_real_rescaling[line_id],
+                                                corton_shortley_phase[line_id],
+                                                unit_sphere_factor,
+                                                schmidt_scaling[line_id],
+                                                conversion_factor[line_id]))
+    return conversion_factor
 
 
 #
@@ -225,10 +236,10 @@ def test_read(fname='test_field_zdipy.dat'):
     with open(fname, 'w') as f:
         f.write(content)
 
-    l, m, g_lm, h_lm = read_zdipy(fname)
-    result = convert(m, g_lm, h_lm)
+    degree_l, order_m, g_lm, h_lm = read_zdipy(fname)
+    result = convert(order_m, g_lm, h_lm)
 
-    write_wso(l, m, *result, fname='test_field_wso.dat')
+    write_wso(degree_l, order_m, *result, fname='test_field_wso.dat')
 
 
 def convert_magnetogram(input_file, output_name=None, inverse=False):
@@ -238,13 +249,13 @@ def convert_magnetogram(input_file, output_name=None, inverse=False):
         file_tokens[0] += "_wso"
         output_name = ".".join(file_tokens)
 
-    l, m, g_lm, h_lm = read_zdipy(input_file)
+    degree_l, order_m, g_lm, h_lm = read_zdipy(input_file)
 
     if inverse:
         log.error("Not ready")
     else:
-        result = convert(m, g_lm, h_lm)
-        write_wso(l, m, *result, fname=output_name)
+        result = convert(degree_l, order_m, g_lm, h_lm)
+        write_wso(degree_l, order_m, *result, fname=output_name)
 
 
 if __name__ == "__main__":

@@ -148,10 +148,12 @@ def forward_conversion_factor(degree_l, order_m):
     unit_sphere_factor = np.sqrt(4.0 * np.pi)
 
     #
-    # Calculate the Schmidt scaling factor $\sqrt{2m+1}$
+    # Calculate the Schmidt scaling factor $\sqrt{2\ell+1}$
     #
-    schmidt_scaling = np.sqrt(2 * order_m + 1)
+    schmidt_scaling = np.sqrt(2 * degree_l + 1)
 
+    #
+    # The full conversion factor.
     #
     conversion_factor = schmidt_scaling / (corton_shortley_phase * complex_to_real_rescaling * unit_sphere_factor)
 

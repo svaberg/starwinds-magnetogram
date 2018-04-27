@@ -212,7 +212,7 @@ def test_read(fname='test_field_zdipy.dat'):
     l, m, g_lm, h_lm = read_zdipy(fname)
     result = convert(m, g_lm, h_lm)
 
-    write_wso(l, m, *result, 'test_field_wso.dat')
+    write_wso(l, m, *result, fname='test_field_wso.dat')
 
 
 def convert_magnetogram(input, output, inverse=False):
@@ -222,7 +222,7 @@ def convert_magnetogram(input, output, inverse=False):
         log.error("Not ready")
     else:
         result = convert(m, g_lm, h_lm)
-        write_wso(l, m, *result, 'test_field_wso.dat')
+        write_wso(l, m, *result, fname=output)
 
 
 if __name__ == "__main__":

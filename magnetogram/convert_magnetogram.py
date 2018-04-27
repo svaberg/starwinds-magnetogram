@@ -128,15 +128,31 @@ def convert_inv(m, g_lm, h_lm):
 
 def forward_conversion_factor(m_val):
 
-    # Calculate the Dirac delta function $\delta_{m0}$, which has
+    #
+    # Calculate the complex-to-real rescaling factor $\sqrt{2-\delta_{m,0}$
+    #
+    #  The Dirac delta function $\delta_{m0}$ has
     # $\delta_{m0} = 1$ for $m = 0$ and
     # $\delta_{m0} = 0$ for $m \neq 0$
     delta_m0 = np.where(m_val == 0, 1, 0)
+    complex_to_real_rescaling = np.sqrt(-delta_m0+2)
 
-    # Calculate the value of $(-1)^m$
-    sign = (-1)**(m_val % 2)
+    #
+    # Calculate the value of the Corton-Shortley phase, $(-1)^m$
+    #
+    corton_shortley_phase = (-1)**(m_val % 2)
 
-    return sign / (np.sqrt(-delta_m0+2) * np.sqrt(4.0 * np.pi))
+    #
+    # Calculate the unit sphere area compensation $\frac{1}{\sqrt{4\pi}}$
+    #
+    unit_sphere_factor = np.sqrt(4.0 * np.pi)
+
+    #
+    # Calculate the Schmidt scaling factor $\sqrt{2m+1}$
+    #
+    schmidt_scaling = np.sqrt(2*m_val + 1)
+
+    return schmidt_scaling / (corton_shortley_phase * complex_to_real_rescaling * unit_sphere_factor)
 
 
 #

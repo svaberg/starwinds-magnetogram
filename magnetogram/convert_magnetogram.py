@@ -76,7 +76,7 @@ def write_wso(l, m, g_lm, h_lm, fname="test_field_wso.dat"):
 
     with open(fname, 'w') as f:
         f.write("Output of %s\n" % __file__)
-        f.write("%d\n" % len(l))
+        f.write("Order:%d\n" % np.max(l))
 
         for l_id in range(len(l)):
             f.write("%d %d %e %e\n" % (l[l_id], m[l_id], g_lm[l_id], h_lm[l_id]))
@@ -188,20 +188,23 @@ def test_back_and_forth(n=4):
 def test_read(fname='test_field_zdipy.dat'):
     content = r"""General poloidal plus toroidal field
 4 3 -3
- 1  0 -2.375224e+02 -0.000000e+00
- 1  1  1.931724e+01 -1.110055e+02
- 2  0  1.374195e+01 -0.000000e+00
- 2  1  7.108133e+01 -9.102435e+01
+ 1  0 1. 1.
+ 1  1 1. 1.
+ 2  0 1. 1.
+ 2  1 1. 1.
+ 2  2 1. 1.
 
- 1  0 1e3 1e4
- 1  1 1e3 1e4
- 2  0 1e3 1e4
- 2  1 1e3 1e4
+ 1  0 100. 101.
+ 1  1 110. 111.
+ 2  0 200. 201.
+ 2  1 210. 211.
+ 2  2 220. 221.
 
- 1  0 2e3 3e4
- 1  1 2e3 3e4
- 2  0 2e3 3e4
- 2  1 2e3 3e4
+ 1  0 1000. 1010.
+ 1  1 1100. 1110.
+ 2  0 2000. 2010.
+ 2  1 2100. 2110.
+ 2  2 2200. 2210.
  """
     with open(fname, 'w') as f:
         f.write(content)
@@ -210,6 +213,7 @@ def test_read(fname='test_field_zdipy.dat'):
     result = convert(m, g_lm, h_lm)
 
     write_wso(l, m, *result, 'test_field_wso.dat')
+
 
 def convert_magnetogram(input, output, inverse=False):
     l, m, g_lm, h_lm = read_zdipy(input)

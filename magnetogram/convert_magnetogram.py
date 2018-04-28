@@ -27,43 +27,30 @@ def read_zdipy(fname):
         # you may also want to remove whitespace characters like `\n` at the end of each line
         content = [x.strip() for x in content]
 
-    assert(content[0] == 'General poloidal plus toroidal field')
-
-    line1_tokens = content[1].split()
-
-    try:
-        line1_values = list(map(int, line1_tokens))
-        #n_lines = line1_values[0]
-        #log.info("Read number of lines: %d." % n_lines)
-        assert(line1_values[1:] == [3, -3])
-    except:
-        log.warning("Unexpected file format on line %d: %s" % (1, contents[1]))
-        n_lines = 1000
-        pass
-
+    header_lines=[]
     degree_l = []
     order_m = []
     g_lm = []
     h_lm = []
-    for line in content[2:]:
-
+    for line in content:
         try:
             line_tokens = line.split()
-            if len(line_tokens) < 4:
-                break
-
             degree_l.append(int(line_tokens[0]))
             order_m.append(int(line_tokens[1]))
-
             g_lm.append(float(line_tokens[2]))
             h_lm.append(float(line_tokens[3]))
-
+            log.debug("Read coefficient line %d: \"%s\"" % (len(g_lm), line))
         except:
-            print("Warning: Unexpected file format on line %s" % line)
+            if len(degree_l) == 0:
+                log.debug("Read header line: %d: \"%s\"" % (len(header_lines), line))
+                header_lines.append(line)
+            else:
+                break
 
+    log.info("Read %d header lines and %d radial coefficient lines." % (len(header_lines), len(g_lm)))
     log.debug("l\tm\tg_lm\th_lm")
-    for line_id,_ in enumerate(degree_l):
-        log.debug("%d\t%d\t%e\t%e" %(degree_l[line_id], order_m[line_id], g_lm[line_id], h_lm[line_id]))
+    for data in zip(degree_l, order_m, g_lm, h_lm):
+        log.debug("%d\t%d\t%e\t%e" % data)
 
     log.info("Finished reading magnetogram file \"%s\"." % fname)
 
@@ -77,52 +64,35 @@ def write_wso(degree_l, order_m, g_lm, h_lm, fname="test_field_wso.dat"):
         f.write("Output of %s\n" % __file__)
         f.write("Order:%d\n" % np.max(degree_l))
 
-        for l_id in range(len(degree_l)):
-            f.write("%d %d %e %e\n" % (degree_l[l_id], order_m[l_id], g_lm[l_id], h_lm[l_id]))
+        for data in zip(degree_l, order_m, g_lm, h_lm):
+            f.write("%d %d %e %e\n" % data)
 
     log.info("Finished writing magnetogram file \"%s\"." % fname)
 
 
-def convert(degree_l, order_m, g_lm, h_lm):
+def convert(degree_l, order_m, g_lm, h_lm, power=1):
     r"""
     Convert Donati et al. (2006) normalized harmonic coefficients to magnetogram to
     The Wilcox Solar Observatory style
-    :param degree_l:
-    :param order_m:
-    :param g_lm:
-    :param h_lm:
+    :param degree_l: Degree of spherical harmonic coefficient
+    :param order_m: Power of spherical harmonic coefficient
+    :param g_lm: Real-like value of spherical harmonic coefficient
+    :param h_lm: Imaginary-like value of spherical harmonic coefficient
+    :param power: Power of conversion factor. Use 1 for zdipy to wso and -1 for wso to zdipy.
     :return:
     """
-    log.debug("Begin converting zdipy coefficients to wso coefficients...")
+    log.debug("Begin conversion...")
 
     degree_l = np.array(degree_l)
     order_m = np.array(order_m)
     g_lm = np.array(g_lm)
     h_lm = np.array(h_lm)
 
-    conversion_factor = forward_conversion_factor(degree_l, order_m)
+    conversion_factor = forward_conversion_factor(degree_l, order_m)**power
     g_lm_out = conversion_factor * g_lm
     h_lm_out = conversion_factor * h_lm
 
-    log.info("Finished converting zdipy coefficients to wso coefficients.")
-    return g_lm_out, h_lm_out
-
-
-def convert_inv(order_m, g_lm, h_lm):
-    r"""
-    Inverse of convert
-    :param order_m:
-    :param g_lm:
-    :param h_lm:
-    :return:
-    """
-    log.debug("Begin converting wso coefficients to zdipy coefficients...")
-
-    conversion_factor = 1.0 / forward_conversion_factor(order_m)
-    g_lm_out = conversion_factor * g_lm
-    h_lm_out = conversion_factor * h_lm
-
-    log.info("Finished converting wso coefficients to zdipy coefficients.")
+    log.info("Finished conversion.")
     return g_lm_out, h_lm_out
 
 
@@ -158,13 +128,14 @@ def forward_conversion_factor(degree_l, order_m):
     conversion_factor = schmidt_scaling / (corton_shortley_phase * complex_to_real_rescaling * unit_sphere_factor)
 
     log.info("l m \t     ctr\t      csp\t     usf\t      ss \t       cf")
-    for line_id in range(len(degree_l)):
-        log.info("%d %d\t%f\t%f\t%f\t%f\t%f" % (degree_l[line_id], order_m[line_id],
-                                                complex_to_real_rescaling[line_id],
-                                                corton_shortley_phase[line_id],
-                                                unit_sphere_factor,
-                                                schmidt_scaling[line_id],
-                                                conversion_factor[line_id]))
+    for data in zip(degree_l, order_m,
+                    complex_to_real_rescaling,
+                    corton_shortley_phase,
+                    np.ones_like(degree_l) * unit_sphere_factor,
+                    schmidt_scaling,
+                    conversion_factor):
+        log.info("%d %d\t%f\t%f\t%f\t%f\t%f" % data)
+
     return conversion_factor
 
 
@@ -238,26 +209,25 @@ def test_read(fname='test_field_zdipy.dat'):
     with open(fname, 'w') as f:
         f.write(content)
 
-    degree_l, order_m, g_lm, h_lm = read_zdipy(fname)
-    result = convert(order_m, g_lm, h_lm)
+    data = read_zdipy(fname)
+    result = convert(*data)
 
     write_wso(degree_l, order_m, *result, fname='test_field_wso.dat')
 
 
-def convert_magnetogram(input_file, output_name=None, inverse=False):
+def convert_magnetogram(input_file, output_name=None, power=1):
 
+    # Make an output file name if none was given
     if output_name is None:
         file_tokens = input_file.split(".")
         file_tokens[0] += "_wso"
         output_name = ".".join(file_tokens)
 
+    # Read input file
     degree_l, order_m, g_lm, h_lm = read_zdipy(input_file)
 
-    if inverse:
-        log.error("Not ready")
-    else:
-        result = convert(degree_l, order_m, g_lm, h_lm)
-        write_wso(degree_l, order_m, *result, fname=output_name)
+    result = convert(degree_l, order_m, g_lm, h_lm, power)
+    write_wso(degree_l, order_m, *result, fname=output_name)
 
 
 if __name__ == "__main__":

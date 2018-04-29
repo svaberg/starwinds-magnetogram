@@ -41,7 +41,7 @@ def read_zdipy(fname):
             h_lm.append(float(line_tokens[3]))
             log.debug("Read coefficient line %d: \"%s\"" % (len(g_lm), line))
         except:
-            if len(degree_l) == 0:
+            if len(h_lm) == 0:
                 log.debug("Read header line: %d: \"%s\"" % (len(header_lines), line))
                 header_lines.append(line)
             else:

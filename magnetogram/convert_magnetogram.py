@@ -4,7 +4,7 @@ import logging
 log = logging.getLogger(__name__)
 
 
-def read_zdipy(fname):
+def read_magnetogram_file(fname):
     r"""
     Read zdipy magnetogram file.
     :return:
@@ -57,7 +57,7 @@ def read_zdipy(fname):
     return degree_l, order_m, g_lm, h_lm
 
 
-def write_wso(degree_l, order_m, g_lm, h_lm, fname="test_field_wso.dat"):
+def write_magnetogram_file(degree_l, order_m, g_lm, h_lm, fname="test_field_wso.dat"):
     log.debug("Begin writing magnetogram file \"%s\"..." % fname)
 
     with open(fname, 'w') as f:
@@ -209,10 +209,10 @@ def test_read(fname='test_field_zdipy.dat'):
     with open(fname, 'w') as f:
         f.write(content)
 
-    data = read_zdipy(fname)
+    data = read_magnetogram_file(fname)
     result = convert(*data)
 
-    write_wso(degree_l, order_m, *result, fname='test_field_wso.dat')
+    write_magnetogram_file(degree_l, order_m, *result, fname='test_field_wso.dat')
 
 
 def convert_magnetogram(input_file, output_name=None, power=1):
@@ -224,10 +224,10 @@ def convert_magnetogram(input_file, output_name=None, power=1):
         output_name = ".".join(file_tokens)
 
     # Read input file
-    degree_l, order_m, g_lm, h_lm = read_zdipy(input_file)
+    degree_l, order_m, g_lm, h_lm = read_magnetogram_file(input_file)
 
     result = convert(degree_l, order_m, g_lm, h_lm, power)
-    write_wso(degree_l, order_m, *result, fname=output_name)
+    write_magnetogram_file(degree_l, order_m, *result, fname=output_name)
 
 
 if __name__ == "__main__":

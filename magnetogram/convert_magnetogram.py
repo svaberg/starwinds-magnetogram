@@ -35,11 +35,15 @@ def read_magnetogram_file(fname):
     for line in content:
         try:
             line_tokens = line.split()
-            degree_l.append(int(line_tokens[0]))
-            order_m.append(int(line_tokens[1]))
-            g_lm.append(float(line_tokens[2]))
-            h_lm.append(float(line_tokens[3]))
-            log.debug("Read coefficient line %d: \"%s\"" % (len(g_lm), line))
+            l = int(line_tokens[0])
+            m = int(line_tokens[1])
+            g = float(line_tokens[2])
+            h = float(line_tokens[3])
+            log.debug("Read coefficient line %d: \"%s\"" % (len(g_lm)+1, line))
+            degree_l.append(l)
+            order_m.append(m)
+            g_lm.append(g)
+            h_lm.append(h)
         except:
             if len(h_lm) == 0:
                 log.debug("Read header line: %d: \"%s\"" % (len(header_lines), line))

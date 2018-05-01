@@ -136,32 +136,39 @@ def test_3():
 
 def demo():
     import matplotlib.pyplot as plt
-    import convert_magnetogram
 
-    def plot_helper(coefficient_file,
-                    normalisation,
-                    lowest_degree_l = 1):
-
-        data = convert_magnetogram.read_magnetogram_file(coefficient_file)
-
-        spectrum_degree_l, scaled_squared_field_spectrum = energy_spectrum(*data, normalisation=normalisation)
-
-        linear_fit, linear_fit_data = fit_powerlaw(
-            spectrum_degree_l[lowest_degree_l:],
-            scaled_squared_field_spectrum[lowest_degree_l:])
-
-        points, = plt.plot(spectrum_degree_l, scaled_squared_field_spectrum, 'o', markersize=4,
-                           label="File: %s. Normalisation: %s." % (coefficient_file,
-                                                                   normalisation.__name__.split("_")[1]))
-        plt.plot(spectrum_degree_l[lowest_degree_l:], linear_fit, 'k-', color=points.get_color())
-        plt.text(1, linear_fit[0], "$f(\ell)=%3.3g\ell + %3.3g$\n$r=%3.3g$" % linear_fit_data[0:3])
-        plt.yscale('log')
-        plt.grid(True, which='both')
-        plt.legend()
-
-    plot_helper("outMagCoeff.dat", normalisation_zdipy)
-    plot_helper("CR2077_GNG.dat", normalisation_schmidt)
+    fig, ax = plt.subplots()
+    spectrum_plot("outMagCoeff.dat", normalisation_zdipy, ax=ax)
+    spectrum_plot("CR2077_GNG.dat", normalisation_schmidt, ax=ax)
     plt.show()
+
+
+def spectrum_plot(coefficient_file,
+                  normalisation,
+                  lowest_degree_l = 1,
+                  ax=None):
+    import convert_magnetogram
+    import matplotlib.pyplot as plt
+
+    data = convert_magnetogram.read_magnetogram_file(coefficient_file)
+
+    spectrum_degree_l, scaled_squared_field_spectrum = energy_spectrum(*data, normalisation=normalisation)
+
+    linear_fit, linear_fit_data = fit_powerlaw(
+        spectrum_degree_l[lowest_degree_l:],
+        scaled_squared_field_spectrum[lowest_degree_l:])
+
+    if ax is None:
+        fig, ax = plt.subplots()
+    points, = ax.plot(spectrum_degree_l, scaled_squared_field_spectrum, 'o', markersize=4,
+                       label="File: %s.\nNormalisation: %s." % (coefficient_file,
+                                                               normalisation.__name__.split("_")[1]))
+    ax.plot(spectrum_degree_l[lowest_degree_l:], linear_fit, 'k-', color=points.get_color(),
+            label="$f(\ell)=%3.3g\ell + %3.3g$\n$r=%3.3g$" % linear_fit_data[0:3])
+    ax.set_yscale('log')
+    ax.grid(True, which='both')
+    ax.legend()
+    return ax
 
 
 if __name__ == "__main__":

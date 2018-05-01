@@ -134,15 +134,6 @@ def test_3():
     test_2(degree_l, order_m, zdipy_g_lm, zdipy_h_lm)
 
 
-def demo():
-    import matplotlib.pyplot as plt
-
-    fig, ax = plt.subplots()
-    spectrum_plot("outMagCoeff.dat", normalisation_zdipy, ax=ax)
-    spectrum_plot("CR2077_GNG.dat", normalisation_schmidt, ax=ax)
-    plt.show()
-
-
 def spectrum_plot(coefficient_file,
                   normalisation,
                   lowest_degree_l = 1,
@@ -183,5 +174,10 @@ if __name__ == "__main__":
 
     test_3()
 
-    demo()
+    # PLot demo
+    import matplotlib.pyplot as plt
+    fig, ax = plt.subplots()
+    spectrum_plot("outMagCoeff.dat", normalisation_zdipy, ax=ax)
+    spectrum_plot("CR2077_GNG.dat", normalisation_schmidt, ax=ax)
+    plt.show()
 

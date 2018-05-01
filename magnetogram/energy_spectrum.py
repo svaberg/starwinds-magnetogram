@@ -1,6 +1,9 @@
 import numpy as np
 import logging
 
+from . import convert_magnetogram
+import matplotlib.pyplot as plt
+from scipy import stats
 
 log = logging.getLogger(__name__)
 
@@ -56,7 +59,6 @@ def energy_spectrum(degree_l, order_m, g_lm, h_lm, normalisation=normalisation_z
 
 def fit_powerlaw(degree_l, spectrum):
     """very basic fit for now"""
-    from scipy import stats
     log_spectrum = np.log(spectrum)
     fit_data = stats.linregress(degree_l, log_spectrum)
 
@@ -66,80 +68,10 @@ def fit_powerlaw(degree_l, spectrum):
     return fitted_curve, fit_data
 
 
-def setup_test():
-    root_logger = logging.getLogger()
-    root_logger.setLevel(logging.DEBUG)
-    ch = logging.StreamHandler()
-    ch.setLevel(logging.DEBUG)
-    log.addHandler(ch)
-
-
-def test_1(coefficient_file, normalisation=normalisation_zdipy, lowest_degree_l = 1, plots=False):
-    import matplotlib.pyplot as plt
-    import convert_magnetogram
-
-    degree_l, order_m, g_lm, h_lm = convert_magnetogram.read_magnetogram_file(coefficient_file)
-
-    spectrum_degree_l, scaled_squared_field_spectrum = energy_spectrum(degree_l, order_m, g_lm, h_lm, normalisation)
-    for line_id, value in enumerate(scaled_squared_field_spectrum):
-        log.debug("%d\t%f" % (line_id, value))
-
-
-    linear_fit, linear_fit_data = fit_powerlaw(
-        spectrum_degree_l[lowest_degree_l:],
-        scaled_squared_field_spectrum[lowest_degree_l:])
-    if plots:
-        plt.plot(spectrum_degree_l, scaled_squared_field_spectrum, 'o')
-        plt.xlabel("Degree $\ell$")
-        plt.ylabel("Scaled squared field")
-
-        plt.plot(spectrum_degree_l[lowest_degree_l:], linear_fit, 'k-')
-        plt.text(1, linear_fit[0], "$%3.3g\ell + %3.3g$\n$r=%3.3g$" % linear_fit_data[0:3])
-        plt.yscale('log')
-        plt.grid(True, which='both')
-        plt.title("File: %s. Normalisation: %s." % (coefficient_file, normalisation.__name__.split("_")[1]))
-        plt.show()
-
-
-def test_2(degree_l, order_m, zdipy_g_lm, zdipy_h_lm, plots=False):
-    import matplotlib.pyplot as plt
-    import convert_magnetogram
-
-    zdipy_spectrum = energy_spectrum(degree_l, order_m, zdipy_g_lm, zdipy_h_lm , normalisation=normalisation_zdipy)
-
-    wso_g_glm, wso_h_lm = convert_magnetogram.convert(degree_l, order_m, zdipy_g_lm, zdipy_h_lm)
-    log.info(wso_g_glm)
-    wso_spectrum = energy_spectrum(degree_l, order_m, wso_g_glm, wso_h_lm, normalisation=normalisation_schmidt)
-
-    if np.allclose(zdipy_spectrum, wso_spectrum):
-        log.info("Spectra match")
-    else:
-        log.error("Spectra do not match")
-        if plots:
-            plt.plot(*zdipy_spectrum, 'x', label="zdipy")
-            plt.plot(*wso_spectrum, '+', label="wso")
-            plt.xlabel("Degree $\ell$")
-            plt.ylabel("Scaled squared field")
-            #plt.yscale('log')
-            plt.grid(True, which='both')
-            plt.legend()
-            plt.show()
-
-
-def test_3():
-    import convert_magnetogram
-
-    degree_l, order_m, zdipy_g_lm, zdipy_h_lm = convert_magnetogram.read_magnetogram_file("outMagCoeff.dat")
-
-    test_2(degree_l, order_m, zdipy_g_lm, zdipy_h_lm)
-
-
 def spectrum_plot(coefficient_file,
                   normalisation,
                   lowest_degree_l = 1,
                   ax=None):
-    import convert_magnetogram
-    import matplotlib.pyplot as plt
 
     data = convert_magnetogram.read_magnetogram_file(coefficient_file)
 
@@ -159,25 +91,7 @@ def spectrum_plot(coefficient_file,
     ax.set_yscale('log')
     ax.grid(True, which='both')
     ax.legend()
+    plt.xlabel("Degree $\ell$")
+    plt.ylabel("Scaled squared field")
     return ax
-
-
-if __name__ == "__main__":
-    setup_test()
-
-    test_1("outMagCoeff.dat", normalisation=normalisation_zdipy)
-    test_1("CR2077_GNG.dat", normalisation=normalisation_schmidt)
-
-    test_2([1], [0], [1], [0])
-    test_2([1], [1], [1], [0])
-    test_2([4], [3], [1], [0])
-
-    test_3()
-
-    # PLot demo
-    import matplotlib.pyplot as plt
-    fig, ax = plt.subplots()
-    spectrum_plot("outMagCoeff.dat", normalisation_zdipy, ax=ax)
-    spectrum_plot("CR2077_GNG.dat", normalisation_schmidt, ax=ax)
-    plt.show()
 

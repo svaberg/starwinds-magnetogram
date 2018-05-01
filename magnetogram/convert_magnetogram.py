@@ -219,7 +219,7 @@ def test_read(fname='test_field_zdipy.dat'):
     write_magnetogram_file(degree_l, order_m, *result, fname='test_field_wso.dat')
 
 
-def convert_magnetogram(input_file, output_name=None, power=1):
+def convert_magnetogram_file(input_file, output_name=None, power=1):
 
     # Make an output file name if none was given
     if output_name is None:

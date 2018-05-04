@@ -6,10 +6,11 @@ import numpy as np
 from scipy.special import lpmv
 from scipy.special import factorial
 
+
 # Evaluate spherical harmonics for on a polar, azimuthal grid)
-def evaluate_spherical(data, polar, azimuth, r=np.nan, R0=1, Rs=3):
-    if np.isnan(r):
-        r = R0
+def evaluate_spherical(data, polar, azimuth, r=None, r0=1, rss=3):
+    if r is None:
+        r = r0
 
     B_radial = np.zeros(azimuth.shape)
     B_polar = np.zeros(azimuth.shape)
@@ -33,13 +34,13 @@ def evaluate_spherical(data, polar, azimuth, r=np.nan, R0=1, Rs=3):
         # Estimate DPml
         DPml = (Pml - np.roll(Pml, 1)) / (np.cos(polar) - np.roll(np.cos(polar), 1)) * np.sin(polar)
 
-        fixed = (R0 / r) ** (l + 2) / (l + 1 + l * (R0 / Rs) ** (2 * l + 1))
+        fixed = (r0 / r) ** (l + 2) / (l + 1 + l * (r0 / rss) ** (2 * l + 1))
 
         B_radial += Pml * (g * np.cos(m * azimuth) + h * np.sin(m * azimuth)) * (
-                l + 1 + l * (r / Rs) ** (2 * l + 1)) * fixed;
-        B_polar -= DPml * (g * np.cos(m * azimuth) + h * np.sin(m * azimuth)) * (1 - (r / Rs) ** (2 * l + 1)) * fixed;
+                l + 1 + l * (r / rss) ** (2 * l + 1)) * fixed;
+        B_polar -= DPml * (g * np.cos(m * azimuth) + h * np.sin(m * azimuth)) * (1 - (r / rss) ** (2 * l + 1)) * fixed;
         B_azimuthal += Pml * (g * np.sin(m * azimuth) - h * np.cos(m * azimuth)) * (
-                1 - (r / Rs) ** (2 * l + 1)) * fixed;
+                1 - (r / rss) ** (2 * l + 1)) * fixed;
 
     return B_radial, B_polar, B_azimuthal
 

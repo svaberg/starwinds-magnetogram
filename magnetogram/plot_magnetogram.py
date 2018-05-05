@@ -6,7 +6,7 @@ log = logging.getLogger(__name__)
 
 
 # Evaluate spherical harmonics for on a polar, azimuthal grid)
-def evaluate_real_magnetogram_stanford_pfss_reference(degreee_l, ordere_m, cosine_coefficients_g, sine_coefficients_h,
+def evaluate_real_magnetogram_stanford_pfss_reference(degree_l, order_m, cosine_coefficients_g, sine_coefficients_h,
                                                       points_polar, points_azimuth, radius=None, r0=1, rss=3):
     if radius is None:
         radius = r0
@@ -15,31 +15,32 @@ def evaluate_real_magnetogram_stanford_pfss_reference(degreee_l, ordere_m, cosin
     field_polar = np.zeros_like(field_radial)
     field_azimuthal = np.zeros_like(field_radial)
 
-    for row_id in range(len(degreee_l)):
+    for row_id in range(len(degree_l)):
 
-        degree_l = degreee_l[row_id]
-        order_m = ordere_m[row_id]
+        deg_l = degree_l[row_id]
+        ord_m = order_m[row_id]
         g_lm = cosine_coefficients_g[row_id]
         h_lm = sine_coefficients_h[row_id]
 
-        p_lm = sp.special.lpmv(order_m, degree_l, np.cos(points_polar))
+        p_lm = sp.special.lpmv(ord_m, deg_l, np.cos(points_polar))
 
         if True:  # Apply correction
             # https://en.wikipedia.org/wiki/Spherical_harmonics#Condon%E2%80%93Shortley_phase
             # https://en.wikipedia.org/wiki/Spherical_harmonics#Conventions
-            d0 = 0 + (order_m == 0)
-            p_lm *= (-1) ** order_m * np.sqrt(sp.special.factorial(degree_l - order_m) / sp.special.factorial(degree_l + order_m)) * np.sqrt(2 - d0)
+            d0 = 0 + (ord_m == 0)
+            p_lm *= (-1) ** ord_m * np.sqrt(sp.special.factorial(deg_l - ord_m) / sp.special.factorial(deg_l + ord_m)) * np.sqrt(2 - d0)
 
         # Estimate DPml
         DPml = (p_lm - np.roll(p_lm, 1)) / (np.cos(points_polar) - np.roll(np.cos(points_polar), 1)) * np.sin(points_polar)
 
-        fixed = (r0 / radius) ** (degree_l + 2) / (degree_l + 1 + degree_l * (r0 / rss) ** (2 * degree_l + 1))
+        fixed = (r0 / radius) ** (deg_l + 2) / (deg_l + 1 + deg_l * (r0 / rss) ** (2 * deg_l + 1))
 
-        field_radial += p_lm * (g_lm * np.cos(order_m * points_azimuth) + h_lm * np.sin(order_m * points_azimuth)) * (
-                degree_l + 1 + degree_l * (radius / rss) ** (2 * degree_l + 1)) * fixed
-        field_polar -= DPml * (g_lm * np.cos(order_m * points_azimuth) + h_lm * np.sin(order_m * points_azimuth)) * (1 - (radius / rss) ** (2 * degree_l + 1)) * fixed
-        field_azimuthal += p_lm * (g_lm * np.sin(order_m * points_azimuth) - h_lm * np.cos(order_m * points_azimuth)) * (
-                1 - (radius / rss) ** (2 * degree_l + 1)) * fixed
+        field_radial += p_lm * (g_lm * np.cos(ord_m * points_azimuth) + h_lm * np.sin(ord_m * points_azimuth)) * (
+                deg_l + 1 + deg_l * (radius / rss) ** (2 * deg_l + 1)) * fixed
+        field_polar -= DPml * (g_lm * np.cos(ord_m * points_azimuth) + h_lm * np.sin(ord_m * points_azimuth)) * (
+                1 - (radius / rss) ** (2 * deg_l + 1)) * fixed
+        field_azimuthal += p_lm * (g_lm * np.sin(ord_m * points_azimuth) - h_lm * np.cos(ord_m * points_azimuth)) * (
+                1 - (radius / rss) ** (2 * deg_l + 1)) * fixed
 
     return field_radial, field_polar, field_azimuthal
 
@@ -141,25 +142,31 @@ def evaluate_real_magnetogram_stanford_pfss(
     # Loop over magnetogram coefficient lines
     for (deg_l, ord_m, g_lm, h_lm) in zip(degree_l, order_m, cosine_coefficients_g, sine_coefficients_h):
 
-        print(deg_l)
-
         _r_l = r_l(deg_l, radius, radius_star, radius_source_surface)
         _theta_lm = theta_lm(deg_l, ord_m, points_polar)
         _phi_lm = phi_lm(ord_m, g_lm, h_lm, points_azimuth)
 
-        _unscaled_radial  = _r_l[1] * _theta_lm[0] * _phi_lm[0]
-        _unscaled_polar   = _r_l[0] * _theta_lm[1] * _phi_lm[0]
-        _unscaled_azimuth = _r_l[0] * _theta_lm[0] * _phi_lm[1]
+        unscaled_radial    = _r_l[1] * _theta_lm[0] * _phi_lm[0]
+        unscaled_polar     = _r_l[0] * _theta_lm[1] * _phi_lm[0]
+        unscaled_azimuthal = _r_l[0] * _theta_lm[0] * _phi_lm[1]
 
-        field_radial    -= _unscaled_radial
-        field_polar     -= _unscaled_polar/radius
-        field_azimuthal -= _unscaled_azimuth/(np.sin(points_azimuth * radius))
+        field_radial    -= unscaled_radial
+        field_polar     -= unscaled_polar / radius
+        field_azimuthal -= unscaled_azimuthal / (radius * np.sin(points_polar))
 
     return field_radial, field_polar, field_azimuthal
 
 
 def pretty_plot(polar, azimuth, z, ax, color_range=(), color_map='RdBu_r'):
+    """
 
+    :param polar:
+    :param azimuth:
+    :param z:
+    :param ax:
+    :param color_range:
+    :param color_map:
+    """
     if len(color_range) == 1:
         color_min = -color_range[0]
         color_max = color_range[0]
@@ -170,7 +177,7 @@ def pretty_plot(polar, azimuth, z, ax, color_range=(), color_map='RdBu_r'):
         color_max = np.absolute(z[~np.isnan(z)]).max()
         color_min = np.absolute(z[~np.isnan(z)]).min()
 
-    # print ('Color map %s, range [%f, %f].' % (color_map, color_min, color_max))
+    log.info('Color map %s, range [%f, %f].' % (color_map, color_min, color_max))
 
     # Print zero contour
     ax.contour(180 / np.pi * azimuth.T, 180 / np.pi * polar.T, z.T, levels=[0], colors=('g',), linewidths=.25)

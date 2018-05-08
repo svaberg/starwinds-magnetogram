@@ -58,12 +58,12 @@ def theta_lm(deg_l, ord_m, points_polar):
     d0 = 0 + (ord_m == 0)
     clm = (-1) ** ord_m * np.sqrt(sp.special.factorial(deg_l - ord_m)
                                   / sp.special.factorial(deg_l + ord_m)) * np.sqrt(2 - d0)
+    value = clm * plm
 
-    clm_plm = clm * plm
     # Estimate derivative of Legendre polynomial (TODO different approach??)
-    clm_d_plm = (clm_plm - np.roll(clm_plm, 1)) / (np.cos(points_polar) - np.roll(np.cos(points_polar), 1)) * np.sin(points_polar)
+    deriv = (value - np.roll(value, 1)) / (np.cos(points_polar) - np.roll(np.cos(points_polar), 1)) * np.sin(points_polar)
 
-    return clm_plm, clm_d_plm
+    return value, deriv
 
 
 def r_l(deg_l, r, r0, rss):
@@ -84,7 +84,7 @@ def r_l(deg_l, r, r0, rss):
     b = 1 - (r/rss)**(2*deg_l + 1)
     # Calculate $\ell + 1 + \ell \left(\frac{r_\star}{r_\text{ss}}\right)^{2\ell+1}$
     e = deg_l + 1 + deg_l * (r0/rss)**(2*deg_l + 1)
-    val = a * b / e
+    value = a * b / e
 
     #
     # Calculate r_l'
@@ -93,7 +93,7 @@ def r_l(deg_l, r, r0, rss):
     d = deg_l + 1 + deg_l * (r/rss)**(2*deg_l + 1)
     deriv = -c * d / e
 
-    return val, deriv
+    return value, deriv
 
 
 def phi_lm(ord_m, g_lm, h_lm, phi):
@@ -105,10 +105,10 @@ def phi_lm(ord_m, g_lm, h_lm, phi):
     :param phi: 2d array of azimuth coordinate values
     :return: 2d array of $Phi_{\ell m}(\phi)$ values
     """
-    val = g_lm * np.cos(ord_m * phi) + h_lm * np.sin(ord_m * phi)
-    deriv = ord_m * (h_lm * np.cos(ord_m * phi) - g_lm * np.sin(ord_m * phi))
+    value = (+g_lm * np.cos(ord_m * phi) + h_lm * np.sin(ord_m * phi))
+    deriv = (-g_lm * np.sin(ord_m * phi) + h_lm * np.cos(ord_m * phi)) * ord_m
 
-    return val, deriv
+    return value, deriv
 
 
 def evaluate_real_magnetogram_stanford_pfss(
@@ -157,6 +157,7 @@ def evaluate_real_magnetogram_stanford_pfss(
     return field_radial, field_polar, field_azimuthal
 
 
+# TODO move stuff from test_plot_magnetogram.plot_test to here.
 def pretty_plot(polar, azimuth, z, ax, color_range=(), color_map='RdBu_r'):
     """
 

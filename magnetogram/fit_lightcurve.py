@@ -8,13 +8,16 @@ class LightCurve(object):
     """
     A light curve
     """
+    def __init__(self):
+        self._center = None
+
     @property
     def height(self):
         """
         Return height of light curve
         :return: Highest value of light curve, assumed to be at the centre of the curve.
         """
-        return self(0)
+        return self(self.center)
 
     @property
     def fwhm(self, x0=1.5):
@@ -47,16 +50,30 @@ class LightCurve(object):
         area, _ = scipy.integrate.quad(self, -np.inf, np.inf)
         return area
 
+    @property
+    def center(self):
+        """
+        Return center of light curve.
+        :return: Center of light curve.
+        """
+        return self._center
+
+    @center.setter
+    def center(self, val):
+        self._center = val
+
 
 class Gaussian(LightCurve):
     """
     Gaussian profile
     """
-    def __init__(self, sigma):
+    def __init__(self, center, sigma):
+        self.center = center
         self.sigma = sigma
 
     def __call__(self, x):
-        num = np.exp(-x ** 2 / (2 * self.sigma ** 2))
+        xx = x - self.center
+        num = np.exp(-xx ** 2 / (2 * self.sigma ** 2))
         den = self.sigma * np.sqrt(2 * np.pi)
         return num / den
 
@@ -72,11 +89,13 @@ class Lorentzian(LightCurve):
     """
     Lorentzian profile
     """
-    def __init__(self, gamma):
+    def __init__(self, center, gamma):
+        self.center = center
         self.gamma = gamma
 
     def __call__(self, x):
-        den = np.pi * (x ** 2 + self.gamma ** 2)
+        xx = x-self.center
+        den = np.pi * (xx ** 2 + self.gamma ** 2)
         return self.gamma / den
 
     def __str__(self):
@@ -100,9 +119,10 @@ class PseudoVoigt(Voigt):
     Pseudo-Voigt profile from
     https://en.wikipedia.org/wiki/Voigt_profile#Pseudo-Voigt_approximation
     """
-    def __init__(self, sigma, gamma):
-        self.gaussian = Gaussian(sigma)
-        self.lorentzian = Lorentzian(gamma)
+    def __init__(self, center, sigma, gamma):
+        self.center = center
+        self.gaussian = Gaussian(center, sigma)
+        self.lorentzian = Lorentzian(center, gamma)
         self.eta = self.calculate_eta()
 
     def calculate_eta(self):
@@ -134,7 +154,8 @@ class FaddeevaVoigt(Voigt):
     """
     Voigt profile using the Faddeeva function
     """
-    def __init__(self, sigma, gamma):
+    def __init__(self, center, sigma, gamma):
+        self.center = center
         self.sigma = sigma
         self. gamma = gamma
 
@@ -151,9 +172,10 @@ class ConvolutionVoigt(Voigt):
     """
     Voigt profile with explicit convolution
     """
-    def __init__(self, sigma, gamma):
-        self.gaussian = Gaussian(sigma)
-        self.lorentzian = Lorentzian(gamma)
+    def __init__(self, center, sigma, gamma):
+        self.center = center
+        self.gaussian = Gaussian(center, sigma)
+        self.lorentzian = Lorentzian(center, gamma)
 
     def __call__(self, x):
         values = np.convolve(
@@ -206,8 +228,8 @@ def demo_plot(light_curve, ax=plt.gca(), xrange=(-10,10)):
 
 def fit(x, y, LightCurve=Gaussian):
 
-    def fitting_function(x, sigma):
-        light_curve = LightCurve(sigma)
+    def fitting_function(x, center, sigma):
+        light_curve = LightCurve(center, sigma)
         return light_curve(x)
 
     popt, pcov = scipy.optimize.curve_fit(fitting_function, x, y)
@@ -216,35 +238,44 @@ def fit(x, y, LightCurve=Gaussian):
     return LightCurve(*popt)
 
 
-def fit_test(xrange=(-10,10)):
-    x = np.linspace(*xrange, 100)
-    true_data = Lorentzian(1)(x)
+def fit_test(true_light_curve, FitLightCurve, xrange=None):
+    if xrange is None:
+        xrange = np.array([-1.0, 1.0])
+        xrange *= 3.0 * true_light_curve.equivalent_width
+        xrange += true_light_curve.center
+    x = np.linspace(*xrange, 200)
+    true_data = true_light_curve(x)
     noise = np.random.normal(size=x.shape, scale=0.1)
 
     true_line, = plt.plot(x, true_data, label='True data')
-    plt.plot(x, true_data + noise, 'o', color=true_line.get_color(), label='Noisy data')
+    plt.plot(x, true_data + noise, 'x', color=true_line.get_color(), label='Noisy data')
 
     # Should fit to equivalent width and height as they are "universal"
-    light_curve = fit(x, true_data + noise)
+    light_curve = fit(x, true_data + noise, FitLightCurve)
     plt.plot(x, light_curve(x), '--', label=light_curve)
 
     plt.grid(True)
     plt.legend()
     plt.show()
 
+
 def basic_test():
 
-    demo_plot(Gaussian(1))
-    demo_plot(Lorentzian(1))
-    demo_plot(PseudoVoigt(1, 1))
-    demo_plot(FaddeevaVoigt(1, 1))
-    demo_plot(ConvolutionVoigt(1, 1))
+    demo_plot(Gaussian(0, 1))
+    demo_plot(Lorentzian(0, 1))
+    demo_plot(PseudoVoigt(0, 1, 1))
+    demo_plot(FaddeevaVoigt(0, 1, 1))
+    demo_plot(ConvolutionVoigt(0, 1, 1))
     plt.grid(True)
     plt.legend()
     plt.show()
 
 
 if __name__ == "__main__":
-    basic_test()
-    fit_test()
+    # basic_test()
+    # fit_test(Gaussian(0, 1), Gaussian)
+    # fit_test(Gaussian(1, 1), Gaussian)
+    # fit_test(Gaussian(0, 1), Lorentzian)
+    fit_test(Gaussian(1, 1), Lorentzian)
+    fit_test(Gaussian(0, 1), FaddeevaVoigt)
 

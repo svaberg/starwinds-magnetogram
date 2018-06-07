@@ -226,16 +226,39 @@ def demo_plot(light_curve, ax=plt.gca(), xrange=(-10,10)):
         print("Equivalent width not supported by %s: %s" % (light_curve, e))
 
 
-def fit(x, y, LightCurve=Gaussian):
+def fit(x, y, LightCurve=Gaussian, guess=None):
 
-    def fitting_function(x, center, sigma):
-        light_curve = LightCurve(center, sigma)
+    def logme(names, values, errors=None):
+        if errors is None:
+            errors = np.zeros_like(values)
+
+        return_value = ""
+        for key, value, error in zip(names, values, errors):
+            return_value += ' %s=%f+-%f,' % (key, value, error)
+
+        return_value = return_value[:-1] + '.'
+        return return_value
+
+    if guess is None:
+        import inspect
+        sig = inspect.signature(LightCurve)
+        params = sig.parameters
+        names = params.keys()
+        initial_guesses = np.ones(len(params.keys()))
+
+    print('Initial guesses:' + logme(names, initial_guesses))
+
+    def fitting_function(x, *args):
+        light_curve = LightCurve(*args)
         return light_curve(x)
 
-    popt, pcov = scipy.optimize.curve_fit(fitting_function, x, y)
-    print(*popt)
+    popt, pcov = scipy.optimize.curve_fit(fitting_function, x, y, p0=initial_guesses)
 
-    return LightCurve(*popt)
+    fitted_curve = LightCurve(*popt)
+    print('Final fit of %s: %s' % (fitted_curve, logme(names, popt, np.sqrt(np.diag(pcov)))))
+    print('%s height=%f, equivalent width=%f' % (fitted_curve, fitted_curve.height, fitted_curve.equivalent_width))
+
+    return fitted_curve
 
 
 def fit_test(true_light_curve, FitLightCurve, xrange=None):
@@ -250,7 +273,6 @@ def fit_test(true_light_curve, FitLightCurve, xrange=None):
     true_line, = plt.plot(x, true_data, label='True data')
     plt.plot(x, true_data + noise, 'x', color=true_line.get_color(), label='Noisy data')
 
-    # Should fit to equivalent width and height as they are "universal"
     light_curve = fit(x, true_data + noise, FitLightCurve)
     plt.plot(x, light_curve(x), '--', label=light_curve)
 
@@ -272,10 +294,11 @@ def basic_test():
 
 
 if __name__ == "__main__":
-    # basic_test()
-    # fit_test(Gaussian(0, 1), Gaussian)
-    # fit_test(Gaussian(1, 1), Gaussian)
-    # fit_test(Gaussian(0, 1), Lorentzian)
+    basic_test()
+    fit_test(Gaussian(0, 1), Gaussian)
+    fit_test(Gaussian(1, 1), Gaussian)
+    fit_test(Gaussian(0, 1), Lorentzian)
     fit_test(Gaussian(1, 1), Lorentzian)
     fit_test(Gaussian(0, 1), FaddeevaVoigt)
+    fit_test(Gaussian(0, 1), PseudoVoigt)
 

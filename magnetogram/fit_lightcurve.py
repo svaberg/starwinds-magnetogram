@@ -8,8 +8,12 @@ class LightCurve(object):
     """
     A light curve
     """
-    def __init__(self):
-        self._center = None
+    def __init__(self, center):
+        self._center = center
+
+    def __call__(self, x):
+        x_centered = x - self.center
+        return self.evaluate(x_centered)
 
     @property
     def height(self):
@@ -68,12 +72,11 @@ class Gaussian(LightCurve):
     Gaussian profile
     """
     def __init__(self, center, sigma):
-        self.center = center
+        super().__init__(center)
         self.sigma = sigma
 
-    def __call__(self, x):
-        xx = x - self.center
-        num = np.exp(-xx ** 2 / (2 * self.sigma ** 2))
+    def evaluate(self, x):
+        num = np.exp(-x ** 2 / (2 * self.sigma ** 2))
         den = self.sigma * np.sqrt(2 * np.pi)
         return num / den
 
@@ -90,12 +93,11 @@ class Lorentzian(LightCurve):
     Lorentzian profile
     """
     def __init__(self, center, gamma):
-        self.center = center
+        super().__init__(center)
         self.gamma = gamma
 
-    def __call__(self, x):
-        xx = x-self.center
-        den = np.pi * (xx ** 2 + self.gamma ** 2)
+    def evaluate(self, x):
+        den = np.pi * (x ** 2 + self.gamma ** 2)
         return self.gamma / den
 
     def __str__(self):
@@ -113,14 +115,13 @@ class Voigt(LightCurve):
     pass
 
 
-
 class PseudoVoigt(Voigt):
     """
     Pseudo-Voigt profile from
     https://en.wikipedia.org/wiki/Voigt_profile#Pseudo-Voigt_approximation
     """
     def __init__(self, center, sigma, gamma):
-        self.center = center
+        super().__init__(center)
         self.gaussian = Gaussian(center, sigma)
         self.lorentzian = Lorentzian(center, gamma)
         self.eta = self.calculate_eta()
@@ -140,7 +141,7 @@ class PseudoVoigt(Voigt):
         fLf = f_L / f
         return 1.36603 * fLf - 0.47719 * fLf ** 2 + 0.11116 * fLf ** 3
 
-    def __call__(self, x):
+    def evaluate(self, x):
         values = 0
         values += self.eta * self.lorentzian(x)
         values += (1 - self.eta) * self.gaussian(x)
@@ -155,11 +156,11 @@ class FaddeevaVoigt(Voigt):
     Voigt profile using the Faddeeva function
     """
     def __init__(self, center, sigma, gamma):
-        self.center = center
+        super().__init__(center)
         self.sigma = sigma
-        self. gamma = gamma
+        self.gamma = gamma
 
-    def __call__(self, x):
+    def evaluate(self, x):
         z = (x + 1j * self.gamma) / (self.sigma * np.sqrt(2))
         wofz_real = np.real(scipy.special.wofz(z))
         return wofz_real / (self.sigma * np.sqrt(2 * np.pi))
@@ -173,11 +174,11 @@ class ConvolutionVoigt(Voigt):
     Voigt profile with explicit convolution
     """
     def __init__(self, center, sigma, gamma):
-        self.center = center
+        super().__init__(center)
         self.gaussian = Gaussian(center, sigma)
         self.lorentzian = Lorentzian(center, gamma)
 
-    def __call__(self, x):
+    def evaluate(self, x):
         values = np.convolve(
             self.gaussian(x),
             self.lorentzian(x),
@@ -246,6 +247,9 @@ def fit(x, y, LightCurve=Gaussian, guess=None):
         names = params.keys()
         initial_guesses = np.ones(len(params.keys()))
 
+    # Guess for center in middle of range
+    initial_guesses[0] = np.mean(x)
+
     print('Initial guesses:' + logme(names, initial_guesses))
 
     def fitting_function(x, *args):
@@ -296,9 +300,10 @@ def basic_test():
 if __name__ == "__main__":
     basic_test()
     fit_test(Gaussian(0, 1), Gaussian)
-    fit_test(Gaussian(1, 1), Gaussian)
+    fit_test(Gaussian(10, 1), Gaussian)
     fit_test(Gaussian(0, 1), Lorentzian)
-    fit_test(Gaussian(1, 1), Lorentzian)
+    fit_test(Gaussian(10, 1), Lorentzian)
     fit_test(Gaussian(0, 1), FaddeevaVoigt)
+    fit_test(Gaussian(10, 1), FaddeevaVoigt)
     fit_test(Gaussian(0, 1), PseudoVoigt)
 

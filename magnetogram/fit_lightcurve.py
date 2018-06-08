@@ -212,7 +212,10 @@ class ConvolutionVoigt(Voigt):
 import matplotlib.pyplot as plt
 
 
-def demo_plot(light_curve, ax=plt.gca(), xrange=(-10,10)):
+def demo_plot(light_curve, ax=None, xrange=(-10,10)):
+    if ax is None:
+        ax=plt.gca()
+
     x = np.linspace(*xrange, 1000)
     line, = ax.plot(x, light_curve(x), label=light_curve)
 
@@ -247,58 +250,138 @@ def fit(x, y, profile, absorbtion=True, guess=None):
         return return_value
 
     if guess is None:
-        param_names = ['center']
-        param_guesses = [np.mean(x)]
+        param_names = ['center', 'depth']
+        param_guesses = [np.mean(x), .1]
         import inspect
         curve_params = inspect.signature(profile).parameters
         param_names.extend(curve_params.keys())
         param_guesses.extend([1] * len(curve_params.keys()))
 
-
     print('Initial guesses:' + logme(param_names, param_guesses))
 
-    def fitting_function(x, center, *args, absorbtion=absorbtion):
-        fitted_values = profile(*args)(x - center)
+    def fitting_function(x, center, depth, *args, absorbtion=absorbtion):
+        fitted_values = depth * profile(*args)(x - center)
         if absorbtion:
             fitted_values = 1 - fitted_values
 
         return fitted_values
 
-
     popt, pcov = scipy.optimize.curve_fit(fitting_function, x, y, p0=param_guesses)
 
+
     center = popt[0]
-    fitted_values = profile(*popt[1:])
-    print('Final fit of %s: %s' % (fitted_values, logme(param_names, popt, np.sqrt(np.diag(pcov)))))
-    print('%s height=%f, equivalent width=%f' % (fitted_values, fitted_values.height, fitted_values.equivalent_width))
+    depth = popt[1]
+    fitted_profile = profile(*popt[2:])
+    fitted_data = depth * fitted_profile(x - center)
+    if absorbtion:
+        fitted_data = 1 - fitted_data
 
-    return center, fitted_values
+    errors = y - fitted_data
+
+    print('Final fit of %s: %s' % (fitted_profile, logme(param_names, popt, np.sqrt(np.diag(pcov)))))
+    print('%s height=%f, equivalent width=%f' % (fitted_profile, fitted_profile.height, fitted_profile.equivalent_width))
+
+    return center, depth, fitted_profile, errors
 
 
-def fit_test(true_profile, center=0, absorbtion=False, profile=Gaussian, xrange=None):
+def fit_test(true_profile, center=0, depth=1, std=0.1, num=50, absorbtion=False, profile=Gaussian, xrange=None):
     if xrange is None:
         xrange = np.array([-1.0, 1.0])
         xrange *= 3.0 * true_profile.equivalent_width
         xrange += center
-    x = np.linspace(*xrange, 200)
-    true_data = true_profile(x - center)
-    if absorbtion:
-        true_data = 1 - true_data
-    noise = np.random.normal(size=x.shape, scale=0.1)
 
-    true_line, = plt.plot(x, true_data, label='True data')
-    plt.plot(x, true_data + noise, 'x', color=true_line.get_color(), label='Noisy data')
+    def evaluate(profile, center, depth, numel=200, std=0.0):
+        x = np.linspace(*xrange, numel)
+        y = depth * profile(x - center)
+        if absorbtion:
+            y = 1 - y
+        y += np.random.normal(size=x.shape, scale=std)
 
-    fitted_center, light_curve = fit(x, true_data + noise, profile, absorbtion)
-    fitted_values = light_curve(x - fitted_center)
-    if absorbtion:
-        fitted_values = 1 - fitted_values
-    plt.plot(x, fitted_values, '--', label=light_curve)
+        return x, y
 
-    plt.grid(True)
-    plt.legend()
+    true_x, true_y = evaluate(true_profile, center, depth, 200)
+    data_x, data_y = evaluate(true_profile, center, depth, num, std)
+
+    try:
+        fitted_center, fitted_depth, fitted_profile, errors = fit(data_x, data_y, profile, absorbtion)
+        fitted_x, fitted_y = evaluate(fitted_profile, fitted_center, depth, 200, 0.0)
+        # raise RuntimeError('a test')
+    except RuntimeError as e:
+        # log that fit failed
+        fitted_profile = errors = None
+        fitted_x = fitted_y = None
+
+    plot_fit_graphics(data_x, data_y, std, fitted_x, fitted_y, errors, fitted_profile, true_x, true_y, true_profile)
     plt.show()
 
+
+def plot_fit_graphics(data_x, data_y, data_y_std, fitted_x, fitted_y, errors, fit_name='Fit',
+                      true_x=None, true_y=None, true_name='True'):
+
+    fig, (ax1, ax2) = plt.subplots(2,1)
+    print(fig)
+    ax3 = ax2.twiny()
+    fig.subplots_adjust(hspace=0)
+
+    ax1.errorbar(data_x, data_y, yerr=data_y_std, label='Noisy data',
+                 fmt='o',
+                 markersize=1,
+                 # color=line.get_color(),
+                 elinewidth=0.5)
+
+    if fitted_x is not None:
+        ax1.plot(fitted_x, fitted_y, label='Fitted %s' % fit_name)
+
+    if true_x is not None:
+        ax1.plot(true_x, true_y, 'k', label='True %s' % true_name)
+
+    ax1.grid(True)
+    ax1.set_ylabel('Signal')
+    ax1.set_xlabel('Velocity')
+    ax1.xaxis.set_ticks_position("top")
+    ax1.xaxis.set_label_position("top")
+    ax1.yaxis.set_label_position("right")
+    ax1.set_zorder(1000)
+    ax1.autoscale(enable=True, axis='x', tight=True)
+    # ax1.spines['bottom'].set_visible(False)
+    ax1.patch.set_alpha(0.0)
+    ax1.legend()
+
+    # range = np.max(np.abs(errors))
+    # bins = np.linspace(-range, range, len(errors)//50)
+    # bins = np.round(50 * bins) / 50
+    # n, bins,_ = ax2.hist(errors, bins=bins, orientation='horizontal')
+    # centers = 0.5 * (bins[1:] + bins[:-1])
+    # centers = bins
+    # ax2.set_yticks(centers)
+
+    if errors is not None:
+        ax2.hist(errors, orientation='horizontal')
+
+    ax2.xaxis.set_ticks_position("bottom")
+    ax2.xaxis.set_label_position("bottom")
+    ax2.yaxis.set_ticks_position("right")
+    ax2.set_xlabel("Frequency")
+    ax2.set_ylabel("Residual")
+    #ax2.grid(True, axis='y')
+    ax2.spines['top'].set_visible(False)
+    ax2.tick_params(axis='x', top=False)
+
+    ax3.plot(data_x, np.zeros_like(data_x), 'k-')
+
+    if errors is not None:
+        ax3.plot(data_x, errors, 'ko', label='Residuals', markersize=1.0)
+
+    # ax3.xaxis.set_ticks_position("top")
+    # ax3.xaxis.set_label_position("top")
+    # ax3.axes.get_xaxis().set_visible(False)
+    plt.setp(ax3.get_xticklabels(), visible=False)
+    ax3.grid(True, axis='x')
+    ax3.autoscale(enable=True, axis='x', tight=True)
+    ax3.spines['top'].set_visible(False)
+    ax3.tick_params(axis='x', top=False)
+
+    plt.show()
 
 def basic_test():
 
@@ -311,9 +394,7 @@ def basic_test():
     plt.legend()
     plt.show()
 
-
-if __name__ == "__main__":
-    # basic_test()
+def fitting_test():
     fit_test(Gaussian(1), center=1, absorbtion=False, profile=Gaussian)
     fit_test(Gaussian(1), center=1, absorbtion=False, profile=Gaussian)
     fit_test(Gaussian(1), center=1, absorbtion=False, profile=Lorentzian)
@@ -322,10 +403,40 @@ if __name__ == "__main__":
     fit_test(Gaussian(1), center=1, absorbtion=False, profile=FaddeevaVoigt)
     fit_test(Gaussian(1), center=1, absorbtion=False, profile=PseudoVoigt)
 
-    fit_test(Gaussian(1), center=10, absorbtion=True, profile=Gaussian)
+    fit_test(Gaussian(1), center=10, absorbtion=True, num=500, profile=Gaussian)
     fit_test(Gaussian(1), center=10, absorbtion=True, profile=Gaussian)
     fit_test(Gaussian(1), center=10, absorbtion=True, profile=Lorentzian)
     fit_test(Gaussian(1), center=10, absorbtion=True, profile=Lorentzian)
     fit_test(Gaussian(1), center=-10, absorbtion=True, profile=FaddeevaVoigt)
     fit_test(Gaussian(1), center=0, absorbtion=True, profile=FaddeevaVoigt)
     fit_test(Gaussian(1), center=13, absorbtion=True, profile=PseudoVoigt)
+
+def all_the_combinations():
+    pass
+
+
+def fit_an_actual_curve(curve_file='/Users/u1092841/Documents/PHD/toupies-pipeline/lopeg_31aug14_v_09.s.out.lsd',
+                        profile=Gaussian, skip_header=2, absorbtion=True):
+    data = np.genfromtxt(curve_file, skip_header=skip_header)
+
+    data_x = data[:, 0]
+    data_y = data[:, 1]
+    data_y_std = data[:, 2]
+
+    fitted_center, fitted_depth, fitted_profile, errors = fit(data_x, data_y, profile, absorbtion)
+
+    fitted_x = np.linspace(np.min(data_x), np.max(data_x), 200)
+    fitted_y = fitted_depth * fitted_profile(fitted_x - fitted_center)
+    if absorbtion:
+        fitted_y = 1 - fitted_y
+
+    plot_fit_graphics(data_x, data_y, data_y_std, fitted_x, fitted_y, errors,
+                      fit_name=fitted_profile, true_x=None, true_y=None, true_name='True')
+
+
+if __name__ == "__main__":
+    # basic_test()
+    # fitting_test()
+    fit_an_actual_curve()
+    fit_an_actual_curve(profile=FaddeevaVoigt)
+

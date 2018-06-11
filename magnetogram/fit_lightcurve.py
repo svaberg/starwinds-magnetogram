@@ -38,8 +38,6 @@ def fit(x, y, profile, absorbtion=True, guess=None):
     log.debug('Initial guesses:' + logme(param_names, param_guesses))
 
 
-    if type(profile) is
-
     def fitting_function(x, center, depth, *args, absorbtion=absorbtion):
         log.debug(['%s=%f' %(a,b) for (a,b) in zip(param_names, (center, depth, *args))])
         fitted_values = depth * profile(*args)(x - center)

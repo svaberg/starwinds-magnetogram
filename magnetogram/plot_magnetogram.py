@@ -39,7 +39,7 @@ def evaluate_real_magnetogram_stanford_pfss_reference(degree_l, order_m, cosine_
                 deg_l + 1 + deg_l * (radius / rss) ** (2 * deg_l + 1)) * fixed
         field_polar -= DPml * (g_lm * np.cos(ord_m * points_azimuth) + h_lm * np.sin(ord_m * points_azimuth)) * (
                 1 - (radius / rss) ** (2 * deg_l + 1)) * fixed
-        field_azimuthal += p_lm * (g_lm * np.sin(ord_m * points_azimuth) - h_lm * np.cos(ord_m * points_azimuth)) * (
+        field_azimuthal -= p_lm * (g_lm * np.sin(ord_m * points_azimuth) - h_lm * np.cos(ord_m * points_azimuth)) * (
                 1 - (radius / rss) ** (2 * deg_l + 1)) * fixed
 
     return field_radial, field_polar, field_azimuthal

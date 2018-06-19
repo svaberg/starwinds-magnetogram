@@ -38,31 +38,16 @@ class ZdipyVoigt(profile_shapes.ProfileShape):
     """
     def __init__(self, sigma, gamma):
         super().__init__()
-        self.sigma = sigma
-        self.gamma = gamma
-        self._fake_center_wl = 250
-        self._fake_strength = 1
-        with tempfile.NamedTemporaryFile(mode='w') as temp:
-            print(temp.name)
-
-            temp.write("# wl0    str     GaussWidth(km/s)  LorantzWidth(1/gausswidth)  lande_g  limb_darkening\n")
-            print(sigma, gamma)
-            temp.write("%f  %f  %f  %f  %f  %f" % (self._fake_center_wl, self._fake_strength, sigma, gamma, 0, 0))
-
-            temp.seek(0)  # 'rewind' the file?
-
-            self.profile = zdipy_profile_voigt.lineData(temp.name)
-            print(self.profile.__dict__)
+        _fake_center_wl = 250.0
+        _fake_strength = 1.0
+        self.profile = lineData(_fake_center_wl, _fake_strength, sigma, gamma, 0, 0)
 
     def __call__(self, v_kms):
-        wl_nm = velocity_kms_to_wavelength_nm(v_kms, self._fake_center_wl)
-        wl_nm = np.asarray(wl_nm)
+        wl_nm = velocity_kms_to_wavelength_nm(v_kms, self.profile.wl0)
         if wl_nm.shape != ():
-            # print(min(wl_nm), max(wl_nm))
             temp = zdipy_profile_voigt.localProfileAndDeriv(self.profile, len(wl_nm), wl_nm)
             retval = 1 - temp.Iunscaled
         elif wl_nm.shape == ():
-            # raise NotImplementedError("oops")
             fake_len = 99
             fake_center = 49
             fake_wl = np.linspace(0.5, 1.5, fake_len) * wl_nm
@@ -72,8 +57,56 @@ class ZdipyVoigt(profile_shapes.ProfileShape):
 
         return retval
 
+    def __str__(self):
+        return "Zdipy Voigt"
+
+
+class ZdipyOneParam(profile_shapes.ProfileShape):
+    """
+    Zdipy profile, unknown properties
+    """
+    def __init__(self, gamma_sigma):
+        super().__init__()
+        _fake_center_wl = 250.0
+        _fake_strength = 1.0
+        self.profile = lineData(_fake_center_wl, _fake_strength, 1, gamma_sigma, 0, 0)
+
+    def __call__(self, v_kms):
+        wl_nm = velocity_kms_to_wavelength_nm(v_kms, self.profile.wl0)
+        if wl_nm.shape != ():
+            temp = zdipy_profile_voigt.localProfileAndDeriv(self.profile, len(wl_nm), wl_nm)
+            retval = 1 - temp.Iunscaled
+        elif wl_nm.shape == ():
+            fake_len = 99
+            fake_center = 49
+            fake_wl = np.linspace(0.5, 1.5, fake_len) * wl_nm
+            assert(fake_wl[fake_center] == wl_nm)
+            temp = zdipy_profile_voigt.localProfileAndDeriv(self.profile, len(fake_wl), fake_wl)
+            retval = 1 - temp.Iunscaled[fake_center]
+
+        return retval
 
     def __str__(self):
-        return "Zdipy Gaussian"
+        return __name__
 
 
+class lineData:
+    def __init__(self, wl0, str, widthGauss, widthLorentz, g, limbDark):
+        # Read in model line profile data from inFileName, and store it as part of the lineData object
+        # lines beginning with a # are ignored (i.e. treated as comments)
+        # Warning: currently the local line profile only uses the first (non-comment) line of line data
+        # that should be pretty easy to expand later for multi-line profiles/spectra
+        self.wl0 = np.array([])
+        self.str = np.array([])
+        self.widthGauss = np.array([])
+        self.widthLorentz = np.array([])
+        self.g = np.array([])
+        self.limbDark = np.array([])
+        self.numLines = 1#len(self.wl0)
+
+        self.wl0 = np.append(self.wl0, wl0)
+        self.str = np.append(self.str, str)
+        self.widthGauss = np.append(self.widthGauss, widthGauss)
+        self.widthLorentz = np.append(self.widthLorentz, widthLorentz)
+        self.g = np.append(self.g, g)
+        self.limbDark = np.append(self.limbDark, limbDark)

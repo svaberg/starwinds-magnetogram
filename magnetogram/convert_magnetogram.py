@@ -5,7 +5,7 @@ log = logging.getLogger(__name__)
 
 
 def read_magnetogram_file(fname):
-    r"""
+    """
     Read zdipy magnetogram file.
     :return:
 
@@ -75,7 +75,7 @@ def write_magnetogram_file(degree_l, order_m, g_lm, h_lm, fname="test_field_wso.
 
 
 def convert(degree_l, order_m, g_lm, h_lm, power=1):
-    r"""
+    """
     Convert Donati et al. (2006) normalized harmonic coefficients to magnetogram to
     The Wilcox Solar Observatory style
     :param degree_l: Degree of spherical harmonic coefficient
@@ -219,7 +219,37 @@ def test_read(fname='test_field_zdipy.dat'):
     write_magnetogram_file(degree_l, order_m, *result, fname='test_field_wso.dat')
 
 
-def convert_magnetogram_file(input_file, output_name=None, power=1):
+def pad_magnetogram(degree_l, order_m, g_lm, h_lm, degree_l_max):
+    """
+    Pad magnetogram by adding zeros up to degree $\ell$.
+    :return: Padded magnetogram.
+    """
+    missing_degrees = range(np.max(degree_l)+1, degree_l_max+1)
+    for deg in missing_degrees:
+        for ord in range(0, deg+1):
+            degree_l.append(deg)
+            order_m.append(ord)
+            g_lm.append(0.0)
+            h_lm.append(0.0)
+
+
+def truncate_magnetogram(degree_l, order_m, g_lm, h_lm, degree_l_max):
+    """
+    Truncate magnetogram to degree l
+    :return: Truncated magnetogram
+    """
+    # Assert that the array is sorted
+    assert(np.all(degree_l[:-1] <= degree_l[1:]))
+
+    max_id = np.searchsorted(degree_l, degree_l_max, side='right')
+
+    del degree_l[max_id:]
+    del order_m[max_id:]
+    del g_lm[max_id:]
+    del h_lm[max_id:]
+
+
+def convert_magnetogram_file(input_file, output_name=None, power=1, degree_l_max=None):
 
     # Make an output file name if none was given
     if output_name is None:
@@ -229,6 +259,14 @@ def convert_magnetogram_file(input_file, output_name=None, power=1):
 
     # Read input file
     degree_l, order_m, g_lm, h_lm = read_magnetogram_file(input_file)
+
+    # Pad or truncate to max degree $\ell$.
+    if degree_l_max is not None:
+        log.info("Pad/truncate to degree %d" % degree_l_max)
+        if degree_l_max > np.max(degree_l):
+            pad_magnetogram(degree_l, order_m, g_lm, h_lm, degree_l_max)
+        elif degree_l_max < np.max(degree_l):
+            truncate_magnetogram(degree_l, order_m, g_lm, h_lm, degree_l_max)
 
     result = convert(degree_l, order_m, g_lm, h_lm, power)
     write_magnetogram_file(degree_l, order_m, *result, fname=output_name)

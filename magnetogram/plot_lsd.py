@@ -183,7 +183,18 @@ def plot_lsd_a(file_name, skip_header=2):
 
     err_kw = {'linewidth': 2, 'elinewidth': .5}
 
-    ax = fig.axes[0]
+
+    ax_id=0
+    ax = fig.axes[ax_id]
+    ax.errorbar(data[:, 0], data[:, 1],
+                yerr=data[:, 2],
+                **err_kw)
+    ax.grid(True)
+    ax.set_ylabel('$I/I_\mathrm{c}$')
+
+
+    ax_id = ax_id + 1
+    ax = fig.axes[ax_id]
     ax.set_title('Data in %s' % file_name)
     ax.errorbar(data[:, 0], data[:, 3],
                 yerr=data[:, 4],
@@ -191,19 +202,15 @@ def plot_lsd_a(file_name, skip_header=2):
     ax.grid(True)
     ax.set_ylabel('$V/V_\mathrm{c}$')
 
-    ax = fig.axes[1]
+
+    ax_id = ax_id + 1
+    ax = fig.axes[ax_id]
     ax.errorbar(data[:, 0], data[:, 5],
                 yerr=data[:, 6],
                 **err_kw)
     ax.grid(True)
     ax.set_ylabel('Null $N/N_\mathrm{c}$')
 
-    ax = fig.axes[2]
-    ax.errorbar(data[:, 0], data[:, 1],
-                yerr=data[:, 2],
-                **err_kw)
-    ax.grid(True)
-    ax.set_ylabel('$I/I_\mathrm{c}$')
 
     #    fig.tight_layout()
     fig.subplots_adjust(hspace=.1)

@@ -4,8 +4,56 @@ import logging
 log = logging.getLogger(__name__)
 
 
-def read_zdipy(fname):
-    r"""
+class SphericalHarmonicsCoefficients(object):
+    """Spherical harmonics coefficient data container class"""
+    def __init__(self, default_coefficients):
+        """Create an empty set of coefficients"""
+        self.coefficients = {}
+        self._default_coefficients = default_coefficients
+        self._degree_max = -1
+
+    def append(self, degree, order, data):
+        """Append coefficients for a given degree and order (cannot already exist)."""
+        assert (degree, order) not in self.coefficients
+        self.set(degree, order, data)
+
+    def set(self, degree, order, data):
+        """Set (overwrite) coefficients for a given degree and order."""
+        assert order <= degree
+        assert data.shape == self._default_coefficients.shape
+        self.coefficients[(degree, order)] = data
+        self._degree_max = max(self._degree_max, degree)
+
+    def get(self, degree, order):
+        """Return coefficients for at given degree and order"""
+        return self.coefficients.get((degree, order), self._default_coefficients)
+
+    def degree_max(self):
+        """Return highest degree in coefficient set"""
+        return self._degree_max
+
+    def size(self):
+        """Return number of coefficients."""
+        return len(self.coefficients.keys())
+
+    def __str__(self):
+        return str(sorted(self.coefficients))
+
+    def apply_scaling(self, scale_function, power=1):
+        """Scale by applying function to each element"""
+        for (degree, order) in self.coefficients:
+            factor = scale_function(degree, order) ** power
+            self.coefficients[(degree, order)] *= factor
+
+    def contents(self):
+        def iterator():
+            for key in sorted(self.coefficients):
+                yield key, self.coefficients[key]
+        return iterator()
+
+
+def read_magnetogram_file(fname):
+    """
     Read zdipy magnetogram file.
     :return:
 
@@ -23,80 +71,59 @@ def read_zdipy(fname):
 
     log.debug("Begin reading magnetogram file \"%s\"..." % fname)
     with open(fname) as f:
-        content = f.readlines()
-        # you may also want to remove whitespace characters like `\n` at the end of each line
-        content = [x.strip() for x in content]
+        magnetogram_file_lines = f.readlines()
+        # Remove whitespace characters like `\n` at the end of each line
+        magnetogram_file_lines = [x.strip() for x in magnetogram_file_lines]
 
-    header_lines=[]
-    degree_l = []
-    order_m = []
-    g_lm = []
-    h_lm = []
-    for line in content:
+    header_lines = []
+
+    coeffs = SphericalHarmonicsCoefficients(np.array([0.0, 0.0]))
+
+    for line in magnetogram_file_lines:
         try:
             line_tokens = line.split()
-            degree_l.append(int(line_tokens[0]))
-            order_m.append(int(line_tokens[1]))
-            g_lm.append(float(line_tokens[2]))
-            h_lm.append(float(line_tokens[3]))
-            log.debug("Read coefficient line %d: \"%s\"" % (len(g_lm), line))
+            coeffs.append(int(line_tokens[0]),
+                          int(line_tokens[1]),
+                          np.array([float(line_tokens[2]), float(line_tokens[3])]))
+            log.debug("Read coefficient line %d: \"%s\"" % (coeffs.size() + 1, line))
         except:
-            if len(degree_l) == 0:
+            if coeffs.size() == 0:
                 log.debug("Read header line: %d: \"%s\"" % (len(header_lines), line))
                 header_lines.append(line)
             else:
+                log.debug("Read non-coefficient line \"%s\", finished reading." % line)
                 break
 
-    log.info("Read %d header lines and %d radial coefficient lines." % (len(header_lines), len(g_lm)))
+    log.info("Read %d header lines and %d radial coefficient lines." % (len(header_lines), coeffs.size()))
     log.debug("l\tm\tg_lm\th_lm")
-    for data in zip(degree_l, order_m, g_lm, h_lm):
-        log.debug("%d\t%d\t%e\t%e" % data)
+    for coeff in coeffs.contents():
+        log.debug("%d\t%d\t%e\t%e" % (coeff[0][0],coeff[0][1],coeff[1][0],coeff[1][1]))
 
     log.info("Finished reading magnetogram file \"%s\"." % fname)
 
-    return degree_l, order_m, g_lm, h_lm
+    return coeffs
 
 
-def write_wso(degree_l, order_m, g_lm, h_lm, fname="test_field_wso.dat"):
+def write_magnetogram_file(coeffs, fname="test_field_wso.dat", degree_max=None):
     log.debug("Begin writing magnetogram file \"%s\"..." % fname)
+
+    if degree_max is None:
+        degree_max = coeffs.degree_max()
 
     with open(fname, 'w') as f:
         f.write("Output of %s\n" % __file__)
-        f.write("Order:%d\n" % np.max(degree_l))
+        f.write("Order:%d\n" % degree_max)
 
-        for data in zip(degree_l, order_m, g_lm, h_lm):
-            f.write("%d %d %e %e\n" % data)
+        for degree in range(0, degree_max + 1):
+            for order in range(0, degree + 1):
+                data = coeffs.get(degree, order)
+                f.write("%d %d %e %e\n" % (degree, order, data[0], data[1]))
 
     log.info("Finished writing magnetogram file \"%s\"." % fname)
 
 
-def convert(degree_l, order_m, g_lm, h_lm, power=1):
-    r"""
-    Convert Donati et al. (2006) normalized harmonic coefficients to magnetogram to
-    The Wilcox Solar Observatory style
-    :param degree_l: Degree of spherical harmonic coefficient
-    :param order_m: Power of spherical harmonic coefficient
-    :param g_lm: Real-like value of spherical harmonic coefficient
-    :param h_lm: Imaginary-like value of spherical harmonic coefficient
-    :param power: Power of conversion factor. Use 1 for zdipy to wso and -1 for wso to zdipy.
-    :return:
-    """
-    log.debug("Begin conversion...")
-
-    degree_l = np.array(degree_l)
-    order_m = np.array(order_m)
-    g_lm = np.array(g_lm)
-    h_lm = np.array(h_lm)
-
-    conversion_factor = forward_conversion_factor(degree_l, order_m)**power
-    g_lm_out = conversion_factor * g_lm
-    h_lm_out = conversion_factor * h_lm
-
-    log.info("Finished conversion.")
-    return g_lm_out, h_lm_out
-
-
 def forward_conversion_factor(degree_l, order_m):
+    """Conversion from zdipy format to wso format"""
 
     #
     # Calculate the complex-to-real rescaling factor $\sqrt{2-\delta_{m,0}$
@@ -127,95 +154,10 @@ def forward_conversion_factor(degree_l, order_m):
     #
     conversion_factor = schmidt_scaling / (corton_shortley_phase * complex_to_real_rescaling * unit_sphere_factor)
 
-    log.info("l m \t     ctr\t      csp\t     usf\t      ss \t       cf")
-    for data in zip(degree_l, order_m,
-                    complex_to_real_rescaling,
-                    corton_shortley_phase,
-                    np.ones_like(degree_l) * unit_sphere_factor,
-                    schmidt_scaling,
-                    conversion_factor):
-        log.info("%d %d\t%f\t%f\t%f\t%f\t%f" % data)
-
     return conversion_factor
 
 
-#
-# Tests
-#
-def test_forward_conversion_factor():
-    assert(np.isclose(forward_conversion_factor(0),  (4.0 * np.pi)**(-0.5)))
-    assert(np.isclose(forward_conversion_factor(1), -(8.0 * np.pi)**(-0.5)))
-    assert(np.isclose(forward_conversion_factor(2),  (8.0 * np.pi)**(-0.5)))
-    assert(np.isclose(forward_conversion_factor(3), -(8.0 * np.pi)**(-0.5)))
-
-    assert(np.isclose(forward_conversion_factor(98),  (8.0 * np.pi)**(-0.5)))
-    assert(np.isclose(forward_conversion_factor(99), -(8.0 * np.pi)**(-0.5)))
-
-    m = np.arange(0, 4)
-    expected = np.array([(4.0 * np.pi)**(-0.5),
-                        -(8.0 * np.pi)**(-0.5),
-                        (8.0 * np.pi)**(-0.5),
-                        -(8.0 * np.pi)**(-0.5)])
-    assert(np.allclose(forward_conversion_factor(m), expected))
-
-
-def test_convert():
-
-    assert(np.allclose(convert(0, 1, 1), (4.0 * np.pi)**(-0.5)))
-    assert(np.allclose(convert(1, 1, 1), -(8.0 * np.pi)**(-0.5)))
-    assert(np.allclose(convert(2, 1, 1), (8.0 * np.pi)**(-0.5)))
-
-    g_lm = np.array([-2, -1, 0, 1, 2])
-    m = np.arange(0, len(g_lm))
-    g_lm_out, h_lm_out = convert(m, g_lm, g_lm)
-    assert(np.allclose(g_lm_out, h_lm_out))
-
-
-def test_back_and_forth(n=4):
-    g_lm = np.linspace(-11, 11, n)
-    h_lm = np.geomspace(1e-7, 4.3e12, n)
-    m = np.arange(0, len(g_lm))
-
-    g_lm_out, h_lm_out = convert_inv(m, *convert(m, g_lm, h_lm))
-    assert(np.allclose(g_lm, g_lm_out))
-    assert(np.allclose(h_lm, h_lm_out))
-
-    g_lm_out, h_lm_out = convert(m, *convert_inv(m, g_lm, h_lm))
-    assert (np.allclose(g_lm, g_lm_out))
-    assert (np.allclose(h_lm, h_lm_out))
-
-
-def test_read(fname='test_field_zdipy.dat'):
-    content = r"""General poloidal plus toroidal field
-4 3 -3
- 1  0 1. 1.
- 1  1 1. 1.
- 2  0 1. 1.
- 2  1 1. 1.
- 2  2 1. 1.
-
- 1  0 100. 101.
- 1  1 110. 111.
- 2  0 200. 201.
- 2  1 210. 211.
- 2  2 220. 221.
-
- 1  0 1000. 1010.
- 1  1 1100. 1110.
- 2  0 2000. 2010.
- 2  1 2100. 2110.
- 2  2 2200. 2210.
- """
-    with open(fname, 'w') as f:
-        f.write(content)
-
-    data = read_zdipy(fname)
-    result = convert(*data)
-
-    write_wso(degree_l, order_m, *result, fname='test_field_wso.dat')
-
-
-def convert_magnetogram(input_file, output_name=None, power=1):
+def convert_magnetogram_file(input_file, output_name=None, power=1, degree_max=None):
 
     # Make an output file name if none was given
     if output_name is None:
@@ -224,19 +166,9 @@ def convert_magnetogram(input_file, output_name=None, power=1):
         output_name = ".".join(file_tokens)
 
     # Read input file
-    degree_l, order_m, g_lm, h_lm = read_zdipy(input_file)
+    coeffs = read_magnetogram_file(input_file)
 
-    result = convert(degree_l, order_m, g_lm, h_lm, power)
-    write_wso(degree_l, order_m, *result, fname=output_name)
+    coeffs.apply_scaling(forward_conversion_factor, power)
 
+    write_magnetogram_file(coeffs, fname=output_name, degree_max=degree_max)
 
-if __name__ == "__main__":
-
-    log.warning("Test 1")
-    test_forward_conversion_factor()
-    log.info("Test 1")
-    test_convert()
-    log.info("Test 1")
-    test_back_and_forth()
-    log.info("Test 1")
-    test_read()

@@ -5,7 +5,7 @@ Magnetogram conversion tools
     :license:
 """
 
-from .convert_magnetogram import convert_magnetogram
+from .convert_magnetogram import convert_magnetogram_file
 
 # For use with versioneer
 '''

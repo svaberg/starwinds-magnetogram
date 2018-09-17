@@ -155,20 +155,3 @@ def forward_conversion_factor(degree_l, order_m):
     conversion_factor = schmidt_scaling / (corton_shortley_phase * complex_to_real_rescaling * unit_sphere_factor)
 
     return conversion_factor
-
-
-def convert_magnetogram_file(input_file, output_name=None, power=1, degree_max=None):
-
-    # Make an output file name if none was given
-    if output_name is None:
-        file_tokens = input_file.split(".")
-        file_tokens[0] += "_wso"
-        output_name = ".".join(file_tokens)
-
-    # Read input file
-    coeffs = read_magnetogram_file(input_file)
-
-    coeffs.apply_scaling(forward_conversion_factor, power)
-
-    write_magnetogram_file(coeffs, fname=output_name, degree_max=degree_max)
-

@@ -7,7 +7,7 @@ from scipy import stats
 
 log = logging.getLogger(__name__)
 
-
+# TODO this is a bit obsolete as there is a new program convert_magnetogram.
 def normalisation_none(degree_l, order_m):
     r"""
     Placeholder normalisation that does nothing
@@ -48,7 +48,7 @@ def energy_spectrum(degree_l, order_m, g_lm, h_lm, normalisation=normalisation_z
     :param normalisation: Normalisation function of harmonic functions
     :return: Normalised squared field spectrum (in units of $g_{\ell m}^2$).
     """
-    degree_l, order_m, g_lm, h_lm = map(np.array, (degree_l, order_m, g_lm, h_lm))
+    degree_l, order_m, g_lm, h_lm = map(np.atleast_1d, (degree_l, order_m, g_lm, h_lm))
 
     assert(len(degree_l) == len(order_m))
     assert(len(degree_l) == len(g_lm))
@@ -101,7 +101,20 @@ def spectrum_plot(coefficient_file,
     if ax is None:
         fig, ax = plt.subplots()
 
-    degree_l, order_m, g_lm, h_lm = convert_magnetogram.read_magnetogram_file(coefficient_file)
+    # TODO this code is dumb
+    coeffs = convert_magnetogram.read_magnetogram_file(coefficient_file)
+    degree_l = []
+    order_m = []
+    g_lm = []
+    h_lm = []
+    for degree in range(0, coeffs.degree_max() + 1):
+        for order in range(0, degree + 1):
+            _g, _h = coeffs.get(degree, order)
+            degree_l.append(degree)
+            order_m.append(order)
+            g_lm.append(_g)
+            h_lm.append(_h)
+    # End of dumb code
 
     for radial_distance in rvals:
         g_lm_r = rlm(degree_l, radial_distance, source_surface_radius) * g_lm

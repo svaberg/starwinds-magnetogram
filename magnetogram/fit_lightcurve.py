@@ -87,5 +87,3 @@ def fit_curve(curve_file, profile=profile_shapes.Gaussian, skip_header=2, absorb
         fitted_y = 1 - fitted_y
 
     plot_fit_lightcurve.plot_fit_graphics(data_x, data_y, data_y_std, fitted_x, fitted_y, errors, fit_name=fitted_profile, true_x=None, true_y=None, true_name='True')
-
-    plt.show()

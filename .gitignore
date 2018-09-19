@@ -13,3 +13,6 @@ __pycache__
 *.pyc
 swmf/temp
 tests/artifacts
+tests/.cache
+tests/.pytest_cache/
+tests/stellarwinds_test_log.txt

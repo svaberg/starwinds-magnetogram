@@ -26,7 +26,7 @@ def main():
     ch.setLevel(args.log_level)
     log.addHandler(ch)
 
-    if (args.plot_type == 'lsd'):
+    if args.plot_type == 'lsd':
         plot_lsd.plot_lsd_a(args.input_file, skip_header=2)
         if args.output_file is None:
             plt.show()

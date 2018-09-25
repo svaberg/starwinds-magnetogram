@@ -35,10 +35,6 @@ def main():
     convert_magnetogram_file(args.input_file, args.output_file, power=args.power, degree_max=args.degree_max)
 
 
-if __name__ == "__main__":
-    main()
-
-
 def convert_magnetogram_file(input_file, output_name=None, power=1, degree_max=None):
         # Make an output file name if none was given
         if output_name is None:
@@ -52,3 +48,9 @@ def convert_magnetogram_file(input_file, output_name=None, power=1, degree_max=N
         coeffs.apply_scaling(cm.forward_conversion_factor, power)
 
         cm.write_magnetogram_file(coeffs, fname=output_name, degree_max=degree_max)
+
+
+if __name__ == "__main__":
+    main()
+
+

@@ -4,7 +4,7 @@
 import argparse
 import logging
 
-log = logging.getLogger('stellarwinds')
+log = logging.getLogger(__name__)
 
 from stellarwinds.magnetogram import convert_magnetogram as cm
 

@@ -1,7 +1,7 @@
 import argparse
 import logging
 
-log = logging.getLogger('stellarwinds')
+log = logging.getLogger(__name__)
 
 import matplotlib.pyplot as plt
 from stellarwinds.magnetogram import plot_lsd

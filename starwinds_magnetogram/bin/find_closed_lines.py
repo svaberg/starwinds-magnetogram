@@ -4,7 +4,7 @@
 import argparse
 import logging
 
-log = logging.getLogger('stellarwinds')
+log = logging.getLogger(__name__)
 
 from stellarwinds.hypercube_rejection import hypercube_rejection
 from stellarwinds.fibonacci_sphere import fibonacci_sphere

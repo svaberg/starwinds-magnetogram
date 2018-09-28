@@ -1,9 +1,5 @@
-# Note that tecplot does not load unless the DYLD_LIBRARY_PATH is set
-# DYLD_LIBRARY_PATH="/Applications/Tecplot 360 EX 2017 R1/Tecplot 360 EX 2017 R1.app/Contents/MacOS" python tecplot_tricks.py
-# Note also that tecplot interferes with the logging library, so that a specific logger must be instatiated.
 import argparse
 import logging
-
 log = logging.getLogger(__name__)
 
 from stellarwinds.hypercube_rejection import hypercube_rejection

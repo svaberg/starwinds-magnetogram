@@ -32,9 +32,19 @@ def main():
 
     import os
     os.environ['files'] = str(plt_files)
+
+
+    tecplot_macro_folder = os.path.abspath(os.path.join(os.path.dirname(__file__), "../../tecplot/"))
+
+    # print(tecplot_macro_folder)
+    # parent_of_parent_dir = os.path.join(current_file, '../../')
+
+    # print(os.path.dirname(os.path.realpath(__file__)))
+
+
     import tecplot as tp
-    tp.macro.execute_file("../../tecplot/plt-concatenate.mcr")
-    tp.macro.execute_file("../../tecplot/2d-animations.mcr")
+    tp.macro.execute_file(os.path.join(tecplot_macro_folder, "plt-concatenate.mcr"))
+    tp.macro.execute_file(os.path.join(tecplot_macro_folder, "2d-animations.mcr"))
 
 
 if __name__ == "__main__":

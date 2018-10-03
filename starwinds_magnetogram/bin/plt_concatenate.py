@@ -107,9 +107,22 @@ $!READDATASET  '%s'
     tp.macro.execute_command('$!Paper PaperSize = A4')
     tp.macro.execute_command('$!WorkspaceView FitPaper')
 
-    # Assign animation strands.
+    # Assign animation strands. Is intended to replace the macro code below.
+    # $!IF |NUMZONES| > 1
+    #   $!EXTENDEDCOMMAND
+    #     COMMANDPROCESSORID = 'Strand Editor'
+    #     COMMAND = 'ZoneSet=1-|NUMZONES|;AssignStrands=TRUE;StrandValue=1;AssignSolutionTime=TRUE;TimeValue=0;DeltaValue=1;TimeOption=ConstantDelta;'
+    # $!GLOBALTIME SOLUTIONTIME = |NUMZONES|
+    # $!ENDIF
     tp.macro.execute_extended_command(command_processor_id='Strand Editor',
-                                      command='ZoneSet=6,5,4,3,2,1;AssignStrands=TRUE;StrandValue=1;AssignSolutionTime=TRUE;TimeValue=0;DeltaValue=1;TimeOption=ConstantDelta;')
+                                      command='ZoneSet=1-%s;'
+                                              'AssignStrands=TRUE;'
+                                              'StrandValue=1;'
+                                              'AssignSolutionTime=TRUE;'
+                                              'TimeValue=0;'
+                                              'DeltaValue=1;'
+                                              'TimeOption=ConstantDelta;' % tp.active_frame().dataset.num_zones)
+
 
     # TODO assign last strand rather than first.
     tp.macro.execute_command('$!GlobalTime SolutionTime = 0')

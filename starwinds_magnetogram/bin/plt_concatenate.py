@@ -52,9 +52,15 @@ def wrap_brackets_in_brackets(str):
     return wrapped
 
 
-def log_vars():
-    for variable_id in range(tp.active_frame().dataset.num_variables):
-        log.debug("%4d: %s" % (variable_id, tp.active_frame().dataset.variable(variable_id)))
+def log_vars(one_liner=True):
+    if one_liner:
+        list_of_vars = []
+        for variable_id in range(tp.active_frame().dataset.num_variables):
+            list_of_vars.append("%d: %s" % (variable_id, tp.active_frame().dataset.variable(variable_id)))
+        log.debug("Variables: " + ", ".join(list_of_vars))
+    else:
+        for variable_id in range(tp.active_frame().dataset.num_variables):
+            log.debug("%4d: %s" % (variable_id, tp.active_frame().dataset.variable(variable_id)))
 
 
 def plt_concatenate(plt_files):
@@ -74,11 +80,12 @@ def plt_concatenate(plt_files):
     stellarwinds.tecplot.units.convert_variables_to_SI(tp.active_frame().dataset)
     log_vars()
 
-
+    #
+    # Calculate some variables.
+    #
     tp.data.operate.execute_equation(equation='{R [m]} = sqrt({X [m]}**2 + {Y [m]}**2 + {Z [m]}**2)')
     tp.data.operate.execute_equation(equation='{U [m/s]} = sqrt({U_x [m/s]}**2 + {U_y [m/s]}**2 + {U_z [m/s]}**2)')
     tp.data.operate.execute_equation(equation='{B [T]} = sqrt({B_x [T]}**2 + {B_y [T]}**2 + {B_z [T]}**2)')
-
     calculate_the_other_variables()
 
     log.debug("After calculations: Read %d variables:" % tp.active_frame().dataset.num_variables)

@@ -7,14 +7,15 @@ import shutil
 log = logging.getLogger(__name__)
 
 import stellarwinds.tecplot.units
+import stellarwinds.tecplot.streamtrace_rakes
 
 
 #
 # Main method. Use -h for usage and help.
 #
 def main():
-    parser = argparse.ArgumentParser(description='Carry out initial processing on SWMF results. Should be called '
-                                                 'after Preplot.')
+    parser = argparse.ArgumentParser(description='Carry out initial processing on SWMF results. '
+                                                 'Should be called after Preplot.')
     parser.add_argument('plt_file', type=argparse.FileType('r'), nargs='+',
                         help='TecPlot .plt files to join, '
                              'or glob pattern expanded by the shell (e.g. 3d__*.plt).')
@@ -36,6 +37,8 @@ def main():
     # Put together in a big file.
     plt_concatenate(plt_filenames)
 
+    plot_me()
+    quit()
     # Create some animations by running the 2d-animations.mcr script.
     # If the program ffmpeg is not found by TecPlot the animations cannot be created.
     if not os.path.exists('ffmpeg'):
@@ -157,6 +160,45 @@ def plt_concatenate(plt_files):
 
     tp.macro.execute_command('$!GlobalTime SolutionTime = %d' % tp.active_frame().dataset.num_zones)
 
+    macro = r"""
+    $!SLICELAYERS SHOW = YES
+    $!SLICEATTRIBUTES 1  CONTOUR{FLOODCOLORING = GROUP2}
+    $!SLICEATTRIBUTES 1  MESH{SHOW = YES}
+    $!SLICEATTRIBUTES 1  MESH{LINETHICKNESS = 0.02}
+
+    $!ISOSURFACELAYERS SHOW = YES
+    $!ISOSURFACEATTRIBUTES 1  ISOVALUE1 = 1
+    $!ISOSURFACEATTRIBUTES 1  CONTOUR{FLOODCOLORING = GROUP2}
+
+
+    #!
+    #! Some generic setup
+    #! 
+    $!INTERFACE ZONEBOUNDINGBOXMODE = OFF
+
+    $!THREEDVIEW VIEWERPOSITION{X = 300}
+    $!THREEDVIEW VIEWERPOSITION{Y = 0}
+    $!THREEDVIEW VIEWERPOSITION{Z = 0}
+    $!THREEDVIEW PSIANGLE = 90
+    $!THREEDVIEW THETAANGLE = -90
+
+    $!VIEW FIT
+      CONSIDERBLANKING = YES
+
+    $!ISOSURFACEATTRIBUTES 1  ISOVALUE1 = 1
+    $!ISOSURFACELAYERS SHOW = YES
+
+    $!PRINTSETUP PALETTE = COLOR
+    $!EXPORTSETUP EXPORTFORMAT = AVI
+    $!EXPORTSETUP IMAGEWIDTH = 1024
+    $!EXPORTSETUP USESUPERSAMPLEANTIALIASING = YES
+
+    #! $!SLICEATTRIBUTES 1  MESH{SHOW = YES}
+    $!SLICEATTRIBUTES 1  MESH{SHOW = NO}
+    $!SLICEATTRIBUTES 1  CONTOUR{CONTOURTYPE = AVERAGECELL}
+    """
+    tp.macro.execute_command(macro)
+
     tp.macro.execute_command('$!RedrawAll')
 
     # Save style sheet used later by 2d-animations.
@@ -233,6 +275,67 @@ def calculate_the_other_variables():
 # $!ALTERDATA
 #   EQUATION = '{ETKM [J/m^3]} = {ET [J/m^3]} + {EK [J/m^3]} + {EM [J/m^3]}'
 #
+
+def plot_me(var_name="ti [K]"):
+
+    var_id = tp.active_frame().dataset.variable(wrap_brackets_in_brackets(var_name)).index
+    log.debug("Variable %2d: %s" % (var_id, var_name))
+
+    tp.add_page()
+    tp.active_page().name = "PlotMe"
+
+    tp.active_frame().plot_type = tp.constant.PlotType.Cartesian3D
+
+    var_id = tp.active_frame().dataset.variable(wrap_brackets_in_brackets(var_name)).index
+    tp.active_frame().plot().contour(0).variable_index = var_id
+    tp.active_frame().plot().contour(0).levels.reset_to_nice(num_levels=11)
+
+
+    tp.active_frame().plot(tp.constant.PlotType.Cartesian3D).show_slices = True
+
+    tp.active_frame().plot().view.psi = 90
+    tp.active_frame().plot().view.theta = -90
+    tp.active_frame().plot().view.fit(consider_blanking=True)
+
+    tp.active_frame().plot().slice(0).contour.flood_contour_group_index = 0
+
+    tp.active_frame().plot(tp.constant.PlotType.Cartesian3D).vector.u_variable_index = 28
+    tp.active_frame().plot(tp.constant.PlotType.Cartesian3D).vector.v_variable_index = 5
+    tp.active_frame().plot(tp.constant.PlotType.Cartesian3D).vector.w_variable_index = 6
+
+    tp.active_frame().plot().show_streamtraces = True
+
+    tp.active_frame().plot().contour(0).colormap_name = 'Hot Metal'
+
+    tp.active_frame().plot().contour(0).colormap_filter.distribution = tp.constant.ColorMapDistribution.Banded
+    tp.active_frame().plot().contour(0).levels.reset_to_nice(num_levels=16)
+    tp.active_frame().plot().slice(0).contour.contour_type = tp.constant.ContourType.AverageCell
+
+    tp.active_frame().plot().streamtraces.delete_all()
+
+    stellarwinds.tecplot.streamtrace_rakes.add_circular_rake(64, 2, 'x', offset=0)
+
+    tp.active_frame().plot().streamtraces.color = tp.constant.Color.Custom12
+
+    tp.active_frame().plot().contour(0).labels.step = 2
+    tp.active_frame().plot().contour(0).legend.box.box_type = tp.constant.TextBox.Filled
+
+    try:
+        num_solution_times = tp.active_frame().plot().num_solution_times
+    except tp.exception.TecplotOutOfDateEngineError:
+        num_solution_times = 10
+
+    for solution_time in range(num_solution_times):
+        tp.macro.execute_command('$!GlobalTime SolutionTime = %d' % solution_time)
+
+        tp.export.save_png('plot_yz_ti_%03d.png' % solution_time,
+                           width=1024,
+                           region=tp.constant.ExportRegion.CurrentFrame,
+                           supersample=3,
+                           convert_to_256_colors=False)
+
+        tp.macro.execute_command('$!RedrawAll')
+
 
 if __name__ == "__main__":
     main()

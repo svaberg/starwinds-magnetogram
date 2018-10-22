@@ -28,12 +28,12 @@ def main():
                         const=logging.DEBUG, help='generate and log detailed debug output')
     args = parser.parse_args()
 
-    log.setLevel(args.log_level) #If the logging disappears look at the convert_magnetogram.py.
+    log.setLevel(args.log_level)  # If the logging disappears look at the convert_magnetogram.py.
     # ch = logging.StreamHandler()
     # ch.setLevel(args.log_level)
     # log.addHandler(ch)
 
-    # ArgumentParser files are of class _io.TextIOWrapper but we want strings.
+    # ArgumentParser files are of type _io.TextIOWrapper but we want strings.
     plt_filenames = [f.name for f in args.plt_file]
 
     # Put together in a big file.

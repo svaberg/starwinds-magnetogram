@@ -20,9 +20,9 @@ def main():
                         help='use hypercube rejection sampling to generate sphere points.')
     parser.add_argument('--keep-open-lines', dest='keep_open_lines', action='store_const',
                         const=True, default=False, help='retain the open field lines and store them in a separate zone')
-    parser.add_argument('--quiet', dest='log_level', action='store_const',
+    parser.add_argument('-q', '--quiet', dest='log_level', action='store_const',
                         const=logging.WARNING, default=logging.INFO, help='only log warnings and errors')
-    parser.add_argument('--debug', dest='log_level', action='store_const',
+    parser.add_argument('-v', '--verbose', dest='log_level', action='store_const',
                         const=logging.DEBUG, help='generate and log detailed debug output')
     args = parser.parse_args()
 

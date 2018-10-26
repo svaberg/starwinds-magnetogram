@@ -21,9 +21,9 @@ def main():
     parser.add_argument('--format-only', dest='power', action='store_const',
                         const=0, help='Convert file format but do not change coefficients')
     parser.add_argument('--degree_max', type=int, default=None, help='Pad magnetogram with zeros up to given degree')
-    parser.add_argument('--quiet', dest='log_level', action='store_const',
+    parser.add_argument('-q', '--quiet', dest='log_level', action='store_const',
                         const=logging.WARNING, default=logging.INFO, help='only log warnings and errors')
-    parser.add_argument('--debug', dest='log_level', action='store_const',
+    parser.add_argument('-v', '--verbose', dest='log_level', action='store_const',
                         const=logging.DEBUG, help='generate and log detailed debug output')
     args = parser.parse_args()
 

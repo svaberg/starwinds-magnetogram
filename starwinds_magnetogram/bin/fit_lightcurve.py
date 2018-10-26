@@ -22,9 +22,9 @@ def main():
     parser.add_argument('input_file', type=str, help='input LSD file')
     parser.add_argument('output_file', type=str, nargs='?', help='output image file')
 
-    parser.add_argument('--quiet', dest='log_level', action='store_const',
+    parser.add_argument('-q', '--quiet', dest='log_level', action='store_const',
                         const=logging.WARNING, default=logging.INFO, help='only log warnings and errors')
-    parser.add_argument('--debug', dest='log_level', action='store_const',
+    parser.add_argument('-v', '--verbose', dest='log_level', action='store_const',
                         const=logging.DEBUG, help='generate and log detailed debug output')
     args = parser.parse_args()
 

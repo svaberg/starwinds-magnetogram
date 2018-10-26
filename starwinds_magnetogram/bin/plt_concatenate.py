@@ -22,9 +22,9 @@ def main():
                         help='TecPlot .plt files to join, '
                              'or glob pattern expanded by the shell (e.g. 3d__*.plt).')
     # parser.add_argument('--output', type=str, help='Specify the output layout file name')
-    parser.add_argument('--quiet', dest='log_level', action='store_const',
+    parser.add_argument('-q', '--quiet', dest='log_level', action='store_const',
                         const=logging.WARNING, default=logging.INFO, help='only log warnings and errors')
-    parser.add_argument('--debug', dest='log_level', action='store_const',
+    parser.add_argument('-v', '--verbose', dest='log_level', action='store_const',
                         const=logging.DEBUG, help='generate and log detailed debug output')
     args = parser.parse_args()
 

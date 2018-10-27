@@ -19,7 +19,7 @@ def main():
     parser = argparse.ArgumentParser(description='Carry out initial processing on SWMF results. '
                                                  'Should be called after Preplot.')
     parser.add_argument('plt_file', type=argparse.FileType('r'), nargs='+',
-                        help='TecPlot .plt files to join, '
+                        help='Tecplot .plt files to join, '
                              'or glob pattern expanded by the shell (e.g. 3d__*.plt).')
     # parser.add_argument('--output', type=str, help='Specify the output layout file name')
     parser.add_argument('-q', '--quiet', dest='log_level', action='store_const',
@@ -43,7 +43,7 @@ def main():
     plot_me("te [K]")
     quit()
     # Create some animations by running the 2d-animations.mcr script.
-    # If the program ffmpeg is not found by TecPlot the animations cannot be created.
+    # If the program ffmpeg is not found by Tecplot the animations cannot be created.
     if not os.path.exists('ffmpeg'):
         ffmpeg_path = shutil.which('ffmpeg')
         os.symlink(ffmpeg_path, 'ffmpeg')
@@ -78,7 +78,7 @@ def plt_concatenate(plt_files):
     stellarwinds.tecplot.derived_variables.log_vars()
 
     #
-    # Set contour values. Most interesting to see scalar quantities. There are 8 contour value slots in TecPlot.
+    # Set contour values. Most interesting to see scalar quantities. There are 8 contour value slots in Tecplot.
     #
     contour_vars = ["R [m]",
                     "U [m/s]",

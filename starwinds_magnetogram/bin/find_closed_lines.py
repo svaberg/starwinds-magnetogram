@@ -11,7 +11,7 @@ from stellarwinds.tecplot import find_closed_fieldlines
 # Main method. Use -h for usage and help.
 #
 def main():
-    parser = argparse.ArgumentParser(description='Find closed field lines in a TecPlot layout.')
+    parser = argparse.ArgumentParser(description='Find closed field lines in a Tecplot layout.')
     parser.add_argument('input_layout', type=str, help='the input  layout file')
     parser.add_argument('output_layout', type=str, nargs='?', help='the output layout file')
     parser.add_argument('--candidates', type=int, default=512, help='number of candidate field lines to consider')

@@ -108,6 +108,8 @@ class PseudoVoigt(Voigt):
     not normalised
     """
     def __init__(self, sigma, gamma):
+        assert(gamma > 0)
+        assert(sigma > 0)
         self.gaussian = Gaussian(sigma)
         self.lorentzian = Lorentzian(gamma)
         self.eta = self.calculate_eta()
@@ -122,7 +124,7 @@ class PseudoVoigt(Voigt):
         f5 += 4.47163 * f_G ** 2 * f_L ** 3
         f5 += 0.07842 * f_G ** 1 * f_L ** 4
         f5 += f_L ** 5
-        f = f5 ** (1 / 5)
+        f = f5 ** (1.0 / 5.0)
 
         fLf = f_L / f
         return 1.36603 * fLf - 0.47719 * fLf ** 2 + 0.11116 * fLf ** 3

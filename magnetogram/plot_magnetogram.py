@@ -152,7 +152,9 @@ def evaluate_real_magnetogram_stanford_pfss(
 
         field_radial    -= unscaled_radial
         field_polar     -= unscaled_polar / radius
-        field_azimuthal -= unscaled_azimuthal / (radius * np.sin(points_polar))
+        field_azimuthal -= np.divide(unscaled_azimuthal, radius * np.sin(points_polar),
+                                     out=np.zeros_like(field_azimuthal),
+                                     where=unscaled_azimuthal != 0)
 
     return field_radial, field_polar, field_azimuthal
 

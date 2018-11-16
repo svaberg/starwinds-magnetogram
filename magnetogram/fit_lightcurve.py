@@ -13,7 +13,7 @@ log = logging.getLogger(__name__)
 
 def fit(x, y, profile, absorbtion=True, guess=None):
 
-    def logme(names, values, errors=None):
+    def logme(names, values, errors=None):  # TODO fix this shadowing
         if errors is None:
             errors = [0.0]*len(values)
 

@@ -5,7 +5,129 @@ import logging
 log = logging.getLogger(__name__)
 
 
+class LehmannZdi:
+    """
+    Reference implementation based on Lehmann et al 2018. Not optimized.
+    Produces same plots as Folsom (2016, 2018) except that the sign of
+    the polar and azimuthal components is always (?) reversed.
+    """
+    def __init__(self, degrees_l, orders_m, alpha_lm, beta_lm, gamma_lm):
+        self.degrees_l = degrees_l
+        self.orders_m = orders_m
+        self.alpha = alpha_lm
+        self.beta = beta_lm
+        self.gamma = gamma_lm
+
+        c_lm2 = (
+                (2 * degrees_l + 1)
+                / (4 * np.pi)
+                * sp.special.factorial(degrees_l - orders_m)
+                / sp.special.factorial(degrees_l + orders_m)
+        )
+
+        self.c_lm = np.sqrt(c_lm2)
+
+    def get_radial_field(self, points_polar, points_azimuth,
+                         radius=None,  # Not used
+                         r0=1,   # Not used
+                         rss=3):  # Not used
+        # if radius is None:
+        #     radius = r0
+        field_radial = np.zeros_like(points_azimuth, dtype=complex)
+
+        for deg_l, ord_m, a_lm, c_lm in zip(self.degrees_l, self.orders_m, self.alpha, self.c_lm):
+            p_lm = sp.special.lpmv(ord_m, deg_l, np.cos(points_polar))
+            field_radial += (a_lm
+                             * c_lm
+                             * p_lm
+                             * np.exp(1.0j * ord_m * points_azimuth)
+                             )
+
+        return field_radial
+
+    def get_polar_poloidal_field(self, points_polar, points_azimuth):
+
+        field_polar_poloidal = np.zeros_like(points_azimuth, dtype=complex)
+
+        for deg_l, ord_m, b_lm, c_lm in zip(self.degrees_l, self.orders_m, self.beta, self.c_lm):
+            p_lm = sp.special.lpmv(ord_m, deg_l, np.cos(points_polar))
+            field_polar_poloidal -= (b_lm
+                                     * c_lm
+                                     * p_lm
+                                     * 1.0j * ord_m * np.exp(1.0j * ord_m * points_azimuth)
+                                     / (deg_l + 1)
+                                     / np.sin(points_polar)
+                                     )
+
+        return field_polar_poloidal
+
+    def get_polar_toroidal_field(self, points_polar, points_azimuth):
+
+        field_polar_toroidal = np.zeros_like(points_azimuth, dtype=complex)
+
+        for deg_l, ord_m, g_lm, c_lm in zip(self.degrees_l, self.orders_m, self.gamma, self.c_lm):
+            p_lm = sp.special.lpmv(ord_m, deg_l, np.cos(points_polar))
+            DPml = (p_lm - np.roll(p_lm, 1)) / (np.cos(points_polar) - np.roll(np.cos(points_polar), 1)) * np.sin(
+                points_polar)
+
+            field_polar_toroidal += (g_lm
+                                     * c_lm
+                                     / (deg_l + 1)
+                                     * DPml
+                                     * np.exp(1.0j * ord_m * points_azimuth)
+                                     )
+
+        return field_polar_toroidal
+
+    def get_polar_field(self, points_polar, points_azimuth):
+        return (
+                self.get_polar_poloidal_field(points_polar, points_azimuth)
+                + self.get_polar_toroidal_field(points_polar, points_azimuth)
+                )
+
+    def get_azimuthal_poloidal_field(self, points_polar, points_azimuth):
+
+        field_azimuthal_poloidal = np.zeros_like(points_azimuth, dtype=complex)
+
+        for deg_l, ord_m, b_lm, c_lm in zip(self.degrees_l, self.orders_m, self.beta, self.c_lm):
+            p_lm = sp.special.lpmv(ord_m, deg_l, np.cos(points_polar))
+            DPml = (p_lm - np.roll(p_lm, 1)) / (np.cos(points_polar) - np.roll(np.cos(points_polar), 1)) * np.sin(
+                points_polar)
+
+            field_azimuthal_poloidal += (b_lm
+                                     * c_lm
+                                     / (deg_l + 1)
+                                     * DPml
+                                     * np.exp(1.0j * ord_m * points_azimuth)
+                                     )
+
+        return field_azimuthal_poloidal
+
+    def get_azimuthal_toroidal_field(self, points_polar, points_azimuth):
+
+        field_azimuthal_toroidal = np.zeros_like(points_azimuth, dtype=complex)
+
+        for deg_l, ord_m, g_lm, c_lm in zip(self.degrees_l, self.orders_m, self.gamma, self.c_lm):
+            p_lm = sp.special.lpmv(ord_m, deg_l, np.cos(points_polar))
+            field_azimuthal_toroidal += (g_lm
+                                     * c_lm
+                                     * p_lm
+                                     * 1.0j * ord_m * np.exp(1.0j * ord_m * points_azimuth)
+                                     / (deg_l + 1)
+                                     / np.sin(points_polar)
+                                     )
+
+        return field_azimuthal_toroidal
+
+    def get_azimuthal_field(self, points_polar, points_azimuth):
+        return (
+                self.get_azimuthal_poloidal_field(points_polar, points_azimuth)
+                + self.get_azimuthal_toroidal_field(points_polar, points_azimuth)
+                )
+
+
 # Evaluate spherical harmonics for on a polar, azimuthal grid)
+# TODO which reference implementation is this? Do we even have a reference implementation?
 def evaluate_real_magnetogram_stanford_pfss_reference(degree_l, order_m, cosine_coefficients_g, sine_coefficients_h,
                                                       points_polar, points_azimuth, radius=None, r0=1, rss=3):
     if radius is None:

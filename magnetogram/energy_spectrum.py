@@ -101,8 +101,11 @@ def spectrum_plot(coefficient_file,
     if ax is None:
         fig, ax = plt.subplots()
 
-    # TODO this code is dumb
     coeffs = convert_magnetogram.read_magnetogram_file(coefficient_file)
+    # Only using radial coefficients
+    coeffs = coeffs[0]
+
+    # TODO this code is dumb
     degree_l = []
     order_m = []
     g_lm = []

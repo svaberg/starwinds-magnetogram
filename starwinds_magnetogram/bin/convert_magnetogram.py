@@ -45,9 +45,9 @@ def convert_magnetogram_file(input_file, output_name=None, power=1, degree_max=N
         # Read input file
         coeffs = cm.read_magnetogram_file(input_file)
 
-        coeffs.apply_scaling(cm.forward_conversion_factor, power)
+        coeffs[0].apply_scaling(cm.forward_conversion_factor, power)
 
-        cm.write_magnetogram_file(coeffs, fname=output_name, degree_max=degree_max)
+        cm.write_magnetogram_file(coeffs[0], fname=output_name, degree_max=degree_max)
 
 
 if __name__ == "__main__":

@@ -51,8 +51,26 @@ class SphericalHarmonicsCoefficients(object):
                 yield key, self.coefficients[key]
         return iterator()
 
+    def as_zdi(self):
+        """ Feel free to improve"""
 
-def read_magnetogram_file(fname):
+        degrees = []
+        orders = []
+
+        for degree in range(0, self.degree_max() + 1):
+            for order in range(0, degree + 1):
+                degrees.append(degree)
+                orders.append(order)
+
+        coeffs = np.zeros((len(degrees), len(self._default_coefficients)))
+        for row_id in range(len(degrees)):
+                coeffs[row_id] = self.get(degrees[row_id], orders[row_id])
+
+        return np.asarray(degrees), np.asarray(orders), coeffs
+
+
+# TODO small change here to return 3 shparm objects
+def read_magnetogram_file(fname, types=("radial",)):
     """
     Read zdipy magnetogram file.
     :return:
@@ -75,33 +93,41 @@ def read_magnetogram_file(fname):
         # Remove whitespace characters like `\n` at the end of each line
         magnetogram_file_lines = [x.strip() for x in magnetogram_file_lines]
 
-    header_lines = []
 
-    coeffs = SphericalHarmonicsCoefficients(np.array([0.0, 0.0]))
+    full_coeffs = []
+    line_offset = 0
 
-    for line in magnetogram_file_lines:
-        try:
-            line_tokens = line.split()
-            coeffs.append(int(line_tokens[0]),
-                          int(line_tokens[1]),
-                          np.array([float(line_tokens[2]), float(line_tokens[3])]))
-            log.debug("Read coefficient line %d: \"%s\"" % (coeffs.size() + 1, line))
-        except:
-            if coeffs.size() == 0:
-                log.debug("Read header line: %d: \"%s\"" % (len(header_lines), line))
-                header_lines.append(line)
-            else:
-                log.debug("Read non-coefficient line \"%s\", finished reading." % line)
-                break
+    for coeffs_types in types:
+        header_lines = []
 
-    log.info("Read %d header lines and %d radial coefficient lines." % (len(header_lines), coeffs.size()))
-    log.debug("l\tm\tg_lm\th_lm")
-    for coeff in coeffs.contents():
-        log.debug("%d\t%d\t%e\t%e" % (coeff[0][0],coeff[0][1],coeff[1][0],coeff[1][1]))
+        coeffs = SphericalHarmonicsCoefficients(np.array([0.0, 0.0]))
+
+        for __line_id, line in enumerate(magnetogram_file_lines[line_offset:]):
+            line_no = __line_id + line_offset
+            try:
+                line_tokens = line.split()
+                coeffs.append(int(line_tokens[0]),
+                              int(line_tokens[1]),
+                              np.array([float(line_tokens[2]), float(line_tokens[3])]))
+                log.debug("Read coefficient line %d: \"%s\"" % (line_no, line))
+            except:
+                if coeffs.size() == 0:
+                    log.debug("Read header line: %d: \"%s\"" % (len(header_lines), line))
+                    header_lines.append(line)
+                else:
+                    log.debug("Read non-coefficient line \"%s\", finished reading %s." % (line, coeffs_types))
+                    line_offset = line_no
+                    break
+
+        log.info("Read %d header lines and %d %s coefficient lines." % (len(header_lines), coeffs.size(), coeffs_types))
+        log.debug("l\tm\tg_lm\th_lm")
+        # for coeff in coeffs.contents():
+        #     log.debug("%d\t%d\t%e\t%e" % (coeff[0][0],coeff[0][1],coeff[1][0],coeff[1][1]))
+
+        full_coeffs.append(coeffs)
 
     log.info("Finished reading magnetogram file \"%s\"." % fname)
-
-    return coeffs
+    return full_coeffs
 
 
 def write_magnetogram_file(coeffs, fname="test_field_wso.dat", degree_max=None):

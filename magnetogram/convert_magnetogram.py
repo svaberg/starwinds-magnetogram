@@ -68,6 +68,21 @@ class SphericalHarmonicsCoefficients(object):
 
         return np.asarray(degrees), np.asarray(orders), coeffs
 
+    # TODO work in progress
+    # start just with total energy in the radial field components
+    # should (?) be the same for the poloidal and toroidal components though.
+    def energy(self):
+
+        _energy = 0
+        for (degree, order), c in self.contents():
+            complex = c[0] + 1j*c[1]
+
+            _energy += np.real(complex * np.conj(complex)) / (2 * degree + 1)
+
+            print(degree, order, complex, _energy)
+
+        return _energy
+
 
 # TODO small change here to return 3 shparm objects
 def read_magnetogram_file(fname, types=("radial",)):

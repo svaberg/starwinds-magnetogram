@@ -13,17 +13,18 @@ class LehmannZdi:
     the polar and azimuthal components is always (?) reversed.
     """
     def __init__(self, degrees_l, orders_m, alpha_lm, beta_lm, gamma_lm):
-        self.degrees_l = degrees_l
-        self.orders_m = orders_m
-        self.alpha = alpha_lm
-        self.beta = beta_lm
-        self.gamma = gamma_lm
+        self.degrees_l = np.atleast_1d(degrees_l)
+        self.orders_m = np.atleast_1d(orders_m)
+        self.alpha = np.atleast_1d(alpha_lm)
+        self.beta = np.atleast_1d(beta_lm)
+        self.gamma = np.atleast_1d(gamma_lm)
 
+        # Calculate c_lm as described in article.
         c_lm2 = (
-                (2 * degrees_l + 1)
+                (2 * self.degrees_l + 1)
                 / (4 * np.pi)
-                * sp.special.factorial(degrees_l - orders_m)
-                / sp.special.factorial(degrees_l + orders_m)
+                * sp.special.factorial(self.degrees_l - self.orders_m)
+                / sp.special.factorial(self.degrees_l + self.orders_m)
         )
 
         self.c_lm = np.sqrt(c_lm2)
@@ -45,7 +46,7 @@ class LehmannZdi:
                                       * np.exp(1.0j * ord_m * points_azimuth)
                                       )
 
-        return field_radial_poloidal
+        return np.real(field_radial_poloidal)
 
     def get_radial_toroidal_field(self, points_polar, points_azimuth):
         """
@@ -57,7 +58,7 @@ class LehmannZdi:
         """
         field_radial_toroidal = np.zeros_like(points_azimuth, dtype=complex)
 
-        return field_radial_toroidal
+        return np.real(field_radial_toroidal)
 
     def get_radial_field(self, points_polar, points_azimuth):
         """
@@ -90,7 +91,7 @@ class LehmannZdi:
                                      / np.sin(points_polar)
                                      )
 
-        return field_polar_poloidal
+        return np.real(field_polar_poloidal)
 
     def get_polar_toroidal_field(self, points_polar, points_azimuth):
         """
@@ -113,7 +114,7 @@ class LehmannZdi:
                                      * np.exp(1.0j * ord_m * points_azimuth)
                                      )
 
-        return field_polar_toroidal
+        return np.real(field_polar_toroidal)
 
     def get_polar_field(self, points_polar, points_azimuth):
         """
@@ -148,7 +149,7 @@ class LehmannZdi:
                                          * np.exp(1.0j * ord_m * points_azimuth)
                                          )
 
-        return field_azimuthal_poloidal
+        return np.real(field_azimuthal_poloidal)
 
     def get_azimuthal_toroidal_field(self, points_polar, points_azimuth):
         """
@@ -169,7 +170,7 @@ class LehmannZdi:
                                          / np.sin(points_polar)
                                          )
 
-        return field_azimuthal_toroidal
+        return np.real(field_azimuthal_toroidal)
 
     def get_azimuthal_field(self, points_polar, points_azimuth):
         """
@@ -197,5 +198,4 @@ class LehmannZdi:
         field_azimuthal = self.get_azimuthal_field(points_polar, points_azimuth)
 
         # Take real values?
-        field_strength = np.real((field_radial**2 + field_polar**2 + field_azimuthal**2)**.5)
-        return field_strength
+        return (field_radial**2 + field_polar**2 + field_azimuthal**2)**.5

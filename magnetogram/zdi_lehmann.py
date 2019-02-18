@@ -13,6 +13,14 @@ class LehmannZdi:
     the polar and azimuthal components is always (?) reversed.
     """
     def __init__(self, degrees_l, orders_m, alpha_lm, beta_lm, gamma_lm):
+        """
+        Construct from coefficients.
+        :param degrees_l: Array of degree indices
+        :param orders_m:  Array of order indices
+        :param alpha_lm: Array of complex $\alpha$ coefficients
+        :param beta_lm:  Array of complex $\beta$ coefficients
+        :param gamma_lm: Array of complex $\gamma$ coefficients
+        """
         self.degrees_l = np.atleast_1d(degrees_l)
         self.orders_m = np.atleast_1d(orders_m)
         self.alpha = np.atleast_1d(alpha_lm)

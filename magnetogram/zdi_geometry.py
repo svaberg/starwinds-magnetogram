@@ -7,8 +7,18 @@ import stellarwinds.tecplot.coordinate_transforms
 
 class ZdiGeometry:
     def __init__(self,
-                 polar_corners=np.linspace(0, np.pi, 32+1),
-                 azimuthal_corners=np.linspace(0, 2*np.pi, 64+1)):
+                 polar_corners=None,
+                 azimuthal_corners=None):
+
+        if type(polar_corners) is int and type(azimuthal_corners) is int:
+            polar_corners = np.linspace(0, np.pi, polar_corners)
+            azimuthal_corners = np.linspace(0, 2 * np.pi, azimuthal_corners)
+        elif type(polar_corners) is int and azimuthal_corners is None:
+            polar_corners = np.linspace(0, np.pi, polar_corners)
+            azimuthal_corners = np.linspace(0, 2 * np.pi, 2 * len(polar_corners))
+        elif polar_corners is None and azimuthal_corners is None:
+            polar_corners = np.linspace(0, np.pi, 32 + 1)
+            azimuthal_corners = np.linspace(0, 2 * np.pi, 64 + 1)
 
         # Only go around once.
         assert(np.abs(np.max(polar_corners) - np.min(polar_corners)) <= np.pi)
@@ -56,4 +66,45 @@ class ZdiGeometry:
                 azimuthal_centers)
 
         return x_centers, y_centers, z_centers
+
+
+def numerical_description(geometry, zdi):
+    """
+    Describe field by numerically evaluating it at a set of points, then taking sums and
+    averages.
+    :param geometry:
+    :param zdi:
+    :return:
+    """
+
+    def describe(name, values):
+        log.info("Describing %s component." %  name)
+        abs_max_indices = np.unravel_index(np.argmax(np.abs(values), axis=None), values.shape)
+        abs_max_polar = geometry.centers()[0][abs_max_indices]
+        abs_max_azimuth = geometry.centers()[1][abs_max_indices]
+        abs_max = values[abs_max_indices]
+
+        mean = np.sum(values * geometry.areas()) / (4 * np.pi)
+        abs_mean = np.sum(np.abs(values) * geometry.areas()) / (4 * np.pi)
+
+        log.info("|B|_max = %4.4g Gauss" % (abs_max))
+        log.info("|B|_max at az=%2.2f deg, pl=%3.2f deg" % (np.rad2deg(abs_max_azimuth),
+                                                            np.rad2deg(abs_max_polar)))
+        log.info("|B|_mean = %4.4g Gauss" % abs_mean)
+
+    _dict = zdi.get_all()
+
+    accumulated_strength_squared = np.zeros_like(geometry.centers()[0])
+    for key_0, value_0 in _dict.items():
+        accumulated_component = np.zeros_like(geometry.centers()[0])
+        for key_1, method_1 in value_0.items():
+            values_1 = method_1(*geometry.centers())
+            describe(key_0 + "-" + key_1, values_1)
+            accumulated_component += values_1
+
+        describe(key_0, accumulated_component)
+
+        accumulated_strength_squared += accumulated_component ** 2
+
+    describe("field strength", accumulated_strength_squared**.5)
 

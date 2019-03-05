@@ -134,14 +134,14 @@ def read_magnetogram_file(fname, types=("radial",)):
                     line_offset = line_no
                     break
 
-        log.info("Read %d header lines and %d %s coefficient lines." % (len(header_lines), coeffs.size(), coeffs_types))
+        log.debug("Read %d header lines and %d %s coefficient lines." % (len(header_lines), coeffs.size(), coeffs_types))
         log.debug("l\tm\tg_lm\th_lm")
         # for coeff in coeffs.contents():
         #     log.debug("%d\t%d\t%e\t%e" % (coeff[0][0],coeff[0][1],coeff[1][0],coeff[1][1]))
 
         full_coeffs.append(coeffs)
 
-    log.info("Finished reading magnetogram file \"%s\"." % fname)
+    log.debug("Finished reading magnetogram file \"%s\"." % fname)
     return full_coeffs
 
 

@@ -9,10 +9,14 @@ log = logging.getLogger(__name__)
 class LehmannZdi:
     """
     Reference implementation based on equation 5 in Lehmann et al. (2018).
-    Produces same plots as in Folsom (2016, 2018) except that the sign of
+    Produces same plots as Folsom (2016, 2018) except that the sign of
     the polar and azimuthal components is always (?) reversed.
     """
-    def __init__(self, degrees_l, orders_m, alpha_lm, beta_lm, gamma_lm):
+    def __init__(self,
+                 degrees_l, orders_m,
+                 alpha_lm, beta_lm, gamma_lm,
+                 dpml_method="gradient",  # For testing
+                 ):
         """
         Construct from coefficients.
         :param degrees_l: Array of degree indices
@@ -36,6 +40,8 @@ class LehmannZdi:
         )
 
         self.c_lm = np.sqrt(c_lm2)
+
+        self._dpml_method = dpml_method
 
     def get_radial_poloidal_field(self, points_polar, points_azimuth):
         """
@@ -112,8 +118,7 @@ class LehmannZdi:
 
         for deg_l, ord_m, g_lm, c_lm in zip(self.degrees_l, self.orders_m, self.gamma, self.c_lm):
             p_lm = sp.special.lpmv(ord_m, deg_l, np.cos(points_polar))
-            DPml = (p_lm - np.roll(p_lm, 1)) / (np.cos(points_polar) - np.roll(np.cos(points_polar), 1)) * np.sin(
-                points_polar)
+            DPml = self._dpml(p_lm, points_polar)
 
             field_polar_toroidal += (g_lm
                                      * c_lm
@@ -147,8 +152,7 @@ class LehmannZdi:
 
         for deg_l, ord_m, b_lm, c_lm in zip(self.degrees_l, self.orders_m, self.beta, self.c_lm):
             p_lm = sp.special.lpmv(ord_m, deg_l, np.cos(points_polar))
-            DPml = (p_lm - np.roll(p_lm, 1)) / (np.cos(points_polar) - np.roll(np.cos(points_polar), 1)) * np.sin(
-                points_polar)
+            DPml = self._dpml(p_lm, points_polar)
 
             field_azimuthal_poloidal += (b_lm
                                          * c_lm
@@ -207,3 +211,54 @@ class LehmannZdi:
 
         # Take real values?
         return (field_radial**2 + field_polar**2 + field_azimuthal**2)**.5
+
+    def get_all(self):
+        """
+        Get all the things in a dictionary.
+        :param points_polar:
+        :param points_azimuth:
+        :return:
+        """
+        _dict = {}
+        _dict["radial"] = {"poloidal": self.get_radial_poloidal_field,}
+                        #  "toroidal": self.get_radial_toroidal_field}  # This component is always zero, see definition
+        _dict["radial"] = {"poloidal": self.get_radial_poloidal_field,
+                           "toroidal": self.get_radial_toroidal_field}
+        _dict["polar"] = {"poloidal": self.get_polar_poloidal_field,
+                          "toroidal": self.get_polar_toroidal_field}
+        _dict["azimuthal"] = {"poloidal": self.get_azimuthal_poloidal_field,
+                              "toroidal": self.get_azimuthal_toroidal_field}
+
+        return _dict
+
+    def _dpml(self, p_lm, points_polar):
+        """
+        Derivative delta p_lm / delta points_polar
+        :param p_lm:
+        :param points_polar:
+        :return:
+        """
+        if self._dpml_method == "roll":
+            # Dumb implementation
+            # Use chain rule
+            # d P(cos(theta)) / d theta = d P / du * du / d theta
+            DPml = (p_lm - np.roll(p_lm, 1)) / (np.cos(points_polar) - np.roll(np.cos(points_polar), 1)) * np.sin(
+                points_polar)
+
+            return DPml
+
+        elif self._dpml_method == "roll2":
+            # More descriptive implementation
+            dp = p_lm - np.roll(p_lm, 1)
+            du = np.cos(points_polar) - np.roll(np.cos(points_polar), 1)
+            du_dtheta = np.sin(points_polar)
+
+            return (dp / du) * du_dtheta
+
+        else:
+            dp_du = np.gradient(p_lm, np.cos(points_polar[0, :]), axis=1)
+            du_dtheta = np.sin(points_polar)
+
+            return dp_du * du_dtheta
+
+

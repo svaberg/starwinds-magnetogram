@@ -43,6 +43,13 @@ class LehmannZdi:
 
         self._dpml_method = dpml_method
 
+    def degree(self):
+        """
+        Degree of spherical harmonics
+        :return:
+        """
+        return np.max(self.degrees_l)
+
     def get_radial_poloidal_field(self, points_polar, points_azimuth):
         """
         Get the radial component of the poloidal field $B_{r, pol}$.
@@ -231,6 +238,81 @@ class LehmannZdi:
 
         return _dict
 
+    def as_dipole(self):
+
+        return self.as_restricted(degree_l_range=(0, 1))
+
+    def as_restricted(self, degree_l_range=(0, 1000), order_m_range=(0, 1000)):
+
+        degree_l_range = tuple(np.atleast_1d(degree_l_range))
+        order_m_range = tuple(np.atleast_1d(order_m_range))
+
+        if len(degree_l_range) == 1:
+            degree_l_range = degree_l_range*2
+
+        if len(order_m_range) == 1:
+            order_m_range = order_m_range*2
+
+        good_indices = np.asarray((degree_l_range[0] <= self.degrees_l) &
+                                (degree_l_range[1] >= self.degrees_l) &
+                                (order_m_range[0] <= self.orders_m) &
+                                (order_m_range[1] >= self.orders_m)).nonzero()[0]  # Returns a tuple; take element 0.
+
+        new_args = [arg[good_indices] for arg in (self.degrees_l,
+                                                  self.orders_m,
+                                                  self.alpha,
+                                                  self.beta,
+                                                  self.gamma)]
+
+        log.info("Retaining %d coefficients" % len(good_indices))
+
+        return LehmannZdi(*new_args, self._dpml_method)
+
+    def energy(self):
+        """
+        Assume units are Gauss
+        :return:
+        """
+
+        # First calculate energy associated with each coefficient
+        lTerm = self.degrees_l / (self.degrees_l + 1)
+        m0mask = np.zeros_like(self.alpha)
+        for i in range(len(self.alpha)):
+            if self.orders_m[i] == 0:
+                m0mask[i] = 1
+
+        def _energy_helper(complex_coeff):
+            Es = 0.5 * complex_coeff * np.conj(complex_coeff)
+            M0s = m0mask * 0.25 * (complex_coeff ** 2 + np.conj(complex_coeff) ** 2)
+
+            return np.real(Es + M0s)
+
+        energy_alpha = _energy_helper(self.alpha)
+        energy_beta = _energy_helper(self.beta)
+        energy_gamma = _energy_helper(self.gamma)
+
+        total_energy = np.sum(energy_alpha) + np.sum(energy_beta) + np.sum(energy_gamma)
+        total_energy_poloidal = np.sum(energy_alpha) + np.sum(energy_beta)
+        total_energy_toroidal = np.sum(energy_gamma)
+        # print 'totalE ', totE, '(B^2)'
+        print('radial  {:7.3%} (% tot)'.format(np.sum(energy_alpha) / total_energy))
+        print('poloidal {:7.3%} (% tot)'.format(total_energy_poloidal / total_energy))
+        print('toroidal {:7.3%} (% tot)'.format(total_energy_toroidal / total_energy))
+
+        print ('Fraction of magnetic energy in each component')
+        print ('This can be summed, and should sum to 1.')
+        print ('l   m    E(alpha)   E(beta)    E(gamma)')
+        for i in range(len(self.alpha)):
+            print('%2i %2i %10.5f %10.5f %10.5f' % (self.degrees_l[i],
+                                                    self.orders_m[i],
+                                                    energy_alpha[i] / total_energy,
+                                                    energy_beta[i] / total_energy,
+                                                    energy_gamma[i] / total_energy))
+
+
+
+        return energy_alpha, energy_beta, energy_gamma
+
     def _dpml(self, p_lm, points_polar):
         """
         Derivative delta p_lm / delta points_polar
@@ -260,5 +342,3 @@ class LehmannZdi:
             du_dtheta = np.sin(points_polar)
 
             return dp_du * du_dtheta
-
-

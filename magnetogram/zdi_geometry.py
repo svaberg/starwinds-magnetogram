@@ -2,7 +2,7 @@ import numpy as np
 import logging
 log = logging.getLogger(__name__)
 
-import stellarwinds.tecplot.coordinate_transforms
+import stellarwinds.coordinate_transforms
 
 
 class ZdiGeometry:
@@ -50,7 +50,7 @@ class ZdiGeometry:
 
     def corners_cartesian(self):
         x_corners, y_corners, z_corners = \
-            stellarwinds.tecplot.coordinate_transforms._rectangular_coordinates_from_spherical(
+            stellarwinds.coordinate_transforms.rectangular_coordinates_from_spherical(
                 np.ones(self.polar_corners.shape),
                 self.polar_corners,
                 self.azimuthal_corners)
@@ -60,7 +60,7 @@ class ZdiGeometry:
     def centers_cartesian(self):
         polar_centers, azimuthal_centers = self.centers()
         x_centers, y_centers, z_centers = \
-            stellarwinds.tecplot.coordinate_transforms._rectangular_coordinates_from_spherical(
+            stellarwinds.coordinate_transforms.rectangular_coordinates_from_spherical(
                 np.ones(polar_centers.shape),
                 polar_centers,
                 azimuthal_centers)

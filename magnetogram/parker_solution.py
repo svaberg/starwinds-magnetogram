@@ -51,6 +51,23 @@ def find_parker_analytic(radius_dimensionless, all_sols=False):
         return w[0], w[1]
 
 
+def parker_sonic_point(
+        coronal_temperature=1.5e6,
+        coronal_base_density=1.5e14 * scipy.constants.proton_mass,
+        stellar_radius=6.95510e8,
+        stellar_mass=1.989e30):
+    G = scipy.constants.gravitational_constant  # Nm2/kg2 (gravitational constant)
+    proton_mass = scipy.constants.proton_mass  # 1.67e-27 kg (proton mass)
+    k_B = scipy.constants.Boltzmann  # J/K (Boltzmann's constant)
+
+    radius_sonic = G * stellar_mass * proton_mass / (4 * coronal_temperature * k_B)
+    speed_sonic = np.sqrt(2 * k_B * coronal_temperature / proton_mass)
+
+    speed_surface, _, _ = parker_speed(stellar_radius, coronal_temperature, stellar_mass)
+    density_sonic = coronal_base_density * (radius_sonic / stellar_radius) ** -2 * (speed_sonic / speed_surface) ** -1
+    return radius_sonic, speed_sonic, density_sonic
+
+
 def parker_speed(radii,
                  temperature,
                  stellar_mass,

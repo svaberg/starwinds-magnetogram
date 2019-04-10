@@ -14,7 +14,9 @@ class LehmannZdi:
     """
     def __init__(self,
                  degrees_l, orders_m,
-                 alpha_lm, beta_lm, gamma_lm,
+                 alpha_lm,
+                 beta_lm,
+                 gamma_lm,
                  dpml_method="gradient",  # For testing
                  ):
         """
@@ -38,7 +40,7 @@ class LehmannZdi:
                 * sp.special.factorial(self.degrees_l - self.orders_m)
                 / sp.special.factorial(self.degrees_l + self.orders_m)
         )
-
+    
         self.c_lm = np.sqrt(c_lm2)
 
         self._dpml_method = dpml_method

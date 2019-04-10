@@ -68,7 +68,7 @@ class SphericalHarmonicsCoefficients(object):
 
         return np.asarray(degrees), np.asarray(orders), coeffs
 
-    # TODO work in progress
+    # TODO work in progress - does nto belong here. Move to zdi_lehmann class.
     # start just with total energy in the radial field components
     # should (?) be the same for the poloidal and toroidal components though.
     def energy(self):
@@ -79,7 +79,7 @@ class SphericalHarmonicsCoefficients(object):
 
             _energy += np.real(complex * np.conj(complex)) / (2 * degree + 1)
 
-            print(degree, order, complex, _energy)
+            log.info(degree, order, complex, _energy)
 
         return _energy
 
@@ -167,7 +167,7 @@ def forward_conversion_factor(degree_l, order_m):
     """Conversion from zdipy format to wso format"""
 
     #
-    # Calculate the complex-to-real rescaling factor $\sqrt{2-\delta_{m,0}$
+    # Calculate the complex-to-real rescaling factor $\sqrt{2-\delta_{m,0}}$
     #
     #  The Dirac delta function $\delta_{m0}$ has
     # $\delta_{m,0} = 1$ for $m = 0$ and

@@ -3,98 +3,7 @@ import cmath
 import logging
 log = logging.getLogger(__name__)
 
-
-class SphericalHarmonicsCoefficients(object):
-    """Spherical harmonics coefficient data container class"""
-    def __init__(self, default_coefficients):
-        """Create an empty set of coefficients"""
-        self.coefficients = {}
-        self._default_coefficients = default_coefficients
-        self._degree_max = 0
-        self._order_min = 0
-
-    def append(self, degree, order, data):
-        """Append coefficients for a given degree and order (cannot already exist)."""
-        assert (degree, order) not in self.coefficients
-        self.set(degree, order, data)
-
-    def set(self, degree, order, data):
-        """Set (overwrite) coefficients for a given degree and order."""
-        assert order <= degree
-        assert data.shape == self._default_coefficients.shape
-        self.coefficients[(degree, order)] = data
-        self._degree_max = max(self._degree_max, degree)
-        self._order_min = min(self._order_min, order)
-
-    def get(self, degree, order):
-        """Return coefficients for at given degree and order"""
-        return self.coefficients.get((degree, order), self._default_coefficients)
-
-    def degree_max(self):
-        """Return highest degree in coefficient set"""
-        return self._degree_max
-
-    def order_min(self):
-        """Return lowest order in coefficient set"""
-        return self._order_min
-
-    def size(self):
-        """Return number of coefficients."""
-        return len(self.coefficients.keys())
-
-    def __str__(self):
-        str = ""
-        for degree, order in sorted(self.coefficients):
-            str += "%d, %d, %s\n" % (degree, order, self.get(degree, order))
-        return str
-
-    def apply_scaling(self, scale_function, power=1):
-        """Scale by applying function to each element"""
-        for (degree, order) in self.coefficients:
-            factor = scale_function(degree, order) ** power
-            self.coefficients[(degree, order)] *= factor
-
-    def contents(self):
-        def iterator():
-            for key in sorted(self.coefficients):
-                yield key, self.coefficients[key]
-        return iterator()
-
-    def as_zdi(self, deny_negative_orders=True):
-        """ Feel free to improve"""
-        if deny_negative_orders and self.order_min() < 0:
-            raise ValueError("Cannot convert negative orders to ZDI format. Use map_to_positive_orders first.")
-
-        degrees = []
-        orders = []
-
-        for degree in range(0, self.degree_max() + 1):
-            for order in range(-degree, degree + 1):
-                degrees.append(degree)
-                orders.append(order)
-
-        coeffs = np.zeros((len(degrees), len(self._default_coefficients)))
-        for row_id in range(len(degrees)):
-                coeffs[row_id] = self.get(degrees[row_id], orders[row_id])
-
-        return np.asarray(degrees), np.asarray(orders), coeffs
-
-    # TODO work in progress - does nto belong here. Move to zdi_lehmann class.
-    # start just with total energy in the radial field components
-    # should (?) be the same for the poloidal and toroidal components though.
-    def energy(self):
-        if self.order_min() < 0:
-            raise ValueError("Cannot calculate energy with negative orders present. Use map_to_positive_orders first.")
-
-        _energy = 0
-        for (degree, order), c in self.contents():
-            complex = c[0] + 1j*c[1]
-
-            _energy += np.real(complex * np.conj(complex)) / (2 * degree + 1)
-
-            log.info(degree, order, complex, _energy)
-
-        return _energy
+import stellarwinds.magnetogram.spherical_harmonics_coefficients as shc
 
 
 def collect_cosines(r, alpha, s, beta):
@@ -123,7 +32,7 @@ def map_to_positive_orders(magnetogram):
     :param magnetogram:
     :return:
     """
-    output = SphericalHarmonicsCoefficients(np.array([0., 0.]))
+    output = shc.SphericalHarmonicsCoefficients(np.array([0., 0.]))
     for degree_l in range(magnetogram.degree_max() + 1):
         output.append(degree_l, 0, magnetogram.get(degree_l, 0))
         for order_m in range(1, degree_l + 1):
@@ -171,7 +80,7 @@ def read_magnetogram_file(fname, types=("radial",)):
     for coeffs_types in types:
         header_lines = []
 
-        coeffs = SphericalHarmonicsCoefficients(np.array([0.0, 0.0]))
+        coeffs = shc.SphericalHarmonicsCoefficients(np.array([0.0, 0.0]))
 
         for __line_id, line in enumerate(magnetogram_file_lines[line_offset:]):
             line_no = __line_id + line_offset

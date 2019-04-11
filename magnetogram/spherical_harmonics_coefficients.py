@@ -96,10 +96,6 @@ class SphericalHarmonicsCoefficients(object):
         :param order_m_max: Highest order to return.
         :return: degrees, orders, data
         """
-
-        degrees = []
-        orders = []
-
         if degree_l_min is None:
             degree_l_min = 0
         if degree_l_max is None:
@@ -109,9 +105,14 @@ class SphericalHarmonicsCoefficients(object):
         if order_m_max is None:
             order_m_max = +degree_l_max
 
+
         # Build full list of degrees and orders
+        degrees = []
+        orders = []
         for degree in range(degree_l_min, degree_l_max + 1):
-            for order in range(order_m_min, order_m_max + 1):
+            _order_min = np.maximum(order_m_min, -degree)
+            _order_max = np.minimum(order_m_max, degree)
+            for order in range(_order_min, _order_max + 1):
                 degrees.append(degree)
                 orders.append(order)
 

@@ -1,6 +1,8 @@
 import numpy as np
 import cmath
 import logging
+import spherical_functions as sf  # Only used in rotating the magnetogram.
+
 log = logging.getLogger(__name__)
 
 import stellarwinds.magnetogram.spherical_harmonics_coefficients as shc
@@ -35,20 +37,43 @@ def map_to_positive_orders(magnetogram):
     output = shc.SphericalHarmonicsCoefficients(np.array([0., 0.]))
     for degree_l in range(magnetogram.degree_max() + 1):
         output.append(degree_l, 0, magnetogram.get(degree_l, 0))
-        for order_m in range(1, degree_l + 1):
-            c_neg = magnetogram.get(degree_l, - order_m)
+        for order_m in range(1, degree_l + 1):  # No need to map m=0 as it has no negative partner.
             c_pos = magnetogram.get(degree_l, + order_m)
+            c_neg = magnetogram.get(degree_l, - order_m)
 
-            r, alpha = cmath.polar(c_neg[0] + 1j * c_neg[1])
-            s, beta  = cmath.polar(c_pos[0] + 1j * c_pos[1])
+            r, alpha = cmath.polar(c_pos[0] + 1j * c_pos[1])
+            s, beta  = cmath.polar(c_neg[0] + 1j * c_neg[1])
 
             t, gamma = collect_cosines(r, alpha, (-1) ** order_m * s, beta)
-            t, gamma = collect_cosines(r, alpha, s, beta)
-            log.debug('collect_c', (r, alpha), (s, beta), (t, gamma))
+            # t, gamma = collect_cosines(r, alpha, s, beta)
+            # log.debug('collect_c', (r, alpha), (s, beta), (t, gamma))
 
             c = cmath.rect(t, gamma)
             output.append(degree_l, order_m, np.array([np.real(c), np.imag(c)]))
     return output
+
+
+
+def rotate_magnetogram(magnetogram):
+
+    alpha, beta, gamma = 0.5 * np.pi, 0.0, 0.0
+
+    rotated_magnetogram = magnetogram.empty_like()
+
+    for deg_l_in in range(magnetogram.degree_max() + 1):
+        order_m_max = deg_l_in
+
+        for order_m_out in range(-order_m_max, order_m_max + 1):
+
+            coeff_out = magnetogram.default_coefficients()
+
+            for order_m_in in range(-order_m_max, order_m_max + 1):
+                wde = sf.Wigner_D_element(alpha, beta, gamma, deg_l_in, order_m_in, order_m_out)
+                coeff_out += wde * magnetogram.get(deg_l_in, order_m_in)
+
+            rotated_magnetogram.append(deg_l_in, order_m_out, coeff_out)
+
+    return rotated_magnetogram
 
 
 # TODO small change here to return 3 shparm objects

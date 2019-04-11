@@ -16,6 +16,20 @@ class SphericalHarmonicsCoefficients(object):
         self._degree_max = 0
         self._order_min = 0
 
+    def empty_like(self):
+        """
+        Return an empty coefficient set of same type.
+        :return:
+        """
+        return SphericalHarmonicsCoefficients(self._default_coefficients)
+
+    def default_coefficients(self):
+        """
+        Return the default coefficients of this magnetogram.
+        :return:
+        """
+        return self._default_coefficients
+
     def append(self, degree, order, data):
         """Append coefficients for a given degree and order (cannot already exist)."""
         assert (degree, order) not in self.coefficients
@@ -79,7 +93,7 @@ class SphericalHarmonicsCoefficients(object):
                 degrees.append(degree)
                 orders.append(order)
 
-        coeffs = np.zeros((len(degrees), len(self._default_coefficients)))
+        coeffs = np.zeros((len(degrees), len(self.default_coefficients())))
         for row_id in range(len(degrees)):
                 coeffs[row_id] = self.get(degrees[row_id], orders[row_id])
 
@@ -105,7 +119,6 @@ class SphericalHarmonicsCoefficients(object):
         if order_m_max is None:
             order_m_max = +degree_l_max
 
-
         # Build full list of degrees and orders
         degrees = []
         orders = []
@@ -117,9 +130,9 @@ class SphericalHarmonicsCoefficients(object):
                 orders.append(order)
 
         # Initialize to right size with new dimension first.
-        coefficients = np.stack((self._default_coefficients,)*len(degrees))
-        assert coefficients.size == len(degrees) * self._default_coefficients.size, "Sizes must match."
-        assert coefficients.dtype == self._default_coefficients.dtype, "Data type must match."
+        coefficients = np.stack((self.default_coefficients(),)*len(degrees))
+        assert coefficients.size == len(degrees) * self.default_coefficients().size, "Sizes must match."
+        assert coefficients.dtype == self.default_coefficients().dtype, "Data type must match."
 
         for row_id in range(len(degrees)):
                 coefficients[row_id] = self.get(degrees[row_id], orders[row_id])
@@ -132,7 +145,7 @@ class SphericalHarmonicsCoefficients(object):
         :param other:
         :return:
         """
-        assert self._default_coefficients.shape == other._default_coefficients.shape, "Incompatible coefficients."
+        assert self.default_coefficients().shape == other.default_coefficients().shape, "Incompatible coefficients."
 
         for (degree, order), co in other.contents():
             cs = self.get(degree, order)

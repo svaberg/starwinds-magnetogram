@@ -85,22 +85,18 @@ class SphericalHarmonicsCoefficients(object):
 
         return np.asarray(degrees), np.asarray(orders), coeffs
 
-    # TODO Does not belong here. Move to zdi_lehmann class.
-    # Energy cannot be computed without assuming type of coeffiecents.
-    # start just with total energy in the radial field components
-    # fails because
-    # should (?) be the same for the poloidal and toroidal components though.
-    # def energy(self):
-    #     if self.order_min() < 0:
-    #         raise ValueError("Cannot calculate energy with negative orders present. Use map_to_positive_orders first.")
-    #
-    #     _energy = 0
-    #     for (degree, order), c in self.contents():
-    #         complex = c[0] + 1j*c[1]
-    #
-    #         _energy += np.real(complex * np.conj(complex)) / (2 * degree + 1)
-    #
-    #         log.info(degree, order, complex, _energy)
-    #
-    #     return _energy
+    def add(self, other):
+        assert self._default_coefficients.shape == other._default_coefficients.shape, "Incompatible coefficients."
+
+        for (degree, order), co in other.contents():
+            cs = self.get(degree, order)
+            self.set(degree, order, cs + co)
+
+    def multiply(self, value):
+        value = np.atleast_1d(value)
+        assert self._default_coefficients.shape == value.shape, "Incompatible coefficients."
+
+        for (degree, order), coeffs in self.contents():
+            self.set(degree, order, coeffs * value)
+
 

@@ -15,8 +15,8 @@ class LehmannZdi:
     def __init__(self,
                  degrees_l, orders_m,
                  alpha_lm,
-                 beta_lm,
-                 gamma_lm,
+                 beta_lm=None,
+                 gamma_lm=None,
                  dpml_method="gradient",  # For testing
                  ):
         """
@@ -27,6 +27,12 @@ class LehmannZdi:
         :param beta_lm:  Array of complex $\beta$ coefficients
         :param gamma_lm: Array of complex $\gamma$ coefficients
         """
+        if beta_lm is None:
+            beta_lm = 0 * alpha_lm
+        if gamma_lm is None:
+            gamma_lm = 0 * alpha_lm
+
+        # One dimension or more please.
         self.degrees_l = np.atleast_1d(degrees_l)
         self.orders_m = np.atleast_1d(orders_m)
         self.alpha = np.atleast_1d(alpha_lm)

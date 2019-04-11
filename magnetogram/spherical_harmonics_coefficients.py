@@ -85,7 +85,52 @@ class SphericalHarmonicsCoefficients(object):
 
         return np.asarray(degrees), np.asarray(orders), coeffs
 
+    def as_arrays(self,
+                  degree_l_min=None, degree_l_max=None,
+                  order_m_min=None, order_m_max=None):
+        """
+        Get full arrays of degrees, orders, and data.
+        :param degree_l_min: Lowest degree to return.
+        :param degree_l_max: Highest degree to return.
+        :param order_m_min: Lowest order to return.
+        :param order_m_max: Highest order to return.
+        :return: degrees, orders, data
+        """
+
+        degrees = []
+        orders = []
+
+        if degree_l_min is None:
+            degree_l_min = 0
+        if degree_l_max is None:
+            degree_l_max = self.degree_max()
+        if order_m_min is None:
+            order_m_min = -degree_l_max
+        if order_m_max is None:
+            order_m_max = +degree_l_max
+
+        # Build full list of degrees and orders
+        for degree in range(degree_l_min, degree_l_max + 1):
+            for order in range(order_m_min, order_m_max + 1):
+                degrees.append(degree)
+                orders.append(order)
+
+        # Initialize to right size with new dimension first.
+        coefficients = np.stack((self._default_coefficients,)*len(degrees))
+        assert coefficients.size == len(degrees) * self._default_coefficients.size, "Sizes must match."
+        assert coefficients.dtype == self._default_coefficients.dtype, "Data type must match."
+
+        for row_id in range(len(degrees)):
+                coefficients[row_id] = self.get(degrees[row_id], orders[row_id])
+
+        return np.asarray(degrees), np.asarray(orders), coefficients
+
     def add(self, other):
+        """
+        Add another set of spherical harmonics coefficients.
+        :param other:
+        :return:
+        """
         assert self._default_coefficients.shape == other._default_coefficients.shape, "Incompatible coefficients."
 
         for (degree, order), co in other.contents():
@@ -93,9 +138,11 @@ class SphericalHarmonicsCoefficients(object):
             self.set(degree, order, cs + co)
 
     def multiply(self, value):
-        value = np.atleast_1d(value)
-        assert self._default_coefficients.shape == value.shape, "Incompatible coefficients."
-
+        """
+        Multiply by a constant
+        :param value:
+        :return:
+        """
         for (degree, order), coeffs in self.contents():
             self.set(degree, order, coeffs * value)
 

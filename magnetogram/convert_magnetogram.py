@@ -1,6 +1,6 @@
 import numpy as np
+import cmath
 import logging
-
 log = logging.getLogger(__name__)
 
 
@@ -10,7 +10,8 @@ class SphericalHarmonicsCoefficients(object):
         """Create an empty set of coefficients"""
         self.coefficients = {}
         self._default_coefficients = default_coefficients
-        self._degree_max = -1
+        self._degree_max = 0
+        self._order_min = 0
 
     def append(self, degree, order, data):
         """Append coefficients for a given degree and order (cannot already exist)."""
@@ -23,6 +24,7 @@ class SphericalHarmonicsCoefficients(object):
         assert data.shape == self._default_coefficients.shape
         self.coefficients[(degree, order)] = data
         self._degree_max = max(self._degree_max, degree)
+        self._order_min = min(self._order_min, order)
 
     def get(self, degree, order):
         """Return coefficients for at given degree and order"""
@@ -32,12 +34,19 @@ class SphericalHarmonicsCoefficients(object):
         """Return highest degree in coefficient set"""
         return self._degree_max
 
+    def order_min(self):
+        """Return lowest order in coefficient set"""
+        return self._order_min
+
     def size(self):
         """Return number of coefficients."""
         return len(self.coefficients.keys())
 
     def __str__(self):
-        return str(sorted(self.coefficients))
+        str = ""
+        for degree, order in sorted(self.coefficients):
+            str += "%d, %d, %s\n" % (degree, order, self.get(degree, order))
+        return str
 
     def apply_scaling(self, scale_function, power=1):
         """Scale by applying function to each element"""
@@ -51,14 +60,16 @@ class SphericalHarmonicsCoefficients(object):
                 yield key, self.coefficients[key]
         return iterator()
 
-    def as_zdi(self):
+    def as_zdi(self, deny_negative_orders=True):
         """ Feel free to improve"""
+        if deny_negative_orders and self.order_min() < 0:
+            raise ValueError("Cannot convert negative orders to ZDI format. Use map_to_positive_orders first.")
 
         degrees = []
         orders = []
 
         for degree in range(0, self.degree_max() + 1):
-            for order in range(0, degree + 1):
+            for order in range(-degree, degree + 1):
                 degrees.append(degree)
                 orders.append(order)
 
@@ -72,6 +83,8 @@ class SphericalHarmonicsCoefficients(object):
     # start just with total energy in the radial field components
     # should (?) be the same for the poloidal and toroidal components though.
     def energy(self):
+        if self.order_min() < 0:
+            raise ValueError("Cannot calculate energy with negative orders present. Use map_to_positive_orders first.")
 
         _energy = 0
         for (degree, order), c in self.contents():
@@ -82,6 +95,51 @@ class SphericalHarmonicsCoefficients(object):
             log.info(degree, order, complex, _energy)
 
         return _energy
+
+
+def collect_cosines(r, alpha, s, beta):
+    cos_terms = r * np.cos(alpha) + s * np.cos(beta)
+    sin_terms = r * np.sin(alpha) - s * np.sin(beta)
+
+    t = np.sqrt(cos_terms**2 + sin_terms**2)
+    gamma = np.arctan2(sin_terms, cos_terms)
+
+    return t, gamma
+
+
+def collect_sines(r, alpha, s, beta):
+    cos_terms = r * np.cos(alpha) - s * np.cos(beta)
+    sin_terms = r * np.sin(alpha) + s * np.sin(beta)
+
+    t = np.sqrt(cos_terms**2 + sin_terms**2)
+    gamma = np.arctan2(sin_terms, cos_terms)
+
+    return t, gamma
+
+
+def map_to_positive_orders(magnetogram):
+    """
+
+    :param magnetogram:
+    :return:
+    """
+    output = SphericalHarmonicsCoefficients(np.array([0., 0.]))
+    for degree_l in range(magnetogram.degree_max() + 1):
+        output.append(degree_l, 0, magnetogram.get(degree_l, 0))
+        for order_m in range(1, degree_l + 1):
+            c_neg = magnetogram.get(degree_l, - order_m)
+            c_pos = magnetogram.get(degree_l, + order_m)
+
+            r, alpha = cmath.polar(c_neg[0] + 1j * c_neg[1])
+            s, beta  = cmath.polar(c_pos[0] + 1j * c_pos[1])
+
+            t, gamma = collect_cosines(r, alpha, (-1) ** order_m * s, beta)
+            t, gamma = collect_cosines(r, alpha, s, beta)
+            log.debug('collect_c', (r, alpha), (s, beta), (t, gamma))
+
+            c = cmath.rect(t, gamma)
+            output.append(degree_l, order_m, np.array([np.real(c), np.imag(c)]))
+    return output
 
 
 # TODO small change here to return 3 shparm objects
@@ -98,8 +156,6 @@ def read_magnetogram_file(fname, types=("radial",)):
     1  1  1.931724e+01 -1.110055e+02
     (...)
     15 15 -2.021262e+01  6.270638e-01
-
-    Only the radial coefficients are (currently) read as they are the only ones used.
     """
 
     log.debug("Begin reading magnetogram file \"%s\"..." % fname)

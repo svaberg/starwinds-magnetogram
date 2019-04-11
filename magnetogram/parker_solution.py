@@ -70,7 +70,7 @@ def parker_sonic_point(
 
 def parker_speed(radii,
                  temperature,
-                 stellar_mass,
+                 stellar_mass=1.989e30,
                  ):
     """
     Calculate speeds in Parker solution

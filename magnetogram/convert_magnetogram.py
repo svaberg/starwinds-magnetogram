@@ -9,6 +9,14 @@ import stellarwinds.magnetogram.spherical_harmonics_coefficients as shc
 
 
 def collect_cosines(r, alpha, s, beta):
+    """
+
+    :param r:
+    :param alpha:
+    :param s:
+    :param beta:
+    :return:
+    """
     cos_terms = r * np.cos(alpha) + s * np.cos(beta)
     sin_terms = r * np.sin(alpha) - s * np.sin(beta)
 
@@ -19,6 +27,14 @@ def collect_cosines(r, alpha, s, beta):
 
 
 def collect_sines(r, alpha, s, beta):
+    """
+
+    :param r:
+    :param alpha:
+    :param s:
+    :param beta:
+    :return:
+    """
     cos_terms = r * np.cos(alpha) - s * np.cos(beta)
     sin_terms = r * np.sin(alpha) + s * np.sin(beta)
 
@@ -34,38 +50,44 @@ def map_to_positive_orders(magnetogram):
     :param magnetogram:
     :return:
     """
-    output = shc.SphericalHarmonicsCoefficients(np.array([0., 0.]))
+    output = shc.empty_like(magnetogram)
     for degree_l in range(magnetogram.degree_max() + 1):
         output.append(degree_l, 0, magnetogram.get(degree_l, 0))
         for order_m in range(1, degree_l + 1):  # No need to map m=0 as it has no negative partner.
             c_pos = magnetogram.get(degree_l, + order_m)
             c_neg = magnetogram.get(degree_l, - order_m)
 
-            r, alpha = cmath.polar(c_pos[0] + 1j * c_pos[1])
-            s, beta  = cmath.polar(c_neg[0] + 1j * c_neg[1])
+            r, alpha = cmath.polar(c_pos)
+            s, beta  = cmath.polar(c_neg)
 
             t, gamma = collect_cosines(r, alpha, (-1) ** order_m * s, beta)
             # t, gamma = collect_cosines(r, alpha, s, beta)
             # log.debug('collect_c', (r, alpha), (s, beta), (t, gamma))
 
             c = cmath.rect(t, gamma)
-            output.append(degree_l, order_m, np.array([np.real(c), np.imag(c)]))
+            output.append(degree_l, order_m, c)
     return output
 
 
+def rotate_magnetogram(magnetogram,
+                       alpha=np.pi, beta=0, gamma=0):
+    """
+    Rotate magnetogram in a 3-1-3 Euler angle
+    :param magnetogram:
+    :param alpha:
+    :param beta:
+    :param gamma:
+    :return: Rotated magnetogram
+    """
 
-def rotate_magnetogram(magnetogram):
-
-    alpha, beta, gamma = 0.5 * np.pi, 0.0, 0.0
-
-    rotated_magnetogram = magnetogram.empty_like()
+    rotated_magnetogram = shc.empty_like(magnetogram)
 
     for deg_l_in in range(magnetogram.degree_max() + 1):
         order_m_max = deg_l_in
 
         for order_m_out in range(-order_m_max, order_m_max + 1):
 
-            coeff_out = magnetogram.default_coefficients()
+            coeff_out = magnetogram.default_coefficients
 
             for order_m_in in range(-order_m_max, order_m_max + 1):
                 wde = sf.Wigner_D_element(alpha, beta, gamma, deg_l_in, order_m_in, order_m_out)
@@ -90,6 +112,16 @@ def read_magnetogram_file(fname, types=("radial",)):
     1  1  1.931724e+01 -1.110055e+02
     (...)
     15 15 -2.021262e+01  6.270638e-01
+
+    1  0 -2.375224e+02 -0.000000e+00
+    1  1  1.931724e+01 -1.110055e+02
+    (...)
+    15 15 -2.021262e+01  6.270638e-01
+
+    1  0 -2.375224e+02 -0.000000e+00
+    1  1  1.931724e+01 -1.110055e+02
+    (...)
+    15 15 -2.021262e+01  6.270638e-01
     """
 
     log.debug("Begin reading magnetogram file \"%s\"..." % fname)
@@ -105,17 +137,21 @@ def read_magnetogram_file(fname, types=("radial",)):
     for coeffs_types in types:
         header_lines = []
 
-        coeffs = shc.SphericalHarmonicsCoefficients(np.array([0.0, 0.0]))
+        coeffs = shc.SphericalHarmonicsCoefficients()
 
         for __line_id, line in enumerate(magnetogram_file_lines[line_offset:]):
             line_no = __line_id + line_offset
             try:
                 line_tokens = line.split()
-                coeffs.append(int(line_tokens[0]),
-                              int(line_tokens[1]),
-                              np.array([float(line_tokens[2]), float(line_tokens[3])]))
+
+                degree_l = int(line_tokens[0])
+                order_m  = int(line_tokens[1])
+                real_coeff = float(line_tokens[2])
+                imag_coeff = float(line_tokens[3])
+
+                coeffs.append(degree_l, order_m, real_coeff + 1j * imag_coeff)
                 log.debug("Read coefficient line %d: \"%s\"" % (line_no, line))
-            except:
+            except (ValueError, IndexError):
                 if coeffs.size() == 0:
                     log.debug("Read header line: %d: \"%s\"" % (len(header_lines), line))
                     header_lines.append(line)
@@ -132,10 +168,17 @@ def read_magnetogram_file(fname, types=("radial",)):
         full_coeffs.append(coeffs)
 
     log.debug("Finished reading magnetogram file \"%s\"." % fname)
-    return full_coeffs
+    return shc.hstack(full_coeffs)
 
 
 def write_magnetogram_file(coeffs, fname="test_field_wso.dat", degree_max=None):
+    """
+
+    :param coeffs:
+    :param fname:
+    :param degree_max:
+    :return:
+    """
     log.debug("Begin writing magnetogram file \"%s\"..." % fname)
 
     if degree_max is None:
@@ -147,14 +190,19 @@ def write_magnetogram_file(coeffs, fname="test_field_wso.dat", degree_max=None):
 
         for degree in range(0, degree_max + 1):
             for order in range(0, degree + 1):
-                data = coeffs.get(degree, order)
-                f.write("%d %d %e %e\n" % (degree, order, data[0], data[1]))
+                coeff = coeffs.get(degree, order)
+                f.write("%d %d %e %e\n" % (degree, order, np.real(coeff), np.imag(coeff)))
 
     log.info("Finished writing magnetogram file \"%s\"." % fname)
 
 
 def forward_conversion_factor(degree_l, order_m):
-    """Conversion from zdipy format to wso format"""
+    """
+    Conversion from zdipy format to wso format
+    :param degree_l:
+    :param order_m:
+    :return:
+    """
 
     #
     # Calculate the complex-to-real rescaling factor $\sqrt{2-\delta_{m,0}}$

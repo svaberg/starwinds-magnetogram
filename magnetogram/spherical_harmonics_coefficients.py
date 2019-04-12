@@ -9,26 +9,20 @@ class SphericalHarmonicsCoefficients(object):
     Can contain a numpy array for each degree and order.
     It is not meant to 'know' its own physical meaning, it's just a container.
     """
-    def __init__(self, default_coefficients):
+    def __init__(self, default_coefficients=0j):
         """Create an empty set of coefficients"""
         self.coefficients = {}
         self._default_coefficients = np.atleast_1d(default_coefficients)
         self._degree_max = 0
         self._order_min = 0
 
-    def empty_like(self):
-        """
-        Return an empty coefficient set of same type.
-        :return:
-        """
-        return SphericalHarmonicsCoefficients(self._default_coefficients)
-
+    @property
     def default_coefficients(self):
         """
-        Return the default coefficients of this magnetogram.
+        Return a copy of the default coefficients of this magnetogram.
         :return:
         """
-        return self._default_coefficients
+        return self._default_coefficients.copy()
 
     def append(self, degree, order, data):
         """Append coefficients for a given degree and order (cannot already exist)."""
@@ -50,20 +44,23 @@ class SphericalHarmonicsCoefficients(object):
         """Return coefficients for at given degree and order"""
         return self.coefficients.get((degree, order), self._default_coefficients)
 
+    # TODO use @property
     def degree_max(self):
         """Return highest degree in coefficient set"""
         return self._degree_max
 
+    # TODO use @property
     def order_min(self):
         """Return lowest order in coefficient set"""
         return self._order_min
 
+    # TODO use @property
     def size(self):
         """Return number of coefficients."""
         return len(self.coefficients.keys())
 
     def __str__(self):
-        str = ""
+        str = "Coefficients:\n"
         for degree, order in sorted(self.coefficients):
             str += "%d, %d, %s\n" % (degree, order, self.get(degree, order))
         return str
@@ -93,7 +90,7 @@ class SphericalHarmonicsCoefficients(object):
                 degrees.append(degree)
                 orders.append(order)
 
-        coeffs = np.zeros((len(degrees), len(self.default_coefficients())))
+        coeffs = np.zeros((len(degrees), len(self.default_coefficients)))
         for row_id in range(len(degrees)):
                 coeffs[row_id] = self.get(degrees[row_id], orders[row_id])
 
@@ -130,34 +127,117 @@ class SphericalHarmonicsCoefficients(object):
                 orders.append(order)
 
         # Initialize to right size with new dimension first.
-        coefficients = np.stack((self.default_coefficients(),)*len(degrees))
-        assert coefficients.size == len(degrees) * self.default_coefficients().size, "Sizes must match."
-        assert coefficients.dtype == self.default_coefficients().dtype, "Data type must match."
+        coefficients = np.stack((self.default_coefficients,)*len(degrees))
+        assert coefficients.size == len(degrees) * self.default_coefficients.size, "Sizes must match."
+        assert coefficients.dtype == self.default_coefficients.dtype, "Data type must match."
 
         for row_id in range(len(degrees)):
                 coefficients[row_id] = self.get(degrees[row_id], orders[row_id])
 
         return np.asarray(degrees), np.asarray(orders), coefficients
 
-    def add(self, other):
-        """
-        Add another set of spherical harmonics coefficients.
-        :param other:
-        :return:
-        """
-        assert self.default_coefficients().shape == other.default_coefficients().shape, "Incompatible coefficients."
+    def __add__(self, other): return add(self, other)
 
-        for (degree, order), co in other.contents():
-            cs = self.get(degree, order)
-            self.set(degree, order, cs + co)
+    def __sub__(self, other): return add(self, multiply(other, -1))
 
-    def multiply(self, value):
-        """
-        Multiply by a constant
-        :param value:
-        :return:
-        """
-        for (degree, order), coeffs in self.contents():
-            self.set(degree, order, coeffs * value)
+    def __mul__(self, value): return multiply(self, value)
+
+    def __rmul__(self, value): return multiply(self, value)
+
+    def __truediv__(self, value): return multiply(self, value**-1)
 
 
+def isclose(shc0,
+            shc1,
+            **kwargs):
+    """
+    Numerical comparison of two sets of spherical harmonics coefficients.
+    :param shc0: First set
+    :param shc1: Second set
+
+    :return: True if the sets are close, otherwise False.
+    """
+    if shc0.default_coefficients.shape != shc1.default_coefficients.shape:
+        return False
+
+    # Get all degree, order pairs from the objects
+    keys = set.union(*[set(a.coefficients) for a in (shc0, shc1)])
+
+    c0 = []
+    c1 = []
+
+    for degree, order in keys:
+
+        c0.append(shc0.get(degree, order))
+        c1.append(shc1.get(degree, order))
+
+    c0 = np.vstack(c0)
+    c1 = np.vstack(c1)
+
+    return np.allclose(c0, c1, **kwargs)
+
+
+def empty_like(shc):
+    """
+    Get empty set of spherical harmonics coefficients with same type of coefficients.
+    """
+    return SphericalHarmonicsCoefficients(shc.default_coefficients)
+
+
+def add(shc0, shc1):
+    """
+    Add coefficients.
+
+    Missing coefficients are assumed to be zero.
+    :param shc0: First set of coefficients.
+    :param shc1: Second set of coefficients.
+    :return: Sum of coefficients.
+    """
+    assert shc0.default_coefficients.shape == shc1.default_coefficients.shape, "Incompatible coefficients."
+
+    # Get all degree, order pairs from the objects
+    keys = set.union(*[set(a.coefficients) for a in (shc0, shc1)])
+
+    shc = empty_like(shc0)
+    for degree, order in keys:
+        v = shc0.get(degree, order) + shc1.get(degree, order)
+        shc.append(degree, order, v)
+
+    return shc
+
+
+def multiply(shc, value):
+    """
+    Multiply coefficients by constant.
+    :param shc: Spherical harmonics coefficients
+    :param value: Constant (must be addable to each
+    :return:
+    """
+
+    output = empty_like(shc)
+    for (degree, order), coeffs in shc.contents():
+        output.append(degree, order, coeffs * value)
+
+    return output
+
+
+def hstack(shcs):
+    """
+    Stack magnetograms by using hstack on each coefficient.
+    :param shcs: tuple of magnetograms
+    :return: stacked magnetogram
+    """
+
+    default_coefficients = np.hstack([a.default_coefficients for a in shcs])
+
+    shc = SphericalHarmonicsCoefficients(default_coefficients)
+
+    # Get all degree, order pairs from the objects
+    keys = set.union(*[set(a.coefficients) for a in shcs])
+
+    for degree, order in keys:
+        values = [a.get(degree, order) for a in shcs]
+        c = np.hstack(values)
+        shc.append(degree, order, c)
+
+    return shc

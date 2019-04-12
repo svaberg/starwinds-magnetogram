@@ -243,3 +243,25 @@ def hstack(shcs):
 
     return shc
 
+
+def hsplit(shc, indices_or_sections=None):
+    """
+    Split spherical harmonics coefficients by horizontally splitting each of the individual coefficients.
+    :param shc: Spherical harmonics coefficients
+    :param indices_or_sections:
+    :return:
+    """
+    if indices_or_sections is None:
+        indices_or_sections = len(shc.default_coefficients)
+
+    default_coefficients = np.hsplit(shc.default_coefficients, indices_or_sections)
+
+    shcs = [SphericalHarmonicsCoefficients(_dc) for _dc in default_coefficients]
+
+    for (degree, order), value in shc.contents():
+        split_values = np.hsplit(value, indices_or_sections)
+
+        for _shc, _split_value in zip(shcs, split_values):
+            _shc.append(degree, order, _split_value)
+
+    return shcs

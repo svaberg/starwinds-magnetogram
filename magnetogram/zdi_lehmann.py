@@ -357,7 +357,9 @@ def from_coefficients(shc,
                       ):
     degree_l, order_m, coeffs_lm = shc.as_arrays(include_unset=False)
 
-    assert len(np.hsplit(coeffs_lm, 3)) <= 3, "Three complex coefficients or less are OK."
+    assert coeffs_lm.shape[1] <= 3, "Three complex coefficients or less are OK."
 
-    return LehmannZdi(degree_l, order_m, *np.hsplit(coeffs_lm, 3), dpml_method)
+    split_coeffs = [coeffs_lm[:, _id] for _id in range(coeffs_lm.shape[1])]
+
+    return LehmannZdi(degree_l, order_m, *split_coeffs, dpml_method)
 

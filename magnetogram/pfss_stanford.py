@@ -12,6 +12,7 @@ def evaluate_real_magnetogram_stanford_pfss_reference(degree_l, order_m, cosine_
     if radius is None:
         radius = r0
 
+    assert np.min(order_m) >= 0, "Stanford PFSS expects only positive orders (TBC)."
     field_radial = np.zeros_like(points_azimuth)
     field_polar = np.zeros_like(field_radial)
     field_azimuthal = np.zeros_like(field_radial)
@@ -145,6 +146,7 @@ def evaluate_on_sphere(
     :return:
     """
     assert(points_polar.shape == points_azimuth.shape)
+    assert np.min(order_m) >= 0, "Stanford PFSS expects only positive orders (TBC)."
 
     if radius is None:
         radius = radius_star
@@ -194,6 +196,7 @@ def evaluate_in_space(
     :return:
     """
     assert(points_polar.shape == points_azimuth.shape)
+    assert np.min(order_m) >= 0, "Stanford PFSS expects only positive orders (TBC)."
 
     # The pfss method is not valid inside the star!
     _invalid_inner_ids = np.where(points_radial < radius_star)

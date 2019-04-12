@@ -22,7 +22,7 @@ class SphericalHarmonicsCoefficients(object):
         Return a copy of the default coefficients of this magnetogram.
         :return:
         """
-        return self._default_coefficients.copy()
+        return self._default_coefficients.copy()  # A copy is needed as the default coefficients are mutable.
 
     def append(self, degree, order, data):
         """Append coefficients for a given degree and order (cannot already exist)."""
@@ -36,12 +36,23 @@ class SphericalHarmonicsCoefficients(object):
         assert np.abs(order) <= degree, "Order must be between -l and l for degree l."
         assert data.shape == self._default_coefficients.shape, "Incompatible coefficients."
 
+        assert type(degree) == int, "Degree index must be integer"
+        assert type(order) == int, "Order index must be integer"
+
         self.coefficients[(degree, order)] = data
         self._degree_max = max(self._degree_max, degree)
         self._order_min = min(self._order_min, order)
 
+    def has(self, degree, order):
+        """Return true if coefficients exist at given degree and order"""
+        return (degree, order) in self.coefficients.keys()
+
     def get(self, degree, order):
         """Return coefficients for at given degree and order"""
+
+        assert type(degree) == int, "Degree index must be integer"
+        assert type(order) == int, "Order index must be integer"
+
         return self.coefficients.get((degree, order), self._default_coefficients)
 
     @property
@@ -96,11 +107,12 @@ class SphericalHarmonicsCoefficients(object):
 
         return np.asarray(degrees), np.asarray(orders), coeffs
 
-    def as_arrays(self,
+    def as_arrays(self, include_unset=True,
                   degree_l_min=None, degree_l_max=None,
                   order_m_min=None, order_m_max=None):
         """
         Get full arrays of degrees, orders, and data.
+        :param include_unset: Include coefficients that have never been set and have the default (zero) value.
         :param degree_l_min: Lowest degree to return.
         :param degree_l_max: Highest degree to return.
         :param order_m_min: Lowest order to return.
@@ -117,24 +129,30 @@ class SphericalHarmonicsCoefficients(object):
             order_m_max = +degree_l_max
 
         # Build full list of degrees and orders
-        degrees = []
-        orders = []
+        full_set_requested_degrees = []
+        full_set_requested_orders = []
         for degree in range(degree_l_min, degree_l_max + 1):
             _order_min = np.maximum(order_m_min, -degree)
             _order_max = np.minimum(order_m_max, degree)
             for order in range(_order_min, _order_max + 1):
-                degrees.append(degree)
-                orders.append(order)
+                full_set_requested_degrees.append(degree)
+                full_set_requested_orders.append(order)
 
         # Initialize to right size with new dimension first.
-        coefficients = np.stack((self.default_coefficients,)*len(degrees))
-        assert coefficients.size == len(degrees) * self.default_coefficients.size, "Sizes must match."
+        coefficients = np.stack((self.default_coefficients,)*len(full_set_requested_degrees))
+        assert coefficients.size == len(full_set_requested_degrees) * self.default_coefficients.size, "Sizes must match."
         assert coefficients.dtype == self.default_coefficients.dtype, "Data type must match."
 
-        for row_id in range(len(degrees)):
-                coefficients[row_id] = self.get(degrees[row_id], orders[row_id])
+        returned_degrees = []
+        returned_orders = []
+        returned_coefficients = []
+        for _deg, _ord in zip(full_set_requested_degrees, full_set_requested_orders):
+            if include_unset or self.has(_deg, _ord):
+                returned_degrees.append(_deg)
+                returned_orders.append(_ord)
+                returned_coefficients.append(self.get(_deg, _ord))
 
-        return np.asarray(degrees), np.asarray(orders), coefficients
+        return np.asarray(returned_degrees), np.asarray(returned_orders), np.asarray(returned_coefficients)
 
     def __add__(self, other): return add(self, other)
 

@@ -350,3 +350,14 @@ class LehmannZdi:
             du_dtheta = np.sin(points_polar)
 
             return dp_du * du_dtheta
+
+
+def from_coefficients(shc,
+                      dpml_method="gradient",  # For testing
+                      ):
+    degree_l, order_m, coeffs_lm = shc.as_arrays(include_unset=False)
+
+    assert len(np.hsplit(coeffs_lm, 3)) <= 3, "Three complex coefficients or less are OK."
+
+    return LehmannZdi(degree_l, order_m, *np.hsplit(coeffs_lm, 3), dpml_method)
+

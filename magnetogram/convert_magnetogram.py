@@ -51,7 +51,7 @@ def map_to_positive_orders(magnetogram):
     :return:
     """
     output = shc.empty_like(magnetogram)
-    for degree_l in range(magnetogram.degree_max() + 1):
+    for degree_l in range(magnetogram.degree_max + 1):
         output.append(degree_l, 0, magnetogram.get(degree_l, 0))
         for order_m in range(1, degree_l + 1):  # No need to map m=0 as it has no negative partner.
             c_pos = magnetogram.get(degree_l, + order_m)
@@ -82,7 +82,7 @@ def rotate_magnetogram(magnetogram,
 
     rotated_magnetogram = shc.empty_like(magnetogram)
 
-    for deg_l_in in range(magnetogram.degree_max() + 1):
+    for deg_l_in in range(magnetogram.degree_max + 1):
         order_m_max = deg_l_in
 
         for order_m_out in range(-order_m_max, order_m_max + 1):
@@ -152,7 +152,7 @@ def read_magnetogram_file(fname, types=("radial",)):
                 coeffs.append(degree_l, order_m, real_coeff + 1j * imag_coeff)
                 log.debug("Read coefficient line %d: \"%s\"" % (line_no, line))
             except (ValueError, IndexError):
-                if coeffs.size() == 0:
+                if coeffs.size == 0:
                     log.debug("Read header line: %d: \"%s\"" % (len(header_lines), line))
                     header_lines.append(line)
                 else:
@@ -160,7 +160,7 @@ def read_magnetogram_file(fname, types=("radial",)):
                     line_offset = line_no
                     break
 
-        log.debug("Read %d header lines and %d %s coefficient lines." % (len(header_lines), coeffs.size(), coeffs_types))
+        log.debug("Read %d header lines and %d %s coefficient lines." % (len(header_lines), coeffs.size, coeffs_types))
         log.debug("l\tm\tg_lm\th_lm")
         # for coeff in coeffs.contents():
         #     log.debug("%d\t%d\t%e\t%e" % (coeff[0][0],coeff[0][1],coeff[1][0],coeff[1][1]))
@@ -182,8 +182,9 @@ def write_magnetogram_file(coeffs, fname="test_field_wso.dat", degree_max=None):
     log.debug("Begin writing magnetogram file \"%s\"..." % fname)
 
     if degree_max is None:
-        degree_max = coeffs.degree_max()
+        degree_max = coeffs.degree_max
 
+    # TODO This should use .arrays() or .zdi() of the magnetogram.
     with open(fname, 'w') as f:
         f.write("Output of %s\n" % __file__)
         f.write("Order:%d\n" % degree_max)

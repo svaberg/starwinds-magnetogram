@@ -44,23 +44,23 @@ class SphericalHarmonicsCoefficients(object):
         """Return coefficients for at given degree and order"""
         return self.coefficients.get((degree, order), self._default_coefficients)
 
-    # TODO use @property
+    @property
     def degree_max(self):
         """Return highest degree in coefficient set"""
         return self._degree_max
 
-    # TODO use @property
+    @property
     def order_min(self):
         """Return lowest order in coefficient set"""
         return self._order_min
 
-    # TODO use @property
+    @property
     def size(self):
         """Return number of coefficients."""
         return len(self.coefficients.keys())
 
     def __str__(self):
-        str = "Coefficients:\n"
+        str = "Spherical harmonics coefficients:\n"
         for degree, order in sorted(self.coefficients):
             str += "%d, %d, %s\n" % (degree, order, self.get(degree, order))
         return str
@@ -79,13 +79,13 @@ class SphericalHarmonicsCoefficients(object):
 
     def as_zdi(self, accept_negative_orders=False):
         """ Feel free to improve"""
-        if not accept_negative_orders and self.order_min() < 0:
+        if not accept_negative_orders and self.order_min < 0:
             raise ValueError("Will not convert negative orders to ZDI format. Use map_to_positive_orders first.")
 
         degrees = []
         orders = []
 
-        for degree in range(0, self.degree_max() + 1):
+        for degree in range(0, self.degree_max + 1):
             for order in range(-degree, degree + 1):
                 degrees.append(degree)
                 orders.append(order)
@@ -110,7 +110,7 @@ class SphericalHarmonicsCoefficients(object):
         if degree_l_min is None:
             degree_l_min = 0
         if degree_l_max is None:
-            degree_l_max = self.degree_max()
+            degree_l_max = self.degree_max
         if order_m_min is None:
             order_m_min = -degree_l_max
         if order_m_max is None:
@@ -223,7 +223,8 @@ def multiply(shc, value):
 
 def hstack(shcs):
     """
-    Stack magnetograms by using hstack on each coefficient.
+    Create a set of spherical harmonics coefficients by horizontally stacking (appending)
+    each of the individual of coefficients together.
     :param shcs: tuple of magnetograms
     :return: stacked magnetogram
     """
@@ -241,3 +242,4 @@ def hstack(shcs):
         shc.append(degree, order, c)
 
     return shc
+

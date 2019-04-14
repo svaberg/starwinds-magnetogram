@@ -6,14 +6,11 @@ import spherical_functions  # Loads slowly, so import only if needed.
 import stellarwinds.magnetogram.spherical_harmonics_coefficients as shc
 
 
-def rotate_magnetogram(magnetogram,
-                       alpha=np.pi, beta=0, gamma=0):
+def rotate_magnetogram(magnetogram, rotation):
     """
-    Rotate magnetogram in a 3-1-3 Euler angle
+    Rotate magnetogram.
     :param magnetogram:
-    :param alpha:
-    :param beta:
-    :param gamma:
+    :param rotation:
     :return: Rotated magnetogram
     """
 
@@ -27,7 +24,7 @@ def rotate_magnetogram(magnetogram,
             coeff_out = magnetogram.default_coefficients
 
             for order_m_in in range(-order_m_max, order_m_max + 1):
-                wde = spherical_functions.Wigner_D_element(alpha, beta, gamma, deg_l_in, order_m_in, order_m_out)
+                wde = spherical_functions.Wigner_D_element(rotation, deg_l_in, order_m_in, order_m_out)
                 coeff_out += wde * magnetogram.get(deg_l_in, order_m_in)
 
             rotated_magnetogram.append(deg_l_in, order_m_out, coeff_out)

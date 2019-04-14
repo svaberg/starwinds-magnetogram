@@ -235,10 +235,8 @@ class LehmannZdi:
         :return:
         """
         _dict = {}
-        _dict["radial"] = {"poloidal": self.get_radial_poloidal_field,}
-                        #  "toroidal": self.get_radial_toroidal_field}  # This component is always zero, see definition
         _dict["radial"] = {"poloidal": self.get_radial_poloidal_field,
-                           "toroidal": self.get_radial_toroidal_field}
+                           "toroidal": self.get_radial_toroidal_field}  # This component is always zero, see definition.
         _dict["polar"] = {"poloidal": self.get_polar_poloidal_field,
                           "toroidal": self.get_polar_toroidal_field}
         _dict["azimuthal"] = {"poloidal": self.get_azimuthal_poloidal_field,

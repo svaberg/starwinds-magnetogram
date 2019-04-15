@@ -5,48 +5,6 @@ import logging
 log = logging.getLogger(__name__)
 
 
-# Evaluate spherical harmonics for on a polar, azimuthal grid)
-# TODO which reference implementation is this? Do we even have a reference implementation?
-def evaluate_real_magnetogram_stanford_pfss_reference(degree_l, order_m, cosine_coefficients_g, sine_coefficients_h,
-                                                      points_polar, points_azimuth, radius=None, r0=1, rss=3):
-    if radius is None:
-        radius = r0
-
-    assert np.min(order_m) >= 0, "Stanford PFSS expects only positive orders (TBC)."
-    field_radial = np.zeros_like(points_azimuth)
-    field_polar = np.zeros_like(field_radial)
-    field_azimuthal = np.zeros_like(field_radial)
-
-    for row_id in range(len(degree_l)):
-
-        deg_l = degree_l[row_id]
-        ord_m = order_m[row_id]
-        g_lm = cosine_coefficients_g[row_id]
-        h_lm = sine_coefficients_h[row_id]
-
-        p_lm = sp.special.lpmv(ord_m, deg_l, np.cos(points_polar))
-
-        if True:  # Apply correction
-            # https://en.wikipedia.org/wiki/Spherical_harmonics#Condon%E2%80%93Shortley_phase
-            # https://en.wikipedia.org/wiki/Spherical_harmonics#Conventions
-            d0 = 0 + (ord_m == 0)
-            p_lm *= (-1) ** ord_m * np.sqrt(sp.special.factorial(deg_l - ord_m) / sp.special.factorial(deg_l + ord_m)) * np.sqrt(2 - d0)
-
-        # Estimate DPml
-        DPml = (p_lm - np.roll(p_lm, 1)) / (np.cos(points_polar) - np.roll(np.cos(points_polar), 1)) * np.sin(points_polar)
-
-        fixed = (r0 / radius) ** (deg_l + 2) / (deg_l + 1 + deg_l * (r0 / rss) ** (2 * deg_l + 1))
-
-        field_radial += p_lm * (g_lm * np.cos(ord_m * points_azimuth) + h_lm * np.sin(ord_m * points_azimuth)) * (
-                deg_l + 1 + deg_l * (radius / rss) ** (2 * deg_l + 1)) * fixed
-        field_polar -= DPml * (g_lm * np.cos(ord_m * points_azimuth) + h_lm * np.sin(ord_m * points_azimuth)) * (
-                1 - (radius / rss) ** (2 * deg_l + 1)) * fixed
-        field_azimuthal -= p_lm * (g_lm * np.sin(ord_m * points_azimuth) - h_lm * np.cos(ord_m * points_azimuth)) * (
-                1 - (radius / rss) ** (2 * deg_l + 1)) * fixed
-
-    return field_radial, field_polar, field_azimuthal
-
-
 def theta_lm(deg_l, ord_m, points_polar):
     """
     Calculate $\Theta_{\ell m}(\theta)$

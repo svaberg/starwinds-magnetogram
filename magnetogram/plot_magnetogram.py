@@ -3,17 +3,21 @@ import scipy.special
 import matplotlib
 import matplotlib.pyplot as plt
 from matplotlib.ticker import MaxNLocator
-from matplotlib.lines import Line2D
+from matplotlib.ticker import IndexLocator
+import matplotlib.colors as colors
 
+from matplotlib.lines import Line2D
+from mpl_toolkits.axes_grid1 import make_axes_locatable
 import logging
 log = logging.getLogger(__name__)
 
 from stellarwinds.magnetogram import pfss_stanford
 from stellarwinds.magnetogram import zdi_geometry
+from stellarwinds.magnetogram import zdi_lehmann
 from stellarwinds import coordinate_transforms
 
 
-def plot_pfss_spheres(magnetogram, geometry=None, radius_source_surface=3):
+def plot_pfss_equirectangular(magnetogram, geometry=None, radius_source_surface=3):
 
     if geometry is None:
         geometry = zdi_geometry.ZdiGeometry()
@@ -40,7 +44,7 @@ def plot_pfss_spheres(magnetogram, geometry=None, radius_source_surface=3):
         polar, azimuth,
         radius=1.5, radius_source_surface=radius_source_surface)
 
-    fig, axs_mat = plt.subplots(2, 3)
+    fig, axs_mat = plt.subplots(2, 3, figsize=(12, 5))
     fig.subplots_adjust(right=0.8)  # Make space for colorbar.
 
     for ax_row, B, radius in zip(axs_mat, (Bs, Bss), (1, radius_source_surface)):
@@ -50,7 +54,6 @@ def plot_pfss_spheres(magnetogram, geometry=None, radius_source_surface=3):
                                        vmin=-abs_max, vmax=abs_max)
             ax_row[component_id].set_ylabel(None)
 
-        # TODO check out make_axes_locatable
         def place_colorbar_axis_right(ax, dx=.22):
             p0 = ax.get_position().p0
             p1 = ax.get_position().p1
@@ -59,7 +62,11 @@ def plot_pfss_spheres(magnetogram, geometry=None, radius_source_surface=3):
             return cbar_ax
 
         cax = place_colorbar_axis_right(ax_row[2])
+
+        # divider = make_axes_locatable(ax_row[2])  # This changes the size of ax_row[2]
+        # cax = divider.append_axes("right", size="5%", pad=0.15)
         fig.colorbar(img, cax=cax)
+
 
         ax_row[0].set_title("Radial field $B_r$ at $r = %2.1f r_\star$" % radius)
         ax_row[1].set_title("Polar field $B_\\theta$ at $r = %2.1f r_\star$" % radius)
@@ -146,7 +153,7 @@ def plot_pfss_slice(magnetogram, geometry=None, normal="x", rmax=8,
     ax.contour(p1[:, :], p2[:, :], radial_distance, levels=[radius_star, radius_source_surface], colors='k')
 
 
-    # To draw streamplot, project f into the p plane.
+    # Streamplots only make sense if the field has a symmetry axis.
 
     # ax.streamplot(p1[:, :].transpose(), p2[:, :].transpose(),
     #               fx[:, :].transpose(), fz[:, :].transpose(), # TODO FIx
@@ -202,7 +209,6 @@ def plot_pfss_streamtraces(magnetogram, geometry=zdi_geometry.ZdiGeometry()):
     legend_items = [_br.collections[0], _bp.collections[0], _ba.collections[0]]
     legend_strs = ["Radial $B_r = 0$", "Polar $B_\\theta = 0$", "Azimuth $B_\phi = 0$"]
 
-
     locator = MaxNLocator(nbins=3, prune="lower")
     line_values = locator.tick_values(np.min(B_tangential_mag), np.max(B_tangential_mag))
     line_thicknesses = 3 * line_values / np.max(line_values)
@@ -210,6 +216,85 @@ def plot_pfss_streamtraces(magnetogram, geometry=zdi_geometry.ZdiGeometry()):
     custom_lines = [Line2D([0], [0], color='k', lw=l) for l in line_thicknesses]
     custom_strs = ["$B_\perp=%4.1f$" % x for x in line_values]
     plt.legend(legend_items + custom_lines, legend_strs + custom_strs)
+
+    return fig, ax
+
+
+def plot_zdi_energy(zc, types="total", negative_orders=False):
+    if type(types) == str:
+        types = types,  # Turn into a tuple
+
+    erad, epol, etor = zc.energy_matrix()
+
+    if not negative_orders:
+        def remove_negative(values):
+            split_id = values.shape[1] // 2
+            values_neg, values_nonneg = np.split(values, [split_id], axis=1)
+            assert np.allclose(values_neg, 0), "Negative orders not accepted."
+            return values_nonneg
+
+        erad = remove_negative(erad)
+        epol = remove_negative(epol)
+        etor = remove_negative(etor)
+
+    etot = epol + etor  # Note that epol already contains erad
+
+    _energies = dict(zip(("total", "radial", "poloidal", "toroidal"), (etot, erad, epol, etor)))
+
+    fig, axs = plt.subplots(1, len(types), figsize=(12, 4 * len(types)))
+    axs = np.atleast_1d(axs)
+
+    for _type, ax in zip(types, axs):
+        values = _energies[_type]
+
+        if np.allclose(values, 0):
+            # If values are all zero use scale colorscale 0-1
+            vmin = .1
+            vmax = 1
+        else:
+            vmax = values.max()
+            vmin = (values[values > 0]).max()**-1
+        img = ax.imshow(values,
+                        # cmap='Greys',
+                        norm=colors.LogNorm(vmin=vmin, vmax=vmax,))
+        ax.minorticks_on()
+        # ax.yaxis.set_major_locator(IndexLocator(base=1, offset=.5))
+        ax.xaxis.set_minor_locator(IndexLocator(base=1, offset=0))
+        ax.yaxis.set_minor_locator(IndexLocator(base=1, offset=0))
+        ax.tick_params(axis='both', color='none')
+        ax.set_xlabel("Order $m$")
+        ax.set_ylabel("Degree $\ell$")
+        ax.set_title("Coefficient %s energy (ZDI)" % _type)
+
+        if values.shape[0] != values.shape[1]:
+            # This means that negative orders are included.
+            ax.set_xticklabels(np.array(ax.get_xticks() - values.shape[1]//2, dtype=int))
+        ax.grid(which='minor', axis='both')
+
+        divider = make_axes_locatable(ax)
+        cax = divider.append_axes("right", size="5%", pad=0.15)
+        fig.colorbar(img, cax=cax)
+
+    return fig, axs
+
+
+def plot_energy_by_degree(zc):
+    erad, epol, etor = zc.energy_matrix()
+
+    fig, ax = plt.subplots()
+    ax.semilogy(np.sum(epol + etor, axis=1), 'o:', label='Total', color='k')
+    _lp = ax.semilogy(np.sum(epol, axis=1), '^:', label='Poloidal')
+    _lt = ax.semilogy(np.sum(etor, axis=1), '>:', label='Toroidal')
+    ax.semilogy(np.cumsum(np.sum(epol + etor, axis=1)), 'o-', label='Total cumulative', color='k')
+    ax.semilogy(np.cumsum(np.sum(epol, axis=1)), '^-', label='Poloidal cumulative',
+                color=_lp[0].get_color())
+    ax.semilogy(np.cumsum(np.sum(etor, axis=1)), '>-', label='Toroidal cumulative',
+                color=_lt[0].get_color())
+    ax.grid()
+    ax.legend(ncol=2)
+    ax.set_xlabel("Degree $\ell$")
+    ax.set_ylabel("Component energy [B$^2$]")
+    ax.set_title("Energy as a function of $\ell$")
 
     return fig, ax
 

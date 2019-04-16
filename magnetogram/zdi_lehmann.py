@@ -5,7 +5,6 @@ import scipy.special
 import logging
 log = logging.getLogger(__name__)
 
-
 class LehmannZdi:
     """
     Reference implementation based on equation 5 in Lehmann et al. (2018).
@@ -281,43 +280,64 @@ class LehmannZdi:
         """
 
         # First calculate energy associated with each coefficient
-        lTerm = self.degrees_l / (self.degrees_l + 1)
+        energy_alpha = self._energy_helper(self.alpha)
+        energy_beta = self._energy_helper(self.beta)
+        energy_gamma = self._energy_helper(self.gamma)
+
+        total_energy = np.sum(energy_alpha) + np.sum(energy_beta) + np.sum(energy_gamma)
+        total_energy_poloidal = np.sum(energy_alpha) + np.sum(energy_beta)
+        total_energy_toroidal = np.sum(energy_gamma)
+        log.info('Total energy: %g (B^2)' % total_energy)
+
+        log.info("radial  %g (%% tot)" % (np.sum(energy_alpha) / total_energy))
+        log.info('poloidal %g (%% tot)' % (total_energy_poloidal / total_energy))
+        log.info('toroidal %g (%% tot)' % (total_energy_toroidal / total_energy))
+
+        log.info ('Fraction of magnetic energy in each component')
+        log.info ('This can be summed, and should sum to 1.')
+        log.info ('l   m    E(alpha)   E(beta)    E(gamma)')
+        for i in range(len(self.alpha)):
+            log.info('%2i %2i %10.5f %10.5f %10.5f' % (self.degrees_l[i],
+                                                       self.orders_m[i],
+                                                       energy_alpha[i] / total_energy,
+                                                       energy_beta[i] / total_energy,
+                                                       energy_gamma[i] / total_energy))
+
+        return energy_alpha, energy_beta, energy_gamma
+
+    def energy_matrix(self):
+        energy_alpha = self._energy_helper(self.alpha)
+        energy_beta = self._energy_helper(self.beta)
+        energy_gamma = self._energy_helper(self.gamma)
+
+        energy_radial = energy_alpha
+        energy_poloidal = energy_alpha + energy_beta
+        energy_toroidal = energy_gamma
+
+        er = np.zeros((self.degree() + 1, 2 * self.degree() + 1))
+        ep = np.zeros_like(er)
+        et = np.zeros_like(ep)
+
+        for i in range(len(energy_poloidal)):
+            er[self.degrees_l[i], self.orders_m[i]] = energy_radial[i]
+            ep[self.degrees_l[i], self.orders_m[i]] = energy_poloidal[i]
+            et[self.degrees_l[i], self.orders_m[i]] = energy_toroidal[i]
+
+        return (np.roll(er, self.degree(), axis=1),
+                np.roll(ep, self.degree(), axis=1),
+                np.roll(et, self.degree(), axis=1))
+
+    def _energy_helper(self, complex_coeff):
+        lTerm = self.degrees_l / (self.degrees_l + 1)  # TODO what is this for.
         m0mask = np.zeros_like(self.alpha)
         for i in range(len(self.alpha)):
             if self.orders_m[i] == 0:
                 m0mask[i] = 1
 
-        def _energy_helper(complex_coeff):
-            Es = 0.5 * complex_coeff * np.conj(complex_coeff)
-            M0s = m0mask * 0.25 * (complex_coeff ** 2 + np.conj(complex_coeff) ** 2)
+        Es = 0.5 * complex_coeff * np.conj(complex_coeff)
+        M0s = m0mask * 0.25 * (complex_coeff ** 2 + np.conj(complex_coeff) ** 2)
 
-            return np.real(Es + M0s)
-
-        energy_alpha = _energy_helper(self.alpha)
-        energy_beta = _energy_helper(self.beta)
-        energy_gamma = _energy_helper(self.gamma)
-
-        total_energy = np.sum(energy_alpha) + np.sum(energy_beta) + np.sum(energy_gamma)
-        total_energy_poloidal = np.sum(energy_alpha) + np.sum(energy_beta)
-        total_energy_toroidal = np.sum(energy_gamma)
-        # print 'totalE ', totE, '(B^2)'
-        print('radial  {:7.3%} (% tot)'.format(np.sum(energy_alpha) / total_energy))
-        print('poloidal {:7.3%} (% tot)'.format(total_energy_poloidal / total_energy))
-        print('toroidal {:7.3%} (% tot)'.format(total_energy_toroidal / total_energy))
-
-        print ('Fraction of magnetic energy in each component')
-        print ('This can be summed, and should sum to 1.')
-        print ('l   m    E(alpha)   E(beta)    E(gamma)')
-        for i in range(len(self.alpha)):
-            print('%2i %2i %10.5f %10.5f %10.5f' % (self.degrees_l[i],
-                                                    self.orders_m[i],
-                                                    energy_alpha[i] / total_energy,
-                                                    energy_beta[i] / total_energy,
-                                                    energy_gamma[i] / total_energy))
-
-
-
-        return energy_alpha, energy_beta, energy_gamma
+        return np.real(Es + M0s)
 
     def _dpml(self, p_lm, points_polar):
         """
@@ -359,5 +379,5 @@ def from_coefficients(shc,
 
     split_coeffs = [coeffs_lm[:, _id] for _id in range(coeffs_lm.shape[1])]
 
-    return LehmannZdi(degree_l, order_m, *split_coeffs, dpml_method)
+    return LehmannZdi(degree_l, order_m, *split_coeffs, dpml_method=dpml_method)
 

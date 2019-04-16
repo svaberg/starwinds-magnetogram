@@ -165,6 +165,23 @@ class SphericalHarmonicsCoefficients(object):
     def __truediv__(self, value): return multiply(self, value**-1)
 
 
+import numpy.random
+
+
+def noise(degree_max=15, noisinator=numpy.random.normal, beta=0):
+    coeffs = SphericalHarmonicsCoefficients()
+
+    for deg_l in range(1, degree_max + 1):
+        for order_m in range(0, deg_l + 1):
+            _noise = noisinator(size=2)
+            _c = _noise[0] + 1j * _noise[1]
+            _c /= (2 * deg_l + 1)  # Wikipeida
+            _c /= deg_l**beta
+            coeffs.append(deg_l, order_m, _c)
+
+    return coeffs
+
+
 def isclose(shc0,
             shc1,
             **kwargs):

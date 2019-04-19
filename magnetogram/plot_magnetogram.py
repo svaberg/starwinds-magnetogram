@@ -1,11 +1,8 @@
 import numpy as np
-import scipy.special
-import matplotlib
 import matplotlib.pyplot as plt
 from matplotlib.ticker import MaxNLocator
 from matplotlib.ticker import IndexLocator
-import matplotlib.colors as colors
-
+from matplotlib import colors
 from matplotlib.lines import Line2D
 from mpl_toolkits.axes_grid1 import make_axes_locatable
 import logging
@@ -13,7 +10,6 @@ log = logging.getLogger(__name__)
 
 from stellarwinds.magnetogram import pfss_stanford
 from stellarwinds.magnetogram import zdi_geometry
-from stellarwinds.magnetogram import zdi_lehmann
 from stellarwinds import coordinate_transforms
 
 
@@ -66,7 +62,6 @@ def plot_pfss_equirectangular(magnetogram, geometry=None, radius_source_surface=
         # divider = make_axes_locatable(ax_row[2])  # This changes the size of ax_row[2]
         # cax = divider.append_axes("right", size="5%", pad=0.15)
         fig.colorbar(img, cax=cax)
-
 
         ax_row[0].set_title("Radial field $B_r$ at $r = %2.1f r_\star$" % radius)
         ax_row[1].set_title("Polar field $B_\\theta$ at $r = %2.1f r_\star$" % radius)
@@ -138,10 +133,10 @@ def plot_pfss_slice(magnetogram, geometry=None, normal="x", rmax=8,
     fmin = np.min(fmag[np.where(fmag > 0)])
     fmax = np.max(fmag)
 
-    norm = matplotlib.colors.SymLogNorm(linthresh=100 * fmin,
-                                        linscale=1,
-                                        vmin=-fmax,
-                                        vmax=fmax)
+    norm = colors.SymLogNorm(linthresh=100 * fmin,
+                             linscale=1,
+                             vmin=-fmax,
+                             vmax=fmax)
 
     im = ax.pcolormesh(p1, p2, np.squeeze(field_radial),
                        norm=norm,

@@ -4,7 +4,7 @@ import argparse
 import os.path
 
 from stellarwinds.magnetogram import convert_magnetogram
-from stellarwinds.magnetogram import zdi_lehmann
+from stellarwinds.magnetogram import zdi_magnetogram
 from stellarwinds.magnetogram import plot_magnetogram
 
 
@@ -22,7 +22,7 @@ def main():
     logging.getLogger("stellarwinds").setLevel(args.log_level)  # Set for entire stellarwinds package.
 
     coefficients = convert_magnetogram.read_magnetogram_file(args.input_file)
-    lz = zdi_lehmann.from_coefficients(coefficients)
+    lz = zdi_magnetogram.from_coefficients(coefficients)
 
     if args.plot_type == 'map':
         fig, _ = plot_magnetogram.plot_map(lz, guess_starname_from_filename(args.input_file))

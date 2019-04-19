@@ -5,7 +5,7 @@ import scipy.special
 import logging
 log = logging.getLogger(__name__)
 
-class LehmannZdi:
+class ZdiMagnetogram:
     """
     Reference implementation based on equation 5 in Lehmann et al. (2018).
     Produces same plots as Folsom (2016, 2018) except that the sign of
@@ -271,7 +271,7 @@ class LehmannZdi:
 
         log.info("Retaining %d coefficients" % len(good_indices))
 
-        return LehmannZdi(*new_args, self._dpml_method)
+        return ZdiMagnetogram(*new_args, self._dpml_method)
 
     def energy(self):
         """
@@ -379,5 +379,5 @@ def from_coefficients(shc,
 
     split_coeffs = [coeffs_lm[:, _id] for _id in range(coeffs_lm.shape[1])]
 
-    return LehmannZdi(degree_l, order_m, *split_coeffs, dpml_method=dpml_method)
+    return ZdiMagnetogram(degree_l, order_m, *split_coeffs, dpml_method=dpml_method)
 

@@ -236,7 +236,7 @@ def plot_zdi_energy(zc, types="total", negative_orders=False):
 
     _energies = dict(zip(("total", "radial", "poloidal", "toroidal"), (etot, erad, epol, etor)))
 
-    fig, axs = plt.subplots(1, len(types), figsize=(12, 4 * len(types)))
+    fig, axs = plt.subplots(1, len(types), figsize=(5 * len(types), 4))
     axs = np.atleast_1d(axs)
 
     for _type, ax in zip(types, axs):
@@ -317,3 +317,181 @@ def plot_equirectangular(geometry, value, ax, vmin=None, vmax=None, cmap='RdBu_r
     ax.grid()
 
     return img
+
+
+
+def plot_map(lz, star_name):
+
+    zg = zdi_geometry.ZdiGeometry(61)
+
+    polar_centers, azimuth_centers = zg.centers()
+
+    zdi_geometry.numerical_description(zg, lz)
+
+    b_radial = lz.get_radial_field(polar_centers, azimuth_centers)
+    b_radial_max_indices = np.unravel_index(np.argmax(b_radial, axis=None), b_radial.shape)
+    b_radial_max_polar = polar_centers[b_radial_max_indices]
+    b_radial_max_azimuth = azimuth_centers[b_radial_max_indices]
+    b_radial_max = b_radial[b_radial_max_indices]
+
+    b_radial_min_indices = np.unravel_index(np.argmin(b_radial, axis=None), b_radial.shape)
+    b_radial_min_polar = polar_centers[b_radial_min_indices]
+    b_radial_min_azimuth = azimuth_centers[b_radial_min_indices]
+    b_radial_min = b_radial[b_radial_min_indices]
+
+    if np.abs(b_radial_max) > np.abs(b_radial_min):
+        abs_b_radial_max = np.abs(b_radial_max)
+        abs_b_radial_max_polar = b_radial_max_polar
+        abs_b_radial_max_azimuth = b_radial_max_azimuth
+    else:
+        abs_b_radial_max = np.abs(b_radial_min)
+        abs_b_radial_max_polar = b_radial_min_polar
+        abs_b_radial_max_azimuth = b_radial_min_azimuth
+
+    abs_b_radial_mean = np.sum(np.abs(b_radial) * zg.areas()) / (4 * np.pi)
+
+    log.info("|B_r|_max = %4.4g Gauss" % abs_b_radial_max)
+    log.info("|B_r|_max at az=%2.2f deg, pl=%3.2f deg" % (np.rad2deg(abs_b_radial_max_azimuth),
+                                                          np.rad2deg(abs_b_radial_max_polar)))
+    log.info("|B_r|_mean = %4.4g Gauss" % abs_b_radial_mean)
+
+    fig, ax = plt.subplots(figsize=(12, 6))
+    polar_corners, azimuth_corners = zg.corners()
+    img1 = ax.pcolormesh(np.rad2deg(azimuth_corners),
+                         np.rad2deg(polar_corners),
+                         b_radial,
+                         vmin=-abs_b_radial_max, vmax=abs_b_radial_max,
+                         cmap="RdBu_r")
+    cb = fig.colorbar(img1, ax=ax)
+
+    i1 = ax.contour(np.rad2deg(zg.centers()[1]),
+                    np.rad2deg(zg.centers()[0]),
+                    b_radial,
+                    0,
+                    linewidths=1,
+                    colors='k',
+                    )
+
+    i1.collections[1].set_label('$B_r=0$ G')  # Even if there is only one line, the collections array has 3 elements.
+    cb.add_lines(i1)
+
+    i2 = ax.contour(np.rad2deg(zg.centers()[1]),
+                    np.rad2deg(zg.centers()[0]),
+                    b_radial,
+                    cb.get_ticks(),
+                    linewidths=.5,
+                    colors='k',
+                    linestyles='dashed'
+                    )
+
+    i2.collections[0].set_label('$\\Delta B_r = %g$ G' % (cb.get_ticks()[1] - cb.get_ticks()[0]))
+    # import pdb; pdb.set_trace()
+    # ax.clabel(i2, fmt='%2.1f', colors='k', fontsize=6)
+    # h2, _ =
+    # for _id, h2l in enumerate(i2.collections):
+    #     h2l.set_label(_id)
+
+    cb.add_lines(i2)
+
+    # _ticks = cb.get_ticks()
+    if np.abs(b_radial_max) > np.abs(b_radial_min):
+        cb.ax.axhline(y=b_radial_min, color='y')
+        _value_to_add = b_radial_min
+    else:
+        cb.ax.axhline(y=b_radial_max, color='g')
+        _value_to_add = b_radial_max
+
+    ax.xaxis.set_ticks(np.arange(0, 361, 45))
+    ax.yaxis.set_ticks(np.arange(0, 181, 30))
+    plt.grid()
+
+    plt.plot(np.rad2deg(b_radial_max_azimuth),
+             np.rad2deg(b_radial_max_polar), 'g^',
+             label='Max $B_r=%s$ G' % latex_float(b_radial_max))
+    plt.plot(np.rad2deg(b_radial_min_azimuth),
+             np.rad2deg(b_radial_min_polar), 'yv',
+             label='Min $B_r=%s$ G' % latex_float(b_radial_min))
+
+    plt.title('%s: $|B_r|_\mathrm{mean}=%4.4g$ G' % (star_name, abs_b_radial_mean))
+    ax.invert_yaxis()
+
+    ## Dipole max
+    b_radial = lz.as_dipole().get_radial_field(polar_centers, azimuth_centers)
+    b_radial_max_indices = np.unravel_index(np.argmax(b_radial, axis=None), b_radial.shape)
+    b_radial_max_polar = polar_centers[b_radial_max_indices]
+    b_radial_max_azimuth = azimuth_centers[b_radial_max_indices]
+    b_radial_max = b_radial[b_radial_max_indices]
+
+    b_radial_min_indices = np.unravel_index(np.argmin(b_radial, axis=None), b_radial.shape)
+    b_radial_min_polar = polar_centers[b_radial_min_indices]
+    b_radial_min_azimuth = azimuth_centers[b_radial_min_indices]
+    b_radial_min = b_radial[b_radial_min_indices]
+
+    log.info("Dipole polar angle %g deg" % np.rad2deg(np.min([b_radial_max_polar, b_radial_min_polar])))
+
+    plt.plot(np.rad2deg(b_radial_max_azimuth, ), np.rad2deg(b_radial_max_polar), 'g^', fillstyle='none', label='Dipole $B_r=%s$ G' % latex_float(b_radial_max))
+    plt.plot(np.rad2deg(b_radial_min_azimuth, ), np.rad2deg(b_radial_min_polar), 'yv', fillstyle='none', label='Dipole $B_r=%s$ G' % latex_float(b_radial_min))
+
+    plt.legend(ncol=3, loc='lower left')
+
+    ax.set_aspect('equal')
+
+    plt.title('%s: $|B_r|_\mathrm{mean}=%4.4g$ G. Dipole at %4.4g deg' % (star_name,
+                                                                abs_b_radial_mean,
+                                                                np.rad2deg(np.min([b_radial_max_polar, b_radial_min_polar]))))
+
+    return fig, ax
+
+
+def pole_walk(lz, zg=None, ax=None):
+    """
+    Forget this; the pole walks all over the place
+    :param lz:
+    :param zg:
+    :return:
+    """
+    if ax is None:
+        ax = plt.gca()
+    if zg is None:
+        zg = zdi_geometry.ZdiGeometry(128)
+
+    polar_centers, azimuth_centers = zg.centers()
+
+    # Dipole max
+    b_radial_max_polar = []
+    b_radial_max_azimuth = []
+    b_radial_min_polar = []
+    b_radial_min_azimuth = []
+
+    for max_degree in range(lz.degree()):
+        b_radial = lz.as_restricted(degree_l_range=(0, max_degree)).get_radial_field(polar_centers, azimuth_centers)
+        b_radial_max_indices = np.unravel_index(np.argmax(b_radial, axis=None), b_radial.shape)
+        b_radial_max_polar.append(polar_centers[b_radial_max_indices])
+        b_radial_max_azimuth.append(azimuth_centers[b_radial_max_indices])
+        b_radial_max = b_radial[b_radial_max_indices]
+
+        b_radial_min_indices = np.unravel_index(np.argmin(b_radial, axis=None), b_radial.shape)
+        b_radial_min_polar.append(polar_centers[b_radial_min_indices])
+        b_radial_min_azimuth.append(azimuth_centers[b_radial_min_indices])
+        b_radial_min = b_radial[b_radial_min_indices]
+
+    ax.plot(np.rad2deg(b_radial_max_azimuth, ), np.rad2deg(b_radial_max_polar), 'g:^', label='Max $B_r=%s$ G' % latex_float(b_radial_max))
+    ax.plot(np.rad2deg(b_radial_min_azimuth, ), np.rad2deg(b_radial_min_polar), 'y:v', label='Min $B_r=%s$ G' % latex_float(b_radial_min))
+
+    for i in range(len(b_radial_min_azimuth)):
+        ax.text(np.rad2deg(b_radial_max_azimuth[i]), np.rad2deg(b_radial_max_polar[i]), str(i))
+        ax.text(np.rad2deg(b_radial_min_azimuth[i]), np.rad2deg(b_radial_min_polar[i]), str(i))
+    ax.legend()
+    return plt.gcf(), ax
+
+
+# TODO move to utils or similar.
+def latex_float(value, pattern="{0:+.3g}"):
+    float_str = pattern.format(value)
+    if "e" in float_str:
+        base, exponent = float_str.split("e")
+        return r"{0} \times 10^{{{1}}}".format(base, int(exponent))
+    else:
+        return float_str
+
+

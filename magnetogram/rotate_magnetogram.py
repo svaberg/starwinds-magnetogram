@@ -6,7 +6,7 @@ log = logging.getLogger(__name__)
 import quaternion
 import spherical_functions
 
-import stellarwinds.magnetogram.spherical_harmonics_coefficients as shc
+import stellarwinds.magnetogram.coefficients as shc
 
 
 def rotate_magnetogram(magnetogram, rotation):

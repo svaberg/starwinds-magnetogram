@@ -4,7 +4,7 @@ import logging
 
 log = logging.getLogger(__name__)
 
-import stellarwinds.magnetogram.spherical_harmonics_coefficients as shc
+import stellarwinds.magnetogram.coefficients as shc
 
 
 def collect_cosines(r, alpha, s, beta):
@@ -107,7 +107,7 @@ def read_magnetogram_file(fname, types=("radial",)):
     for coeffs_types in types:
         header_lines = []
 
-        coeffs = shc.SphericalHarmonicsCoefficients()
+        coeffs = shc.Coefficients()
 
         for __line_id, line in enumerate(magnetogram_file_lines[line_offset:]):
             line_no = __line_id + line_offset

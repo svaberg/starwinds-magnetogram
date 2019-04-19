@@ -1,9 +1,10 @@
 import numpy as np
+import numpy.random
 import logging
 log = logging.getLogger(__name__)
 
 
-class SphericalHarmonicsCoefficients(object):
+class Coefficients(object):
     """
     Spherical harmonics coefficient data container class.
     Can contain a numpy array for each degree and order.
@@ -165,11 +166,10 @@ class SphericalHarmonicsCoefficients(object):
     def __truediv__(self, value): return multiply(self, value**-1)
 
 
-import numpy.random
 
 
 def noise(degree_max=15, noisinator=numpy.random.normal, beta=0):
-    coeffs = SphericalHarmonicsCoefficients()
+    coeffs = Coefficients()
 
     for deg_l in range(1, degree_max + 1):
         for order_m in range(0, deg_l + 1):
@@ -216,7 +216,7 @@ def empty_like(shc):
     """
     Get empty set of spherical harmonics coefficients with same type of coefficients.
     """
-    return SphericalHarmonicsCoefficients(shc.default_coefficients)
+    return Coefficients(shc.default_coefficients)
 
 
 def add(shc0, shc1):
@@ -266,7 +266,7 @@ def hstack(shcs):
 
     default_coefficients = np.hstack([a.default_coefficients for a in shcs])
 
-    shc = SphericalHarmonicsCoefficients(default_coefficients)
+    shc = Coefficients(default_coefficients)
 
     # Get all degree, order pairs from the objects
     keys = set.union(*[set(a.coefficients) for a in shcs])
@@ -291,7 +291,7 @@ def hsplit(shc, indices_or_sections=None):
 
     default_coefficients = np.hsplit(shc.default_coefficients, indices_or_sections)
 
-    shcs = [SphericalHarmonicsCoefficients(_dc) for _dc in default_coefficients]
+    shcs = [Coefficients(_dc) for _dc in default_coefficients]
 
     for (degree, order), value in shc.contents():
         split_values = np.hsplit(value, indices_or_sections)

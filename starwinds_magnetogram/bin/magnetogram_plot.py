@@ -1,18 +1,18 @@
-import argparse
 import logging
-import os.path
-
 log = logging.getLogger(__name__)
-
+import argparse
+import os.path
 import numpy as np
 import matplotlib
-matplotlib.use('Qt5Agg')  # So that a plot window actually opens.
-import matplotlib.pyplot as plt
+# matplotlib.use('Qt5Agg')  # So that a plot window actually opens.
 import scipy.constants
-from stellarwinds.magnetogram import energy_spectrum
+import matplotlib.pyplot as plt
+
 from stellarwinds.magnetogram import convert_magnetogram
 from stellarwinds.magnetogram import zdi_lehmann
 from stellarwinds.magnetogram import zdi_geometry
+
+
 #
 # Main method. Use -h for usage and help.
 #
@@ -42,6 +42,7 @@ def main():
     else:
         plt.savefig(args.output_file)
 
+
 def latex_float(f):
     float_str = "{0:+.3g}".format(f)
     if "e" in float_str:
@@ -49,6 +50,7 @@ def latex_float(f):
         return r"{0} \times 10^{{{1}}}".format(base, int(exponent))
     else:
         return float_str
+
 
 def read_lehmann_zdi(input_file):
     # Read input file
@@ -66,6 +68,7 @@ def read_lehmann_zdi(input_file):
 
     lz = zdi_lehmann.LehmannZdi(degree_l, order_m, alpha_lm, beta_lm, gamma_lm)
     return lz
+
 
 def plot_map(input_file):
 
@@ -139,7 +142,6 @@ def plot_map(input_file):
     # for _id, h2l in enumerate(i2.collections):
     #     h2l.set_label(_id)
 
-
     cb.add_lines(i2)
 
     # _ticks = cb.get_ticks()
@@ -164,8 +166,6 @@ def plot_map(input_file):
     star_name = os.path.basename(input_file)[6:-4]
     plt.title('%s: $|B_r|_\mathrm{mean}=%4.4g$ G' % (star_name, abs_b_radial_mean))
     ax.invert_yaxis()
-
-
 
     ## Dipole max
     b_radial = lz.as_dipole().get_radial_field(polar_centers, azimuth_centers)
@@ -225,7 +225,6 @@ def pole_walk(lz, zg):
     plt.plot(np.rad2deg(b_radial_min_azimuth, ), np.rad2deg(b_radial_min_polar), 'y:')#, label='Min $B_r=%s$ G' % latex_float(b_radial_min))
 
 
-
 def plot_spectrum(input_file):
     """
     Plot the spectrum (not working)
@@ -251,9 +250,6 @@ def plot_spectrum(input_file):
     eb = eb[1:] / (2 * scipy.constants.mu_0)
     eg = eg[1:] / (2 * scipy.constants.mu_0)
 
-
-
-
     fig, axs = plt.subplots(2, 1)
 
     ax=axs[0]
@@ -275,9 +271,7 @@ def plot_spectrum(input_file):
     ax.grid()
     ax.legend(ncol=2, loc="lower right")
 
-
     ax = axs[1]
-
 
     # ax.semilogy(lz.degrees_l, energy_alpha_lm, 'x', label='$\\alpha$')
     # ax.semilogy(lz.degrees_l, energy_beta_lm, 'x',  label='$\\beta$')
@@ -297,10 +291,8 @@ def plot_spectrum(input_file):
     ax.legend(ncol=3, loc="lower left")
     ax.set_xlabel("Degree $\ell$")
 
-
     star_name = os.path.basename(input_file)[6:-4]
     axs[0].set_title('Average magnetic pressure of %s' % star_name)
-
 
     return fig
 

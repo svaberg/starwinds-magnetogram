@@ -5,6 +5,7 @@ import scipy.special
 import logging
 log = logging.getLogger(__name__)
 
+
 class ZdiMagnetogram:
     """
     Reference implementation based on equation 5 in Lehmann et al. (2018).
@@ -210,7 +211,6 @@ class ZdiMagnetogram:
                 + self.get_azimuthal_toroidal_field(points_polar, points_azimuth)
                 )
 
-    # This is not part of Lehmann but from zdipy.
     # When should the real values be taken?
     def get_field_strength(self, points_polar, points_azimuth):
         """

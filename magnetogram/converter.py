@@ -141,7 +141,7 @@ def read_magnetogram_file(fname, types=("radial",)):
     return shc.hstack(full_coeffs)
 
 
-def write_magnetogram_file(coeffs, fname="test_field_wso.dat", degree_max=None):
+def write_magnetogram_file(coeffs, fname, degree_max=None):
     """
 
     :param coeffs:

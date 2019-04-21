@@ -6,7 +6,7 @@ import glob
 from tests import context  # Test context
 import stellarwinds.magnetogram.lsd_plots as plsd
 
-
+# TODO stop referring to files outside project.
 
 @pytest.mark.parametrize("parameters", ("VNI", "VI"))
 def test_plot_lsd_profile(request, parameters, skip_header=2):

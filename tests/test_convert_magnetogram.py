@@ -43,7 +43,7 @@ def test_independent_implementation(l, m):
 
 
 # TODO use the temp folder
-def test_read(fname='test_field_zdipy.dat'):
+def test_read():
     content = r"""General poloidal plus toroidal field
 4 3 -3
  1  0 1. 1.
@@ -64,14 +64,17 @@ def test_read(fname='test_field_zdipy.dat'):
  2  1 2100. 2110.
  2  2 2200. 2210.
  """
-    with open(fname, 'w') as f:
+
+    path = context.default_artifact_directory + '/test_field_zdipy.dat'
+
+    with open(path, 'w') as f:
         f.write(content)
 
-    coeffs = cm.read_magnetogram_file(fname)
+    coeffs = cm.read_magnetogram_file(path)
 
     coeffs.apply_scaling(cm.forward_conversion_factor)
 
-    cm.write_magnetogram_file(coeffs, fname='test_field_wso.dat')
+    cm.write_magnetogram_file(coeffs, fname=context.default_artifact_directory + '/test_field_wso.dat')
 
 
 def test_map_to_positive_orders(request):

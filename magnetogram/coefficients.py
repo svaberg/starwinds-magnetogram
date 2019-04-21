@@ -166,8 +166,6 @@ class Coefficients(object):
     def __truediv__(self, value): return multiply(self, value**-1)
 
 
-
-
 def noise(degree_max=15, noisinator=numpy.random.normal, beta=0):
     coeffs = Coefficients()
 

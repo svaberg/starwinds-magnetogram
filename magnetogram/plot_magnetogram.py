@@ -12,6 +12,12 @@ from stellarwinds.magnetogram import pfss_stanford
 from stellarwinds.magnetogram import zdi_geometry
 from stellarwinds import coordinate_transforms
 
+# TODO all functions should return the axis objects they create. Functions that
+# generate a single axis should take ax as an argument which can be None. Functions
+# which produce multiple axes can take an axs argument which must be of the right dimensions.
+# There is no need to return the Figure object as it can be retrieved from ax.figure.
+# No plot function should generate more than one figure.
+
 
 def plot_pfss_equirectangular(magnetogram, geometry=None, radius_source_surface=3):
 
@@ -215,11 +221,30 @@ def plot_pfss_streamtraces(magnetogram, geometry=zdi_geometry.ZdiGeometry()):
     return fig, ax
 
 
-def plot_zdi_energy(zc, types="total", negative_orders=False):
+def plot_zdi_energy(zc, types="total", negative_orders=False, axs=None):
+
     if type(types) == str:
         types = types,  # Turn into a tuple
+    if axs is None:
+        _, axs = plt.subplots(1, len(types), figsize=(5 * len(types), 4))
+        axs = np.atleast_1d(axs)
 
-    erad, epol, etor = zc.energy_matrix()
+    for _type, ax in zip(types, axs):
+        _plot_zdi_energy(zc, _type, negative_orders, ax)
+
+    return ax.figure, axs
+
+
+def _plot_zdi_energy(zc, name="total", negative_orders=False, ax=None):
+
+    if ax is None:
+        _, ax = plt.subplots()
+
+    erad, epol, etor = zc.energy_matrix()  # Todo change to read perhaps just some types. Also alpha, beta and gamma.
+    etot = epol + etor  # Note that epol already contains erad
+    _energies = dict(zip(("total", "radial", "poloidal", "toroidal"), (etot, erad, epol, etor)))
+
+    energy = _energies[name]
 
     if not negative_orders:
         def remove_negative(values):
@@ -228,55 +253,45 @@ def plot_zdi_energy(zc, types="total", negative_orders=False):
             assert np.allclose(values_neg, 0), "Negative orders not accepted."
             return values_nonneg
 
-        erad = remove_negative(erad)
-        epol = remove_negative(epol)
-        etor = remove_negative(etor)
+        energy = remove_negative(energy)
 
-    etot = epol + etor  # Note that epol already contains erad
+    if np.allclose(energy, 0):
+        # If values are all zero use scale colorscale 0-1
+        vmin = .1
+        vmax = 1
+    else:
+        vmax = energy.max()
+        vmin = (energy[energy > 0]).max()**-1
+    img = ax.imshow(energy,
+                    # cmap='Greys',
+                    norm=colors.LogNorm(vmin=vmin, vmax=vmax,))
+    ax.minorticks_on()
+    # ax.yaxis.set_major_locator(IndexLocator(base=1, offset=.5))
+    ax.xaxis.set_minor_locator(IndexLocator(base=1, offset=0))
+    ax.yaxis.set_minor_locator(IndexLocator(base=1, offset=0))
+    ax.tick_params(axis='both', color='none')
+    ax.set_xlabel("Order $m$")
+    ax.set_ylabel("Degree $\ell$")
+    ax.set_title("Coefficient %s energy (ZDI)" % name)
 
-    _energies = dict(zip(("total", "radial", "poloidal", "toroidal"), (etot, erad, epol, etor)))
+    if energy.shape[0] != energy.shape[1]:
+        # This means that negative orders are included.
+        ax.set_xticklabels(np.array(ax.get_xticks() - energy.shape[1]//2, dtype=int))
+    ax.grid(which='minor', axis='both')
 
-    fig, axs = plt.subplots(1, len(types), figsize=(5 * len(types), 4))
-    axs = np.atleast_1d(axs)
+    divider = make_axes_locatable(ax)
+    cax = divider.append_axes("right", size="5%", pad=0.15)
+    ax.figure.colorbar(img, cax=cax)
 
-    for _type, ax in zip(types, axs):
-        values = _energies[_type]
-
-        if np.allclose(values, 0):
-            # If values are all zero use scale colorscale 0-1
-            vmin = .1
-            vmax = 1
-        else:
-            vmax = values.max()
-            vmin = (values[values > 0]).max()**-1
-        img = ax.imshow(values,
-                        # cmap='Greys',
-                        norm=colors.LogNorm(vmin=vmin, vmax=vmax,))
-        ax.minorticks_on()
-        # ax.yaxis.set_major_locator(IndexLocator(base=1, offset=.5))
-        ax.xaxis.set_minor_locator(IndexLocator(base=1, offset=0))
-        ax.yaxis.set_minor_locator(IndexLocator(base=1, offset=0))
-        ax.tick_params(axis='both', color='none')
-        ax.set_xlabel("Order $m$")
-        ax.set_ylabel("Degree $\ell$")
-        ax.set_title("Coefficient %s energy (ZDI)" % _type)
-
-        if values.shape[0] != values.shape[1]:
-            # This means that negative orders are included.
-            ax.set_xticklabels(np.array(ax.get_xticks() - values.shape[1]//2, dtype=int))
-        ax.grid(which='minor', axis='both')
-
-        divider = make_axes_locatable(ax)
-        cax = divider.append_axes("right", size="5%", pad=0.15)
-        fig.colorbar(img, cax=cax)
-
-    return fig, axs
+    return ax
 
 
-def plot_energy_by_degree(zc):
+def plot_energy_by_degree(zc, ax=None):
+    if ax is None:
+        _, ax = plt.subplots()
+
     erad, epol, etor = zc.energy_matrix()
 
-    fig, ax = plt.subplots()
     ax.semilogy(np.sum(epol + etor, axis=1), 'o:', label='Total', color='k')
     _lp = ax.semilogy(np.sum(epol, axis=1), '^:', label='Poloidal')
     _lt = ax.semilogy(np.sum(etor, axis=1), '>:', label='Toroidal')
@@ -288,10 +303,10 @@ def plot_energy_by_degree(zc):
     ax.grid()
     ax.legend(ncol=2)
     ax.set_xlabel("Degree $\ell$")
-    ax.set_ylabel("Component energy [B$^2$]")
+    ax.set_ylabel("Summed component energy [B$^2$]")
     ax.set_title("Energy as a function of $\ell$")
 
-    return fig, ax
+    return ax.figure, ax
 
 
 def plot_equirectangular(geometry, value, ax, vmin=None, vmax=None, cmap='RdBu_r'):

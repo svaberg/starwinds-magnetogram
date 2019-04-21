@@ -375,6 +375,10 @@ def from_coefficients(shc,
                       ):
     degree_l, order_m, coeffs_lm = shc.as_arrays(include_unset=False)
 
+    if np.min(order_m) < 0:
+        log.warning("Creating ZDI magnetogram with negative orders;")
+        log.warning("use map_to_positive_orders first to avoid this warning.")
+
     assert coeffs_lm.shape[1] <= 3, "Three complex coefficients or less are OK."
 
     split_coeffs = [coeffs_lm[:, _id] for _id in range(coeffs_lm.shape[1])]

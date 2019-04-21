@@ -4,7 +4,7 @@ log = logging.getLogger(__name__)
 import quaternion
 import pytest
 from tests import context  # Test context
-from tests import magnetograms
+from tests.magnetogram import magnetograms
 from tests.magnetogram.test_convert_magnetogram import get_field_values
 import stellarwinds.magnetogram.rotate as rm
 from stellarwinds.magnetogram import converter

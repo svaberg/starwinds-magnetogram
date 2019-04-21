@@ -1,15 +1,12 @@
 import matplotlib as mpl
-from matplotlib import cm, colors
-from mpl_toolkits.mplot3d import Axes3D
+from matplotlib import cm
 import numpy as np
-from scipy.special import lpmv
-from scipy.special import factorial
 import logging
-import pytest
 
 # Test "context"
 from tests import context  # Test context
-from tests import magnetograms
+from tests.magnetogram import magnetograms
+
 log = logging.getLogger(__name__)
 
 # Local
@@ -116,7 +113,6 @@ def test_zdi_magnetogram_3d(request, magnetogram_name="mengel"):
             # plt.savefig(pn.get())
 
             import matplotlib.pyplot as plt
-            from mpl_toolkits.mplot3d import Axes3D
             # ax.plot_surface(*corners, facecolors=cm.coolwarm(corners[0]),
             #            linewidth=1, antialiased=False)
 

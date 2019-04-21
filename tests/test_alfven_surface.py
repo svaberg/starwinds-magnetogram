@@ -4,11 +4,9 @@ import scipy.constants
 import logging
 log = logging.getLogger(__name__)
 
-import pytest
-
 # Test "context"
 from tests import context  # Test context
-from tests import magnetograms
+from tests.magnetogram import magnetograms
 
 # Local
 import stellarwinds.magnetogram.parker_solution as parker
@@ -143,7 +141,6 @@ def test_alfven_surface(request,
             fig.colorbar(im).set_label('Radial field strength')
 
         else:
-            from matplotlib.colors import LogNorm
 
             norm = mpl.colors.LogNorm(vmin=1e-2,
                                       vmax=1e2)

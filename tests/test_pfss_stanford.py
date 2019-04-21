@@ -5,7 +5,7 @@ log = logging.getLogger(__name__)
 
 # Test "context"
 from tests import context  # Test context
-from tests import magnetograms  # Example magnetograms
+from tests.magnetogram import magnetograms
 
 # Local
 import stellarwinds.magnetogram.pfss_magnetogram as pfss_stanford

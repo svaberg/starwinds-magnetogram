@@ -6,7 +6,7 @@ import logging
 
 log = logging.getLogger(__name__)
 
-import stellarwinds.magnetogram.convert_magnetogram
+import stellarwinds.magnetogram.converter
 
 
 #
@@ -40,13 +40,13 @@ def convert_magnetogram_file(input_file, output_name=None, power=1, degree_max=N
             output_name = ".".join(file_tokens)
 
         # Read input file
-        coeffs = stellarwinds.magnetogram.convert_magnetogram.read_magnetogram_file(input_file)
+        coeffs = stellarwinds.magnetogram.converter.read_magnetogram_file(input_file)
 
-        coeffs.apply_scaling(stellarwinds.magnetogram.convert_magnetogram.forward_conversion_factor, power)
+        coeffs.apply_scaling(stellarwinds.magnetogram.converter.forward_conversion_factor, power)
 
-        stellarwinds.magnetogram.convert_magnetogram.write_magnetogram_file(coeffs,
-                                                                            fname=output_name,
-                                                                            degree_max=degree_max)
+        stellarwinds.magnetogram.converter.write_magnetogram_file(coeffs,
+                                                                  fname=output_name,
+                                                                  degree_max=degree_max)
 
 
 if __name__ == "__main__":

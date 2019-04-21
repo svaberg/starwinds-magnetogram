@@ -8,8 +8,9 @@ from mpl_toolkits.axes_grid1 import make_axes_locatable
 import logging
 log = logging.getLogger(__name__)
 
-from stellarwinds.magnetogram import pfss_stanford
-from stellarwinds.magnetogram import zdi_geometry
+from stellarwinds.magnetogram import pfss_magnetogram
+from stellarwinds import magnetogram
+import stellarwinds.magnetogram.geometry
 from stellarwinds import coordinate_transforms
 
 # TODO all functions should return the axis objects they create. Functions that
@@ -19,18 +20,18 @@ from stellarwinds import coordinate_transforms
 # No plot function should generate more than one figure.
 
 
-def plot_pfss_equirectangular(magnetogram, geometry=None, radius_source_surface=3):
+def plot_pfss_equirectangular(coefficients, geometry=None, radius_source_surface=3):
 
     if geometry is None:
-        geometry = zdi_geometry.ZdiGeometry()
+        geometry = magnetogram.geometry.ZdiGeometry()
 
     #
     # Evaluate magnetic field at coordinates.
     #
-    degree_l, order_m, alpha_lm = magnetogram.as_arrays(include_unset=False)
-    polar, azimuth = zdi_geometry.ZdiGeometry().centers()
+    degree_l, order_m, alpha_lm = coefficients.as_arrays(include_unset=False)
+    polar, azimuth = geometry.centers()
 
-    Bs = pfss_stanford.evaluate_on_sphere(
+    Bs = pfss_magnetogram.evaluate_on_sphere(
         degree_l,
         order_m,
         np.real(alpha_lm),
@@ -38,7 +39,7 @@ def plot_pfss_equirectangular(magnetogram, geometry=None, radius_source_surface=
         polar, azimuth,
         radius=1, radius_source_surface=radius_source_surface)
 
-    Bss = pfss_stanford.evaluate_on_sphere(
+    Bss = pfss_magnetogram.evaluate_on_sphere(
         degree_l,
         order_m,
         np.real(alpha_lm),
@@ -82,7 +83,7 @@ def plot_pfss_equirectangular(magnetogram, geometry=None, radius_source_surface=
     return fig, axs_mat
 
 
-def plot_pfss_slice(magnetogram, geometry=None, normal="x", rmax=8,
+def plot_pfss_slice(coefficients, geometry=None, normal="x", rmax=8,
                     radius_source_surface=3, radius_star=1):
 
     # Points in normal plane.
@@ -109,13 +110,13 @@ def plot_pfss_slice(magnetogram, geometry=None, normal="x", rmax=8,
 
     pr, pp, pa = coordinate_transforms.spherical_coordinates_from_rectangular(px, py, pz)
 
-    degree_l, order_m, alpha_lm = magnetogram.as_arrays(include_unset=False)
-    field_radial, field_polar, field_azimuthal = pfss_stanford.evaluate_in_space(degree_l, order_m,
-                                                                                 np.real(alpha_lm),
-                                                                                 np.imag(alpha_lm),
-                                                                                 pr, pp, pa,
-                                                                                 radius_star=radius_star,
-                                                                                 radius_source_surface=radius_source_surface)
+    degree_l, order_m, alpha_lm = coefficients.as_arrays(include_unset=False)
+    field_radial, field_polar, field_azimuthal = pfss_magnetogram.evaluate_in_space(degree_l, order_m,
+                                                                                    np.real(alpha_lm),
+                                                                                    np.imag(alpha_lm),
+                                                                                    pr, pp, pa,
+                                                                                    radius_star=radius_star,
+                                                                                    radius_source_surface=radius_source_surface)
 
     assert field_radial.shape == pr.shape
     assert field_polar.shape == pr.shape
@@ -167,12 +168,12 @@ def plot_pfss_slice(magnetogram, geometry=None, normal="x", rmax=8,
     return fig, ax
 
 
-def plot_pfss_streamtraces(magnetogram, geometry=zdi_geometry.ZdiGeometry()):
+def plot_pfss_streamtraces(coefficients, geometry=magnetogram.geometry.ZdiGeometry()):
 
-    degree_l, order_m, alpha_lm = magnetogram.as_arrays(include_unset=False)
-    polar, azimuth = zdi_geometry.ZdiGeometry().centers()
+    degree_l, order_m, alpha_lm = coefficients.as_arrays(include_unset=False)
+    polar, azimuth = geometry.centers()
 
-    B_radial, B_polar, B_azimuthal = pfss_stanford.evaluate_on_sphere(
+    B_radial, B_polar, B_azimuthal = pfss_magnetogram.evaluate_on_sphere(
         degree_l,
         order_m,
         np.real(alpha_lm),
@@ -335,15 +336,15 @@ def plot_equirectangular(geometry, value, ax, vmin=None, vmax=None, cmap='RdBu_r
 
 
 
-def plot_map(lz, star_name):
+def plot_map(zdi_magnetogram, star_name):
 
-    zg = zdi_geometry.ZdiGeometry(61)
+    zg = magnetogram.geometry.ZdiGeometry(61)
 
     polar_centers, azimuth_centers = zg.centers()
 
-    zdi_geometry.numerical_description(zg, lz)
+    geometry.numerical_description(zg, zdi_magnetogram)
 
-    b_radial = lz.get_radial_field(polar_centers, azimuth_centers)
+    b_radial = zdi_magnetogram.get_radial_field(polar_centers, azimuth_centers)
     b_radial_max_indices = np.unravel_index(np.argmax(b_radial, axis=None), b_radial.shape)
     b_radial_max_polar = polar_centers[b_radial_max_indices]
     b_radial_max_azimuth = azimuth_centers[b_radial_max_indices]
@@ -431,7 +432,7 @@ def plot_map(lz, star_name):
     ax.invert_yaxis()
 
     ## Dipole max
-    b_radial = lz.as_dipole().get_radial_field(polar_centers, azimuth_centers)
+    b_radial = zdi_magnetogram.as_dipole().get_radial_field(polar_centers, azimuth_centers)
     b_radial_max_indices = np.unravel_index(np.argmax(b_radial, axis=None), b_radial.shape)
     b_radial_max_polar = polar_centers[b_radial_max_indices]
     b_radial_max_azimuth = azimuth_centers[b_radial_max_indices]
@@ -458,19 +459,19 @@ def plot_map(lz, star_name):
     return fig, ax
 
 
-def pole_walk(lz, zg=None, ax=None):
+def pole_walk(zdi_magnetogram, geometry=None, ax=None):
     """
     Forget this; the pole walks all over the place
-    :param lz:
-    :param zg:
+    :param zdi_magnetogram:
+    :param geometry:
     :return:
     """
     if ax is None:
         ax = plt.gca()
-    if zg is None:
-        zg = zdi_geometry.ZdiGeometry(128)
+    if geometry is None:
+        geometry = magnetogram.geometry.ZdiGeometry(128)
 
-    polar_centers, azimuth_centers = zg.centers()
+    polar_centers, azimuth_centers = geometry.centers()
 
     # Dipole max
     b_radial_max_polar = []
@@ -478,8 +479,8 @@ def pole_walk(lz, zg=None, ax=None):
     b_radial_min_polar = []
     b_radial_min_azimuth = []
 
-    for max_degree in range(lz.degree()):
-        b_radial = lz.as_restricted(degree_l_range=(0, max_degree)).get_radial_field(polar_centers, azimuth_centers)
+    for max_degree in range(zdi_magnetogram.degree()):
+        b_radial = zdi_magnetogram.as_restricted(degree_l_range=(0, max_degree)).get_radial_field(polar_centers, azimuth_centers)
         b_radial_max_indices = np.unravel_index(np.argmax(b_radial, axis=None), b_radial.shape)
         b_radial_max_polar.append(polar_centers[b_radial_max_indices])
         b_radial_max_azimuth.append(azimuth_centers[b_radial_max_indices])

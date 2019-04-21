@@ -3,9 +3,9 @@ log = logging.getLogger(__name__)
 import argparse
 import os.path
 
-from stellarwinds.magnetogram import convert_magnetogram
+from stellarwinds.magnetogram import converter
 from stellarwinds.magnetogram import zdi_magnetogram
-from stellarwinds.magnetogram import plot_magnetogram
+from stellarwinds.magnetogram import plots
 
 
 def main():
@@ -21,17 +21,17 @@ def main():
 
     logging.getLogger("stellarwinds").setLevel(args.log_level)  # Set for entire stellarwinds package.
 
-    coefficients = convert_magnetogram.read_magnetogram_file(args.input_file)
+    coefficients = converter.read_magnetogram_file(args.input_file)
     lz = zdi_magnetogram.from_coefficients(coefficients)
 
     if args.plot_type == 'map':
-        fig, _ = plot_magnetogram.plot_map(lz, guess_starname_from_filename(args.input_file))
+        fig, _ = plots.plot_map(lz, guess_starname_from_filename(args.input_file))
     elif args.plot_type == 'spectrum':
-        fig, _ = plot_magnetogram.plot_energy_by_degree(lz)
+        fig, _ = plots.plot_energy_by_degree(lz)
     elif args.plot_type == 'matrix':
-        fig, _ = plot_magnetogram.plot_zdi_energy(lz)
+        fig, _ = plots.plot_zdi_energy(lz)
     elif args.plot_type == 'walk':
-        fig, _ = plot_magnetogram.pole_walk(lz)
+        fig, _ = plots.pole_walk(lz)
 
     #
     # Show or save plot

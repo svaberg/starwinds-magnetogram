@@ -20,7 +20,7 @@ def main():
                                                  'Should be called after Preplot.')
     parser.add_argument('plt_file', type=argparse.FileType('r'), nargs='+',
                         help='Tecplot .plt files to join, '
-                             'or glob pattern expanded by the shell (e.g. 3d__*.plt).')
+                             'or glob pattern expanded by the shell (e.geometry. 3d__*.plt).')
     # parser.add_argument('--output', type=str, help='Specify the output layout file name')
     parser.add_argument('-q', '--quiet', dest='log_level', action='store_const',
                         const=logging.WARNING, default=logging.INFO, help='only log warnings and errors')

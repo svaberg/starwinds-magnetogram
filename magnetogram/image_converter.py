@@ -1,11 +1,33 @@
+import logging
+log = logging.getLogger(__name__)
 import numpy as np
 from scipy.special import sph_harm
+import time
+import functools
 
 from stellarwinds.magnetogram import geometry
 from stellarwinds.magnetogram import coefficients
 
 
-def from_image(image, zg=None, lmax=15):
+_degree_l_max = 30  # Highest expected harmonic degree
+
+
+class TimeLogger:
+
+    def __init__(self, msg, log=log):
+        self.msg = msg
+        self.log = log
+
+    def __enter__(self):
+        self.log.debug("Timing %s..." % self.msg)
+        self.start_time = time.time()
+
+    def __exit__(self, *args):
+        elapsed_time = time.time() - self.start_time
+        self.log.info("%s in %f seconds" % (self.msg, elapsed_time))
+
+
+def from_image(image, zg=None, lmax=_degree_l_max):
     """
     Get spherical harmonics coefficients from an image matrix
     :param image: image matrix
@@ -21,12 +43,18 @@ def from_image(image, zg=None, lmax=15):
     polar, azimuth = zg.centers()
     delta_polar, delta_azimuth = _deltas(zg)
 
-    coeffs = coefficients.Coefficients()
-    for l, m in _indices(lmax):
-        ylm = sph_harm(m, l, azimuth, polar)
-        flm = np.sum(image * np.conj(ylm) * np.sin(polar) * delta_azimuth * delta_polar)
-        coeffs.append(l, m, flm)
+    with TimeLogger("Built coefficients", log):
+        # These are the same for all $\ell, m$.
+        fixed_factors = image * np.sin(polar) * delta_azimuth * delta_polar
 
+        coeffs = coefficients.Coefficients()
+
+        for l, m in _indices(lmax):
+            ylm = spherical_harmonic(m, l, azimuth, polar)  # This is the slow call, not the looping.
+            flm = np.sum(np.conj(ylm) * fixed_factors)
+            coeffs.append(l, m, flm)
+
+    log.debug(_cached_spherical_harmonic.cache_info())
     return coeffs, zg
 
 
@@ -37,12 +65,38 @@ def to_image(coeffs, zg):
     :param zg: geometry
     :return: image matrix
     """
-    polar, azimuth = zg.centers()
-    image = np.zeros_like(azimuth, dtype=complex)
-    for (deg_l, ord_m), val in coeffs.contents():
-        image += val * sph_harm(ord_m, deg_l, azimuth, polar)
+    with TimeLogger("Built image", log) as t:
+        polar, azimuth = zg.centers()
+        image = np.zeros_like(azimuth, dtype=complex)
+        for (deg_l, ord_m), val in coeffs.contents():
+            image += val * spherical_harmonic(ord_m, deg_l, azimuth, polar)
 
+    log.debug(_cached_spherical_harmonic.cache_info())
     return image
+
+
+@functools.lru_cache(maxsize=_degree_l_max ** 2)
+def _cached_spherical_harmonic(ord_m, deg_l, az_tuple, pl_tuple):
+    pl = np.array(pl_tuple)
+    az = np.array(az_tuple)
+    az = az[..., np.newaxis]
+    return sph_harm(ord_m, deg_l, az, pl)
+
+
+def spherical_harmonic(ord_m, deg_l, azimuth, polar, use_cache=True):
+
+    if use_cache:
+        azimuth = np.atleast_2d(azimuth)
+        polar = np.atleast_2d(polar)
+
+        azimuth_tuple = tuple(azimuth[..., 0])
+        polar_tuple = tuple(polar[0, ...])
+
+        ylm = _cached_spherical_harmonic(ord_m, deg_l, azimuth_tuple, polar_tuple)
+
+        return ylm
+    else:
+        return sph_harm(ord_m, deg_l, azimuth, polar)
 
 
 def _deltas(zg):
@@ -62,7 +116,7 @@ def _deltas(zg):
     return delta_polar[1:, ...], delta_azimuth[..., 1:]
 
 
-def _indices(lmax=15):
+def _indices(lmax=_degree_l_max):
     """
     Yield full set of indices up to lmax
     :param lmax: maximum degree

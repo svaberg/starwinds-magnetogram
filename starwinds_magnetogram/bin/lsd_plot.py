@@ -4,7 +4,7 @@ import logging
 log = logging.getLogger(__name__)
 
 import matplotlib.pyplot as plt
-from stellarwinds.magnetogram import lsd_plots
+from stellarwinds.magnetogram import plot_lsd
 
 
 #
@@ -27,7 +27,7 @@ def main():
     log.addHandler(ch)
 
     if args.plot_type == 'lsd':
-        lsd_plots.plot_lsd_a(args.input_file, skip_header=2)
+        plot_lsd.plot_lsd_a(args.input_file, skip_header=2)
         if args.output_file is None:
             plt.show()
         else:

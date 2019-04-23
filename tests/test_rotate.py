@@ -5,7 +5,7 @@ import quaternion
 import pytest
 from tests import context  # Test context
 from tests.magnetogram import magnetograms
-from tests.magnetogram.test_convert_magnetogram import get_field_values
+from tests.magnetogram.test_converter import get_field_values
 import stellarwinds.magnetogram.rotate as rm
 from stellarwinds.magnetogram import converter
 from stellarwinds.magnetogram import zdi_magnetogram

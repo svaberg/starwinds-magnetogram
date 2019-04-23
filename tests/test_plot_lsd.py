@@ -4,7 +4,7 @@ import numpy as np
 import pytest
 import glob
 from tests import context  # Test context
-import stellarwinds.magnetogram.lsd_plots as plsd
+import stellarwinds.magnetogram.plot_lsd as plsd
 
 # TODO stop referring to files outside project.
 

@@ -434,8 +434,6 @@ def data_mengel():
     return shc.hstack(coefficients)
 
 
-
-
 def dipole():
     """A dipole"""
     coefficients = shc.Coefficients(np.zeros(3, dtype=complex))

@@ -1,4 +1,7 @@
 import logging
+
+import stellarwinds.magnetogram.plot_zdi
+
 log = logging.getLogger(__name__)
 import argparse
 import os.path
@@ -25,13 +28,13 @@ def main():
     lz = zdi_magnetogram.from_coefficients(coefficients)
 
     if args.plot_type == 'map':
-        fig, _ = plots.plot_map(lz, guess_starname_from_filename(args.input_file))
+        fig, _ = stellarwinds.magnetogram.plot_zdi.plot_map(lz, guess_starname_from_filename(args.input_file))
     elif args.plot_type == 'spectrum':
-        fig, _ = plots.plot_energy_by_degree(lz)
+        fig, _ = stellarwinds.magnetogram.plot_zdi.plot_energy_by_degree(lz)
     elif args.plot_type == 'matrix':
-        fig, _ = plots.plot_zdi_energy(lz)
+        fig, _ = stellarwinds.magnetogram.plot_zdi.plot_zdi_energy(lz)
     elif args.plot_type == 'walk':
-        fig, _ = plots.pole_walk(lz)
+        fig, _ = stellarwinds.magnetogram.plot_zdi.pole_walk(lz)
 
     #
     # Show or save plot

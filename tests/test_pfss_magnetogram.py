@@ -1,6 +1,9 @@
 import numpy as np
 import scipy.special
 import logging
+
+import stellarwinds.magnetogram.plot_pfss
+
 log = logging.getLogger(__name__)
 
 # Test "context"
@@ -78,7 +81,7 @@ def test_plot_pfss_equirectangular(request,
     magnetogram = magnetograms.get_radial(magnetogram_name)
 
     with context.PlotNamer(__file__, request.node.name) as (pn, plt):
-        fig, axs = plots.plot_pfss_equirectangular(magnetogram)
+        fig, axs = stellarwinds.magnetogram.plot_pfss.plot_equirectangular(magnetogram)
         plt.savefig(pn.get())
 
 
@@ -88,7 +91,7 @@ def test_plot_pfss_slice(request,
     magnetogram = magnetograms.get_radial(magnetogram_name)
 
     with context.PlotNamer(__file__, request.node.name) as (pn, plt):
-        fig, axs = plots.plot_pfss_slice(magnetogram)
+        fig, axs = stellarwinds.magnetogram.plot_pfss.plot_slice(magnetogram)
         fig.savefig(pn.get())
 
 
@@ -163,7 +166,7 @@ def test_plot_pfss_streamtraces(request,
 
     magnetogram = magnetograms.get_radial(magnetogram_name)
     with context.PlotNamer(__file__, request.node.name) as (pn, plt):
-        fig, ax = plots.plot_pfss_streamtraces(magnetogram)
+        fig, ax = stellarwinds.magnetogram.plot_pfss.plot_streamtraces(magnetogram)
         fig.savefig(pn.get())
 
 

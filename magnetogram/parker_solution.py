@@ -116,3 +116,12 @@ class ParkerSolution(AnalyticBase):
                     (speeds / self.speed_surface) ** -1
 
         return densities
+
+    @property
+    def total_mass_flux(self):
+        """
+        Total mass flux through a closed surface enclosing the star. The mass flux is the same through any such
+        surface.
+        :return:
+        """
+        return 4 * np.pi * self.radius_sonic**2 * self.speed_sonic * self.density_sonic

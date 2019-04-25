@@ -4,6 +4,7 @@ import numpy as np
 import logging
 
 # Test "context"
+import stellarwinds.magnetogram.plot_zdi
 from tests import context  # Test context
 from tests.magnetogram import magnetograms
 
@@ -380,8 +381,8 @@ def test_plot_zdi_magnetogram_energy(request):
     zc = stellarwinds.magnetogram.zdi_magnetogram.from_coefficients(coeffs)
     with context.PlotNamer(__file__, request.node.name) as (pn, plt):
 
-        fig, axs = plots.plot_zdi_energy(zc)
+        fig, axs = stellarwinds.magnetogram.plot_zdi.plot_zdi_energy(zc)
         fig.savefig(pn.get())
 
-        fig, axs = plots.plot_zdi_energy(zc, types=("poloidal", "toroidal"))
+        fig, axs = stellarwinds.magnetogram.plot_zdi.plot_zdi_energy(zc, types=("poloidal", "toroidal"))
         fig.savefig(pn.get())

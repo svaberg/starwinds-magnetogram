@@ -10,21 +10,31 @@ from tests import context  # Test context
 from tests.magnetogram import magnetograms
 
 # Local
+from stellarwinds.magnetogram.geometry import ZdiGeometry
 from stellarwinds.magnetogram.parker_solution import ParkerSolution
 from stellarwinds.magnetogram import pfss_magnetogram
 from stellarwinds.coordinate_transforms import spherical_coordinates_from_rectangular
 from stellarwinds.coordinate_transforms import spherical_to_rectangular_transformation_matrix
 
 
-def test_alfven(request):
+def b_alfven(u, rho):
+    return u * (scipy.constants.mu_0 * rho)**.5
 
-    coronal_temperatures = (0.5e6, 0.75e6, 1e6, 1.5e6, 2e6, 3e6, 4e6)
+
+def test_alfven(request):
+    """
+    Calculates the magnetic field required for the Alfven surface to fall at a given point.
+    :param request:
+    :return:
+    """
+
+    temperatures = (0.5e6, 0.75e6, 1e6, 1.5e6, 2e6, 3e6, 4e6)
 
     with context.PlotNamer(__file__, request.node.name) as (pn, plt):
 
-        for _id, coronal_temperature in enumerate(coronal_temperatures):
+        for _id, temperature in enumerate(temperatures):
 
-            p = ParkerSolution(temperature=coronal_temperature)
+            p = ParkerSolution(temperature=temperature)
 
             r = p.stellar_radius * np.geomspace(1, 215)
             c = plt.rcParams['axes.prop_cycle'].by_key()['color'][_id]
@@ -32,19 +42,26 @@ def test_alfven(request):
             u = p.speed(r)
             rho = p.density(r)
 
-            plt.plot(r/p.stellar_radius, u * (scipy.constants.mu_0 * rho)**.5, color=c)
+            plt.plot(p.radius_sonic/p.stellar_radius,
+                     b_alfven(p.speed_sonic, p.density_sonic),
+                     'o',
+                     color=c)
+
+            plt.plot(r/p.stellar_radius,
+                     b_alfven(u, rho),
+                     color=c,
+                     label="T = %g K" % temperature)
 
         plt.xlabel(r'Height over chromosphere [$R_{\star}$]')
         plt.ylabel('Alfven field [T]')
-        # plt.ylim((1e-2, 1e11))
         plt.yscale('log')
-        # plt.xlim((r_S, 15*r_S))
         plt.grid(True)
+        plt.legend()
         plt.savefig(pn.get())
 
 
-@pytest.mark.parametrize("magnetogram_name", ("dipole",))
-@pytest.mark.parametrize("plot_name", ("B_r", "c_A"))
+@pytest.mark.parametrize("magnetogram_name", ("dipole", "mengel"))
+@pytest.mark.parametrize("plot_name", ("B_r", "B", "c_A"))
 def test_alfven_surface(request,
                         magnetogram_name,
                         plot_name):
@@ -110,11 +127,6 @@ def test_alfven_surface(request,
     alfven_mach_number = velocity / (1e-4*bmag / np.sqrt(scipy.constants.mu_0 * density))
 
     with context.PlotNamer(__file__, request.node.name) as (pn, plt):
-        fig, ax = plt.subplots(figsize=(6, 9))
-        ax.contourf(np.squeeze(bz[0, :, :]))
-        plt.savefig(pn.get())
-        plt.close()
-
 
         fig, ax = plt.subplots(figsize=(9, 6))
         # ax.plot(px[0,:,:], pz[0,:,:])
@@ -135,6 +147,16 @@ def test_alfven_surface(request,
                                cmap='RdBu_r'
                                )
             fig.colorbar(im).set_label('Radial field strength')
+
+        elif plot_name == "B":
+            norm = mpl.colors.LogNorm()
+
+            b = (bx ** 2 + by ** 2 + bz ** 2) ** .5
+
+            im = ax.pcolormesh(px[0, :, :], pz[0, :, :], b[0, :, :],
+                               norm=norm,
+                               cmap='viridis')
+            fig.colorbar(im).set_label('Absolute field strength')
 
         else:
 
@@ -174,32 +196,35 @@ def test_alfven_surface(request,
         plt.savefig(pn.get())
 
 
-def bmax_location(degree_l, order_m, g_lm, h_lm, rs, rss):
+def source_surface_field_maximum(degree_l, order_m, g_lm, h_lm, rs, rss):
 
     """
-    Find the spherical coordinates of Bmax on the source surface; outside of the source surface
+    Find the spherical coordinates of the point where the magnetic field strength is maximal
+    on the source surface; outside of the source surface
     this will remain the strongest field location.
     :return:
     """
-    points_polar, points_azimuth = np.meshgrid(np.linspace(0, np.pi), np.linspace(0, 2*np.pi))
+    points_polar, points_azimuth = ZdiGeometry().centers()
     field_radial, field_polar, field_azimuthal = pfss_magnetogram.evaluate_on_sphere(
         degree_l, order_m, g_lm, h_lm,
         points_polar, points_azimuth,
         radius=rss, radius_star=rs, radius_source_surface=rss)
 
+    # On the source surface (and outside) the polar and azimuthal components are zero.
     assert np.allclose(field_polar, 0)
     assert np.allclose(field_azimuthal, 0)
 
-    _max_ids = np.unravel_index(np.argmax(field_radial, axis=None), field_radial.shape)
+    # Get the indices of the field maximum
+    indices = np.unravel_index(np.argmax(field_radial, axis=None), field_radial.shape)
 
-    return points_polar[_max_ids], points_azimuth[_max_ids], field_radial[_max_ids]
+    return points_polar[indices], points_azimuth[indices], field_radial[indices]
 
 
-def line_strength(pr, pp, pa,
-                  degree_l, order_m, g_lm, h_lm,
-                  rs, rss):
+def evaluate_along_ray(pr, pp, pa,
+                       degree_l, order_m, g_lm, h_lm,
+                       rs, rss):
     """
-    Calculate total field strength along ray
+    Calculate field strength along ray
     :param pr:
     :param pp:
     :param pa:
@@ -238,113 +263,112 @@ def test_alfven_surface_max(request,
     rss = 3
     rs = 1
     rmax = 2e3
-    star_radius = 6.95510e8
+
     radial_points = np.geomspace(rs, rmax)
 
     with context.PlotNamer(__file__, request.node.name) as (pn, plt):
         fig, ax = plt.subplots(figsize=(6, 9))
 
-        for scale in (.1, 1, 10):
+        for magnetogram_scale in (.1, 1, 10):
             magnetogram = magnetograms.get_radial(magnetogram_name)
-            magnetogram *= scale
+            magnetogram *= magnetogram_scale
             degree_l, order_m, alpha_lm = magnetogram.as_arrays(include_unset=False)
 
-            polar_max, azimuth_max, bmax = bmax_location(degree_l, order_m,
-                                                         np.real(alpha_lm),
-                                                         np.imag(alpha_lm),
-                                                         rs, rss)
+            polar_max, azimuth_max, bmax = source_surface_field_maximum(degree_l, order_m,
+                                                                        np.real(alpha_lm),
+                                                                        np.imag(alpha_lm),
+                                                                        rs, rss)
 
-            field_radial, field_polar, field_azimuth = line_strength(radial_points, polar_max, azimuth_max,
-                                                                     degree_l, order_m,
-                                                                     np.real(alpha_lm),
-                                                                     np.imag(alpha_lm),
-                                                                     rs, rss)
+            field_radial, field_polar, field_azimuth = evaluate_along_ray(radial_points, polar_max, azimuth_max,
+                                                                          degree_l, order_m,
+                                                                          np.real(alpha_lm),
+                                                                          np.imag(alpha_lm),
+                                                                          rs, rss)
 
             p = ParkerSolution()
-            velocity = p.speed(radial_points * star_radius)
-            density = p.density(radial_points * star_radius)
+            velocity = p.speed(radial_points * p.stellar_radius)
+            density = p.density(radial_points * p.stellar_radius)
 
             alfven_speed = (1e-4*field_radial / np.sqrt(scipy.constants.mu_0 * density))
 
-            ax.plot(radial_points, velocity/alfven_speed)
-
+            ax.plot(radial_points, velocity/alfven_speed, label="B=%4.2g rho=%4.2g T=%4.2g" % (bmax,
+                                                                                      p.base_density,
+                                                                                      p.temperature))
         ax.set_xscale('log')
         ax.set_yscale('log')
         ax.grid(True)
-
+        plt.legend()
         plt.savefig(pn.get())
         plt.close()
+
+
 
         p0 = ParkerSolution()
 
         fig, ax = plt.subplots(figsize=(6, 9))
 
-        for density_sacle in (.1, 1, 10):
+        for density_scale in (.1, 1, 10):
             magnetogram = magnetograms.get_radial(magnetogram_name)
-            magnetogram *= scale
             degree_l, order_m, alpha_lm = magnetogram.as_arrays(include_unset=False)
 
-            polar_max, azimuth_max, bmax = bmax_location(degree_l, order_m,
-                                                         np.real(alpha_lm),
-                                                         np.imag(alpha_lm),
-                                                         rs, rss)
+            polar_max, azimuth_max, bmax = source_surface_field_maximum(degree_l, order_m,
+                                                                        np.real(alpha_lm),
+                                                                        np.imag(alpha_lm),
+                                                                        rs, rss)
 
-            field_radial, field_polar, field_azimuth = line_strength(radial_points, polar_max, azimuth_max,
-                                                                     degree_l, order_m,
-                                                                     np.real(alpha_lm),
-                                                                     np.imag(alpha_lm),
-                                                                     rs, rss)
+            field_radial, field_polar, field_azimuth = evaluate_along_ray(radial_points, polar_max, azimuth_max,
+                                                                          degree_l, order_m,
+                                                                          np.real(alpha_lm),
+                                                                          np.imag(alpha_lm),
+                                                                          rs, rss)
 
-            p = ParkerSolution(base_density=p0.base_density * density_sacle)
-            velocity = p.speed(radial_points * star_radius)
-            density = p.density(radial_points * star_radius)
+            p = ParkerSolution(base_density=p0.base_density * density_scale)
+            velocity = p.speed(radial_points * p.stellar_radius)
+            density = p.density(radial_points * p.stellar_radius)
 
             alfven_speed = (1e-4 * field_radial / np.sqrt(scipy.constants.mu_0 * density))
 
-            ax.plot(radial_points, velocity/alfven_speed)
-
+            ax.plot(radial_points, velocity/alfven_speed, label="B=%g rho=%g T=%g" % (bmax,
+                                                                                      p.base_density,
+                                                                                      p.temperature))
         ax.set_xscale('log')
         ax.set_yscale('log')
         ax.grid(True)
-
+        plt.legend()
         plt.savefig(pn.get())
         plt.close()
 
 
         fig, ax = plt.subplots(figsize=(6, 9))
 
-        for temperature_sacle in 2**np.linspace(-2, 2, 5):
+        for temperature_scale in 2**np.linspace(-2, 2, 5):
             magnetogram = magnetograms.get_radial(magnetogram_name)
-            magnetogram *= scale
             degree_l, order_m, alpha_lm = magnetogram.as_arrays(include_unset=False)
 
-            polar_max, azimuth_max, bmax = bmax_location(degree_l, order_m,
-                                                         np.real(alpha_lm),
-                                                         np.imag(alpha_lm),
-                                                         rs, rss)
+            polar_max, azimuth_max, bmax = source_surface_field_maximum(degree_l, order_m,
+                                                                        np.real(alpha_lm),
+                                                                        np.imag(alpha_lm),
+                                                                        rs, rss)
 
-            field_radial, field_polar, field_azimuth = line_strength(radial_points, polar_max, azimuth_max,
-                                                                     degree_l, order_m,
-                                                                     np.real(alpha_lm),
-                                                                     np.imag(alpha_lm),
-                                                                     rs, rss)
+            field_radial, field_polar, field_azimuth = evaluate_along_ray(radial_points, polar_max, azimuth_max,
+                                                                          degree_l, order_m,
+                                                                          np.real(alpha_lm),
+                                                                          np.imag(alpha_lm),
+                                                                          rs, rss)
 
-            p = ParkerSolution(temperature=p0.temperature * temperature_sacle)
-            velocity = p.speed(radial_points * star_radius)
-            density = p.density(radial_points * star_radius)
+            p = ParkerSolution(temperature=p0.temperature * temperature_scale)
+            velocity = p.speed(radial_points * p.stellar_radius)
+            density = p.density(radial_points * p.stellar_radius)
 
             alfven_speed = (1e-4*field_radial / np.sqrt(scipy.constants.mu_0 * density))
 
             ax.plot(radial_points, velocity/alfven_speed, label="B=%g rho=%g T=%g" % (bmax,
-                                                                                      0,
-                                                                                      1.5e6 * temperature_sacle))
-            # ax.plot(radial_points, alfven_speed)
+                                                                                      p.base_density,
+                                                                                      p.temperature))
 
         ax.set_xscale('log')
         ax.set_yscale('log')
         ax.grid(True)
-
         plt.legend()
-
         plt.savefig(pn.get())
         plt.close()

@@ -7,7 +7,7 @@ from stellarwinds import magnetogram
 from stellarwinds.magnetogram.plots import log, latex_float
 
 
-def plot_zdi_energy(zc, types="total", negative_orders=False, axs=None):
+def plot_energy(zc, types="total", negative_orders=False, axs=None):
 
     if type(types) == str:
         types = types,  # Turn into a tuple
@@ -16,12 +16,12 @@ def plot_zdi_energy(zc, types="total", negative_orders=False, axs=None):
         axs = np.atleast_1d(axs)
 
     for _type, ax in zip(types, axs):
-        _plot_zdi_energy(zc, _type, negative_orders, ax)
+        _plot_energy(zc, _type, negative_orders, ax)
 
     return ax.figure, axs
 
 
-def _plot_zdi_energy(zc, name="total", negative_orders=False, ax=None):
+def _plot_energy(zc, name="total", negative_orders=False, ax=None):
 
     if ax is None:
         _, ax = plt.subplots()

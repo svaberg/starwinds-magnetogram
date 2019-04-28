@@ -12,7 +12,7 @@ from stellarwinds.magnetogram import coefficients
 _degree_l_max = 30  # Highest expected harmonic degree
 
 
-class TimeLogger:
+class TimeLogger:  # TODO use contextmanager decorator
 
     def __init__(self, msg, log=log):
         self.msg = msg

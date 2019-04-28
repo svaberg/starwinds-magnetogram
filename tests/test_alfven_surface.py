@@ -1,7 +1,9 @@
-import numpy as np
-import matplotlib as mpl
-import scipy.constants
 import logging
+
+import matplotlib as mpl
+import numpy as np
+import scipy.constants
+
 log = logging.getLogger(__name__)
 
 # Test "context"
@@ -13,8 +15,7 @@ from tests.magnetogram import magnetograms
 from stellarwinds.magnetogram.geometry import ZdiGeometry
 from stellarwinds.magnetogram.parker_solution import ParkerSolution
 from stellarwinds.magnetogram import pfss_magnetogram
-from stellarwinds.coordinate_transforms import spherical_coordinates_from_rectangular
-from stellarwinds.coordinate_transforms import spherical_to_rectangular_transformation_matrix
+from stellarwinds.magnetogram import plot_pfss
 
 
 def b_alfven(u, rho):
@@ -62,98 +63,74 @@ def test_alfven(request):
 
 @pytest.mark.parametrize("magnetogram_name", ("dipole", "mengel"))
 @pytest.mark.parametrize("plot_name", ("B_r", "B", "c_A"))
-def test_alfven_surface(request,
+def test_alfven_slice(request,
                         magnetogram_name,
                         plot_name):
 
-    rss = 3
-    rs = 1
-    rmax = 6
+    normal = "x"
+    radius_star = 1
+    radius_source_surface = 3
+    radius_max = 6
 
-    _x = np.linspace(-1, 1, 302) * rmax
-    _y = 0
-    _z = np.linspace(-1, 1, 304) * rmax
+    # Points in slice plane xy coordinate system.
+    p1 = np.linspace(-1, 1, 102) * radius_max
+    p2 = np.linspace(-1, 1, 104) * radius_max
+    p1, p2 = np.meshgrid(p1, p2)
 
-    px, py, pz = np.meshgrid(_x, _y, _z)
-
-    log.debug(_x.shape)
-
-    assert px.shape == (1, len(_x), len(_z))  # np.meshgrid switches argument 1 and 2 in result.
-
-    _shape = px.shape
-
-    pr, pp, pa = spherical_coordinates_from_rectangular(px,py,pz)
+    pxyz = pfss_magnetogram.normal_plane(p1, p2, normal)
 
     radial_coefficients = magnetograms.get_radial(magnetogram_name) * 10
-    degree_l, order_m, alpha_lm = radial_coefficients.as_arrays(include_unset=False)
-    field_radial, field_polar, field_azimuthal = pfss_magnetogram.evaluate_in_space(degree_l, order_m,
-                                                                                    np.real(alpha_lm),
-                                                                                    np.imag(alpha_lm),
-                                                                                    pr, pp, pa,
-                                                                                    radius_star=rs,
-                                                                                    radius_source_surface=rss)
 
-    assert field_radial.shape == pr.shape
-    assert field_polar.shape == pr.shape
-    assert field_azimuthal.shape == pr.shape
+    f_rpa_xyz = pfss_magnetogram.evaluate_on_slice(radial_coefficients, *pxyz,
+                                                   radius_source_surface, radius_star)
 
-    # assert np.all(field_polar[np.where(pr > rss)] == 0)
-    # assert np.all(field_azimuthal[np.where(pr > rss)] == 0)
-
-    Frpa = np.stack([c.flatten() for c in (field_radial, field_polar, field_azimuthal)], axis=-1)
-
-    polarity = np.sign(Frpa[:, 0] * pr.flatten()).reshape(_shape)
-
-    transformation_matrix = spherical_to_rectangular_transformation_matrix(pp.flatten(),
-                                                                           pa.flatten())
-    Fxyz = transformation_matrix @ Frpa[:, :, np.newaxis]
-    # Get rid of last dimension which is 1
-    Fxyz = np.squeeze(Fxyz)
-
-    bx = Fxyz[:, 0].reshape(_shape)
-    by = Fxyz[:, 1].reshape(_shape)
-    bz = Fxyz[:, 2].reshape(_shape)
-    bmag = (bx ** 2 + by ** 2 + bz ** 2) ** .5
-    bmin = np.min(bmag[np.where(bmag > 0)])
-    bmax = np.max(bmag)
+    # Drop the extra dimension
+    pxyz = [np.squeeze(p) for p in pxyz]
+    px, py, pz = pxyz
+    f_rpa_xyz = [np.squeeze(f) for f in f_rpa_xyz]
+    fr, fp, fa, fx, fy, fz = f_rpa_xyz
 
     p = ParkerSolution()
-    radial_distance = field_radial * 6.95510e8
+    radial_distance = fr * 6.95510e8
     velocity = p.speed(radial_distance)
     density = p.density(radial_distance)
 
-    velocity = velocity.reshape(_shape)
-    density = density.reshape(_shape)
+    bmag = (fr**2 + fp**2 + fa**2)**.5
+
     alfven_mach_number = velocity / (1e-4*bmag / np.sqrt(scipy.constants.mu_0 * density))
+
+    # import pdb; pdb.set_trace()
 
     with context.PlotNamer(__file__, request.node.name) as (pn, plt):
 
         fig, ax = plt.subplots(figsize=(9, 6))
-        # ax.plot(px[0,:,:], pz[0,:,:])
 
         if plot_name == "B_r":
             from matplotlib.colors import SymLogNorm
-            b= (bx[0, :, :] ** 2 + by[0, :, :] ** 2 + bz[0, :, :] ** 2) ** .5
-            bmin = np.min(b[np.where(b > 0)])
-            bmax = np.max(b)
+
+            bmin = np.min(bmag[np.where(bmag > 0)])
+            bmax = np.max(bmag)
 
             norm = mpl.colors.SymLogNorm(linthresh=100 * bmin,
                                          linscale=1,
                                          vmin=-bmax,
                                          vmax=bmax)
 
-            im = ax.pcolormesh(px[0, :, :], pz[0, :, :], field_radial[0, :, :],
+            im = ax.pcolormesh(p1, p2, fr,
                                norm=norm,
                                cmap='RdBu_r'
                                )
+
+            ax.streamplot(p1, p2,
+                          fy, fz,
+                          color='gray')
+
             fig.colorbar(im).set_label('Radial field strength')
 
         elif plot_name == "B":
             norm = mpl.colors.LogNorm()
 
-            b = (bx ** 2 + by ** 2 + bz ** 2) ** .5
-
-            im = ax.pcolormesh(px[0, :, :], pz[0, :, :], b[0, :, :],
+            im = ax.pcolormesh(p1, p2, bmag,
                                norm=norm,
                                cmap='viridis')
             fig.colorbar(im).set_label('Absolute field strength')
@@ -163,37 +140,40 @@ def test_alfven_surface(request,
             norm = mpl.colors.LogNorm(vmin=1e-2,
                                       vmax=1e2)
 
-            im = ax.pcolormesh(px[0, :, :],
-                               pz[0, :, :],
-                               alfven_mach_number[0, :, :],
+            im = ax.pcolormesh(p1, p2,
+                               alfven_mach_number,
                                norm=norm,
                                cmap='PuOr')
-            # im = ax.pcolormesh(px[0, :, :], pz[0, :, :], field_radial[0, :, :],
-            #                    norm=norm,
-            #                    cmap='PuOr')
 
             fig.colorbar(im).set_label('Alfven number')
 
-        r_a = ax.contour(px[0, :, :], pz[0, :, :], alfven_mach_number[0, :, :], levels=(1,), colors='black')
+        # Plot Alfven surface
+        r_a = ax.contour(p1, p2, alfven_mach_number, levels=(1,), colors='black')
         r_a.collections[0].set_label("Alfven surface")
 
-        r_ss = ax.contour(px[0, :, :], pz[0, :, :], pr[0,:,:], levels=[rs, rss], colors='white')
+        # Plot source surface
+        pr = (px**2 + py**2 + pz**2)**.5
+        r_ss = ax.contour(p1, p2, pr, levels=[radius_star, radius_source_surface], colors='white')
         r_ss.collections[0].set_label("Source surface")
 
-        # # ax.quiver(px[0,:,:], pz[0,:,:], fx[0,:,:], fz[0,:,:])
-        ax.streamplot(px[0,:,:].transpose(), pz[0,:,:].transpose(),
-                      bx[0,:,:].transpose(), bz[0,:,:].transpose(),
-                      color='gray')
-        # # ax.streamplot(pz[0,:,:], px[0,:,:], fz[0,:,:], fx[0,:,:])
-        #
-        # ax.contour(px[0, :, :], pz[0, :, :], pr[0,:,:], levels=[rs, rss], colors='k')
-        #
         ax.set_aspect('equal')
         ax.set_xlabel('Distance $x/r_{\\star}$')
         ax.set_ylabel('Distance $z/r_{\\star}$')
 
         plt.legend()
         plt.savefig(pn.get())
+
+
+@pytest.mark.parametrize("magnetogram_name", ("dipole",))
+def test_slice(request,
+               magnetogram_name):
+
+    radial_coefficients = magnetograms.get_radial(magnetogram_name) * 10
+
+    with context.PlotNamer(__file__, request.node.name) as (pn, plt):
+        fig, ax = plot_pfss.plot_slice(radial_coefficients)
+        fig.savefig(pn.get())
+        plt.close()
 
 
 def source_surface_field_maximum(degree_l, order_m, g_lm, h_lm, rs, rss):
@@ -257,8 +237,8 @@ def evaluate_along_ray(pr, pp, pa,
     return field_radial, field_polar, field_azimuthal
 
 
-def test_alfven_surface_max(request,
-                            magnetogram_name="dipole"):
+def test_max_alfven_radius_by_field_strength(request,
+                                             magnetogram_name="dipole"):
 
     rss = 3
     rs = 1
@@ -291,17 +271,32 @@ def test_alfven_surface_max(request,
 
             alfven_speed = (1e-4*field_radial / np.sqrt(scipy.constants.mu_0 * density))
 
-            ax.plot(radial_points, velocity/alfven_speed, label="B=%4.2g rho=%4.2g T=%4.2g" % (bmax,
-                                                                                      p.base_density,
-                                                                                      p.temperature))
+            ax.plot(radial_points, alfven_speed,
+                    label="Alfven speed, B=%4.2g" % bmax)
+
         ax.set_xscale('log')
         ax.set_yscale('log')
+        ax.plot(radial_points, velocity, 'k',
+                label="Parker flow speed")
+
         ax.grid(True)
+        ax.set_title("Alfven surface maximum at intersection")
         plt.legend()
         plt.savefig(pn.get())
         plt.close()
 
 
+def test_max_alfven_radius_by_density(request,
+                                      magnetogram_name="dipole"):
+
+    rss = 3
+    rs = 1
+    rmax = 2e3
+
+    radial_points = np.geomspace(rs, rmax)
+
+    with context.PlotNamer(__file__, request.node.name) as (pn, plt):
+        fig, ax = plt.subplots(figsize=(6, 9))
 
         p0 = ParkerSolution()
 
@@ -328,16 +323,31 @@ def test_alfven_surface_max(request,
 
             alfven_speed = (1e-4 * field_radial / np.sqrt(scipy.constants.mu_0 * density))
 
-            ax.plot(radial_points, velocity/alfven_speed, label="B=%g rho=%g T=%g" % (bmax,
-                                                                                      p.base_density,
-                                                                                      p.temperature))
+            ax.plot(radial_points, alfven_speed, label="Alfven speed rho=%4.2g" % p.base_density)
+
         ax.set_xscale('log')
         ax.set_yscale('log')
+        ax.plot(radial_points, velocity, 'k',
+                label="Parker flow speed")
+
         ax.grid(True)
         plt.legend()
         plt.savefig(pn.get())
         plt.close()
 
+
+def test_max_alfven_radius_by_temperature(request,
+                                          magnetogram_name="dipole"):
+
+    rss = 3
+    rs = 1
+    rmax = 2e3
+
+    radial_points = np.geomspace(rs, rmax)
+
+    with context.PlotNamer(__file__, request.node.name) as (pn, plt):
+
+        p0 = ParkerSolution()
 
         fig, ax = plt.subplots(figsize=(6, 9))
 
@@ -362,9 +372,12 @@ def test_alfven_surface_max(request,
 
             alfven_speed = (1e-4*field_radial / np.sqrt(scipy.constants.mu_0 * density))
 
-            ax.plot(radial_points, velocity/alfven_speed, label="B=%g rho=%g T=%g" % (bmax,
-                                                                                      p.base_density,
-                                                                                      p.temperature))
+            line = ax.plot(radial_points, alfven_speed, label="Alfven speed T=%g" % p.temperature)
+
+            ax.plot(radial_points, velocity,
+                    '--',
+                    color=line[0].get_color(),
+                    label="Parker flow speed T=%g" % p.temperature)
 
         ax.set_xscale('log')
         ax.set_yscale('log')

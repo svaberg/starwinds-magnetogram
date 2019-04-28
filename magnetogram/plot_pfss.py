@@ -3,9 +3,10 @@ from matplotlib import pyplot as plt, colors
 from matplotlib.lines import Line2D
 from matplotlib.ticker import MaxNLocator
 
-from stellarwinds import magnetogram, coordinate_transforms
+from stellarwinds import magnetogram
 from stellarwinds.magnetogram import pfss_magnetogram
-from stellarwinds.magnetogram.plots import plot_equirectangular
+from stellarwinds.magnetogram import plots
+from stellarwinds.magnetogram.geometry import ZdiGeometry
 
 
 def plot_equirectangular(coefficients, geometry=None, radius_source_surface=3):
@@ -19,7 +20,7 @@ def plot_equirectangular(coefficients, geometry=None, radius_source_surface=3):
     """
 
     if geometry is None:
-        geometry = magnetogram.geometry.ZdiGeometry()
+        geometry = ZdiGeometry()
 
     #
     # Evaluate magnetic field at coordinates.
@@ -49,8 +50,8 @@ def plot_equirectangular(coefficients, geometry=None, radius_source_surface=3):
     for ax_row, B, radius in zip(axs_mat, (Bs, Bss), (1, radius_source_surface)):
         abs_max = np.max(np.abs(B))
         for component_id in range(len(B)):
-            img = plot_equirectangular(geometry, B[component_id], ax_row[component_id],
-                                       vmin=-abs_max, vmax=abs_max)
+            img = plots.plot_equirectangular(geometry, B[component_id], ax_row[component_id],
+                                             vmin=-abs_max, vmax=abs_max)
             ax_row[component_id].set_ylabel(None)
 
         def place_colorbar_axis_right(ax, dx=.22):
@@ -76,92 +77,47 @@ def plot_equirectangular(coefficients, geometry=None, radius_source_surface=3):
     return fig, axs_mat
 
 
-def plot_slice(coefficients, geometry=None, normal="x", rmax=8,
+def plot_slice(coefficients, normal="x", rmax=8,
                radius_source_surface=3, radius_star=1):
 
-    # Points in normal plane.
-    _p1 = np.linspace(-1, 1, 302) * rmax
-    _p2 = np.linspace(-1, 1, 304) * rmax
-    _p3 = np.atleast_1d(0)
+    # Points in slice plane xy coordinate system.
+    p1 = np.linspace(-1, 1, 302) * rmax
+    p2 = np.linspace(-1, 1, 304) * rmax
+    p1, p2 = np.meshgrid(p1, p2)
 
-    p1, p2 = np.meshgrid(_p1, _p2)
+    px, py, pz = pfss_magnetogram.normal_plane(p1, p2, normal)
 
-    assert p1.shape == (len(_p2), len(_p1))  # np.meshgrid switches argument 1 and 2 in result.
+    fr, fp, fa, fx, fy, fz = pfss_magnetogram.evaluate_on_slice(coefficients, px, py, pz,
+                                                                radius_source_surface, radius_star)
 
-    _shape = p1.shape
-
-    def rotate(p1, p2, normal):
-        p3 = np.zeros_like(p1)
-        if normal == "x":
-            return p3[..., np.newaxis], p1[..., np.newaxis], p2[..., np.newaxis]
-        elif normal == "y":
-            return p1[..., np.newaxis], p3[..., np.newaxis], p2[..., np.newaxis]
-        if normal == "z":
-            return p1[..., np.newaxis], p2[..., np.newaxis], p3[..., np.newaxis]
-
-    px, py, pz = rotate(p1, p2, normal)
-
-    pr, pp, pa = coordinate_transforms.spherical_coordinates_from_rectangular(px, py, pz)
-
-    degree_l, order_m, alpha_lm = coefficients.as_arrays(include_unset=False)
-    field_radial, field_polar, field_azimuthal = pfss_magnetogram.evaluate_in_space(degree_l, order_m,
-                                                                                    np.real(alpha_lm),
-                                                                                    np.imag(alpha_lm),
-                                                                                    pr, pp, pa,
-                                                                                    radius_star=radius_star,
-                                                                                    radius_source_surface=radius_source_surface)
-
-    assert field_radial.shape == pr.shape
-    assert field_polar.shape == pr.shape
-    assert field_azimuthal.shape == pr.shape
-
-    Frpa = np.stack([c.flatten() for c in (field_radial, field_polar, field_azimuthal)], axis=-1)
-
-    transformation_matrix = coordinate_transforms.spherical_to_rectangular_transformation_matrix(pp.flatten(),
-                                                                                                 pa.flatten())
-    Fxyz = transformation_matrix @ Frpa[:, :, np.newaxis]
-    # Get rid of last dimension which is 1
-    Fxyz = np.squeeze(Fxyz)
-
-    fx = Fxyz[:, 0].reshape(_shape)
-    fy = Fxyz[:, 1].reshape(_shape)
-    fz = Fxyz[:, 2].reshape(_shape)
-
+    #
+    # Plot stars here...
+    #
     fig, ax = plt.subplots(figsize=(9, 6))
-
-    fmag = (fx[:, :] ** 2 + fy[:, :] ** 2 + fz[:, :] ** 2) ** .5
+    fmag = (fx ** 2 + fy ** 2 + fz ** 2) ** .5
     fmin = np.min(fmag[np.where(fmag > 0)])
     fmax = np.max(fmag)
-
     norm = colors.SymLogNorm(linthresh=100 * fmin,
                              linscale=1,
                              vmin=-fmax,
                              vmax=fmax)
-
-    im = ax.pcolormesh(p1, p2, np.squeeze(field_radial),
+    im = ax.pcolormesh(p1, p2, np.squeeze(fr),
                        norm=norm,
                        cmap='RdBu_r')
-
     fig.colorbar(im).set_label('Radial field strength')
-
-    radial_distance = np.squeeze(pr)
-    ax.contour(p1[:, :], p2[:, :], radial_distance, levels=[radius_star, radius_source_surface], colors='k')
-
-
-    # Streamplots only make sense if the field has a symmetry axis.
-
-    # ax.streamplot(p1[:, :].transpose(), p2[:, :].transpose(),
-    #               fx[:, :].transpose(), fz[:, :].transpose(), # TODO FIx
-    #               color='gray')
 
     ax.set_aspect('equal')
     ax.set_xlabel('Distance $x/r_{\\star}$')
     ax.set_ylabel('Distance $z/r_{\\star}$')
 
+    # Add star and source surface.
+    radial_distance = np.squeeze((px**2 + py**2 + pz**2)**.5)
+    ax.contour(p1[:, :], p2[:, :], radial_distance, levels=[radius_star, radius_source_surface], colors='k')
+
     return fig, ax
 
 
-def plot_streamtraces(coefficients, geometry=magnetogram.geometry.ZdiGeometry()):
+def plot_streamtraces(coefficients, geometry=ZdiGeometry()):
 
     degree_l, order_m, alpha_lm = coefficients.as_arrays(include_unset=False)
     polar, azimuth = geometry.centers()
@@ -178,7 +134,7 @@ def plot_streamtraces(coefficients, geometry=magnetogram.geometry.ZdiGeometry())
 
     fig, ax = plt.subplots(figsize=(18, 6))
 
-    img = plot_equirectangular(geometry, B_radial, ax,
+    img = plots.plot_equirectangular(geometry, B_radial, ax,
                                vmin=-B_radial_abs_max,
                                vmax=B_radial_abs_max,
                                cmap='RdBu_r')

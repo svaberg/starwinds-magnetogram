@@ -2,6 +2,9 @@ import numpy as np
 import scipy as sp
 
 import logging
+
+from stellarwinds import coordinate_transforms
+
 log = logging.getLogger(__name__)
 
 
@@ -201,3 +204,36 @@ def evaluate_in_space(
 
     return field_radial, field_polar, field_azimuthal
 
+
+def evaluate_on_slice(coefficients, px, py, pz, radius_source_surface, radius_star):
+    pr, pp, pa = coordinate_transforms.spherical_coordinates_from_rectangular(px, py, pz)
+    degree_l, order_m, alpha_lm = coefficients.as_arrays(include_unset=False)
+    fr, fp, fa = evaluate_in_space(degree_l, order_m,
+                                                    np.real(alpha_lm),
+                                                    np.imag(alpha_lm),
+                                                    pr, pp, pa,
+                                                    radius_star=radius_star,
+                                                    radius_source_surface=radius_source_surface)
+    assert fr.shape == pr.shape
+    assert fp.shape == pr.shape
+    assert fa.shape == pr.shape
+    Frpa = np.stack([c.flatten() for c in (fr, fp, fa)], axis=-1)
+    transformation_matrix = coordinate_transforms.spherical_to_rectangular_transformation_matrix(pp.flatten(),
+                                                                                                 pa.flatten())
+    Fxyz = transformation_matrix @ Frpa[:, :, np.newaxis]
+    # Get rid of last dimension which is 1
+    Fxyz = np.squeeze(Fxyz)
+    fx = Fxyz[:, 0].reshape(px.shape)
+    fy = Fxyz[:, 1].reshape(px.shape)
+    fz = Fxyz[:, 2].reshape(px.shape)
+    return fr, fp, fa, fx, fy, fz
+
+
+def normal_plane(p1, p2, normal):
+    p3 = np.zeros_like(p1)
+    if normal == "x":
+        return p3[..., np.newaxis], p1[..., np.newaxis], p2[..., np.newaxis]
+    elif normal == "y":
+        return p1[..., np.newaxis], p3[..., np.newaxis], p2[..., np.newaxis]
+    if normal == "z":
+        return p1[..., np.newaxis], p2[..., np.newaxis], p3[..., np.newaxis]

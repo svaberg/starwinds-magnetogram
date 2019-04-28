@@ -32,7 +32,7 @@ def main():
     elif args.plot_type == 'spectrum':
         fig, _ = stellarwinds.magnetogram.plot_zdi.plot_energy_by_degree(lz)
     elif args.plot_type == 'matrix':
-        fig, _ = stellarwinds.magnetogram.plot_zdi.plot_zdi_energy(lz)
+        fig, _ = stellarwinds.magnetogram.plot_zdi.plot_energy(lz)
     elif args.plot_type == 'walk':
         fig, _ = stellarwinds.magnetogram.plot_zdi.pole_walk(lz)
 

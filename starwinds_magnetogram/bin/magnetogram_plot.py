@@ -1,14 +1,11 @@
 import logging
-
-import stellarwinds.magnetogram.plot_zdi
-
 log = logging.getLogger(__name__)
 import argparse
 import os.path
 
 from stellarwinds.magnetogram import converter
 from stellarwinds.magnetogram import zdi_magnetogram
-from stellarwinds.magnetogram import plots
+from stellarwinds.magnetogram import plot_zdi
 
 
 def main():
@@ -28,13 +25,13 @@ def main():
     lz = zdi_magnetogram.from_coefficients(coefficients)
 
     if args.plot_type == 'map':
-        fig, _ = stellarwinds.magnetogram.plot_zdi.plot_map(lz, guess_starname_from_filename(args.input_file))
+        fig, _ = plot_zdi.plot_map(lz, guess_star_name_from_filename(args.input_file))
     elif args.plot_type == 'spectrum':
-        fig, _ = stellarwinds.magnetogram.plot_zdi.plot_energy_by_degree(lz)
+        fig, _ = plot_zdi.plot_energy_by_degree(lz)
     elif args.plot_type == 'matrix':
-        fig, _ = stellarwinds.magnetogram.plot_zdi.plot_energy(lz)
+        fig, _ = plot_zdi.plot_energy(lz)
     elif args.plot_type == 'walk':
-        fig, _ = stellarwinds.magnetogram.plot_zdi.pole_walk(lz)
+        fig, _ = plot_zdi.pole_walk(lz)
 
     #
     # Show or save plot
@@ -46,7 +43,7 @@ def main():
         fig.savefig(args.output_file)
 
 
-def guess_starname_from_filename(input_file):
+def guess_star_name_from_filename(input_file):
     return os.path.basename(input_file)[6:-4]
 
 

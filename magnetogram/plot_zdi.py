@@ -4,6 +4,7 @@ from matplotlib.ticker import IndexLocator
 from mpl_toolkits.axes_grid1 import make_axes_locatable
 
 from stellarwinds import magnetogram
+import stellarwinds.magnetogram.geometry
 from stellarwinds.magnetogram.plots import log, latex_float
 
 
@@ -96,12 +97,11 @@ def plot_energy_by_degree(zc, ax=None):
 
 
 def plot_map(zdi_magnetogram, star_name):
-
     zg = magnetogram.geometry.ZdiGeometry(61)
 
     polar_centers, azimuth_centers = zg.centers()
 
-    geometry.numerical_description(zg, zdi_magnetogram)
+    stellarwinds.magnetogram.geometry.numerical_description(zg, zdi_magnetogram)
 
     b_radial = zdi_magnetogram.get_radial_field(polar_centers, azimuth_centers)
     b_radial_max_indices = np.unravel_index(np.argmax(b_radial, axis=None), b_radial.shape)

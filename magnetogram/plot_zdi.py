@@ -130,7 +130,7 @@ def plot_map(zdi_magnetogram, star_name):
                                                           np.rad2deg(abs_b_radial_max_polar)))
     log.info("|B_r|_mean = %4.4g Gauss" % abs_b_radial_mean)
 
-    fig, ax = plt.subplots(figsize=(12, 6))
+    fig, ax = plt.subplots(figsize=(10, 4))
     polar_corners, azimuth_corners = zg.corners()
     img1 = ax.pcolormesh(np.rad2deg(azimuth_corners),
                          np.rad2deg(polar_corners),

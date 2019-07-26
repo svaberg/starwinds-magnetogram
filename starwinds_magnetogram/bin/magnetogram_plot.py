@@ -40,7 +40,7 @@ def main():
         import matplotlib.pyplot as plt
         plt.show()
     else:
-        fig.savefig(args.output_file)
+        fig.savefig(args.output_file, bbox_inches="tight")
 
 
 def guess_star_name_from_filename(input_file):

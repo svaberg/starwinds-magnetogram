@@ -15,6 +15,8 @@ import stellarwinds.magnetogram.zdi_magnetogram
 import stellarwinds.magnetogram.geometry
 from stellarwinds.magnetogram import plots
 import stellarwinds.magnetogram.coefficients as shc
+# This import registers the 3D projection, but is otherwise unused.
+from mpl_toolkits.mplot3d import Axes3D  # noqa: F401 unused import
 
 def test_properties(request):
     """Use ZdiGeometry object with ZdiMagnetogram object to calculate properties"""
@@ -134,7 +136,7 @@ def test_zdi_magnetogram_3d(request, magnetogram_name="mengel"):
                 m.set_array(values)
                 fig.colorbar(m)
 
-                ax.set_aspect('equal')
+                # ax.set_aspect('equal')
                 ax.set_title("az=%f, el=%f" % (ax.azim, ax.elev))
                 ax.set_xlabel("x [R]")
                 ax.set_ylabel("y [R]")
@@ -148,7 +150,7 @@ def test_zdi_magnetogram_3d(request, magnetogram_name="mengel"):
             fig, ax = surface3d_and_bar(*corners, B[0], color_norm, color_map)
 
             plt.savefig(pn.get())
-
+            plt.close()
 
             def surface3d3_and_bar(x, y, z, values, color_norm, color_map):
                 fig = plt.figure()
@@ -164,7 +166,7 @@ def test_zdi_magnetogram_3d(request, magnetogram_name="mengel"):
                                            shade=False)
 
 
-                    ax.set_aspect('equal')
+                    # ax.set_aspect('equal')
                     ax.view_init(azim=120 * pid, elev=60)
                     ax.set_title("az=%f, el=%f" % (ax.azim, ax.elev))
                     ax.set_xlabel("x [R]")
@@ -186,6 +188,7 @@ def test_zdi_magnetogram_3d(request, magnetogram_name="mengel"):
 
             fig, ax = surface3d3_and_bar(*corners, B[6], color_norm, color_map)
             plt.savefig(pn.get())
+            plt.close()
 
 
             def surface3d3_shifted_and_bar(x, y, z, values, color_norm, color_map):
@@ -202,7 +205,7 @@ def test_zdi_magnetogram_3d(request, magnetogram_name="mengel"):
                                            shade=False)
 
 
-                ax.set_aspect('equal')
+                # ax.set_aspect('equal')
                 # ax.view_init(azim=120 * pid)
                 # ax.set_title("az=%f, el=%f" % (ax.azim, ax.elev))
                 ax.set_xlabel("x [R]")
@@ -222,6 +225,7 @@ def test_zdi_magnetogram_3d(request, magnetogram_name="mengel"):
             fig, ax = surface3d3_shifted_and_bar(*corners, B[0], color_norm, color_map)
 
             plt.savefig(pn.get())
+            plt.close()
 
             break
 

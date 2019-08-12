@@ -34,6 +34,7 @@ def test_dimensionless(request):
         plt.xlim((0, 8))
         plt.grid(True)
         plt.savefig(pn.get())
+        plt.close()
 
 
 
@@ -70,6 +71,7 @@ def test_speed(request):
 
         plt.grid(True)
         plt.savefig(pn.get())
+        plt.close()
 
 
 def test_density(request):
@@ -101,6 +103,7 @@ def test_density(request):
         plt.yscale('log')
         plt.grid(True)
         plt.savefig(pn.get())
+        plt.close()
 
 
 def test_total_mass_flux(request):
@@ -155,6 +158,7 @@ def test_total_mass_flux(request):
         ax2.set_ylabel('Mass loss [Msun/yr]')
 
         plt.savefig(pn.get())
+        plt.close()
 
 
 def test_total_mass_flux_variation(request):

@@ -63,6 +63,7 @@ def test_rotate_magnetogram_around_z(request, magnetogram_name, alpha_deg):
             fig.colorbar(img1, ax=ax, orientation='horizontal')
 
         plt.savefig(pn.get())
+        plt.close()
 
     assert np.allclose(values0, values1)
 
@@ -139,6 +140,7 @@ def test_rotate_magnetogram(request, magnetogram_name, euler_deg):
 
         axs[1].set_title("Euler angles zyz [deg] (%4.1f, %4.1f, %4.1f)" % tuple(euler_deg))
         plt.savefig(pn.get())
+        plt.close()
 
     assert np.allclose(values0, values1)
 

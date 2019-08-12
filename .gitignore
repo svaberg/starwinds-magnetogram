@@ -24,3 +24,8 @@ tests/report.html
 .pytest_cache/
 Stellarwinds.egg-info/
 
+untitled.*
+tecplot_log.txt
+.coverage
+stellarwinds_test_log.txt
+myresults.xml

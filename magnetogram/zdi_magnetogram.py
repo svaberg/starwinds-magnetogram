@@ -46,7 +46,16 @@ class ZdiMagnetogram:
                 * sp.special.factorial(self.degrees_l - self.orders_m)
                 / sp.special.factorial(self.degrees_l + self.orders_m)
         )
-    
+
+        if False:
+        # This takes better care of the cancellations in (l-m)!/(l+m)!
+            @np.vectorize
+            def factorial_expression(l, m):
+                return np.exp(-np.sum(np.log(np.arange(l - m + 1, l + m + 1))))
+
+            # Calculate c_lm as described in article.
+            c_lm2 = (2 * self.degrees_l + 1) / (4 * np.pi) * factorial_expression(self.degrees_l, self.orders_m)
+
         self.c_lm = np.sqrt(c_lm2)
 
         self._dpml_method = dpml_method

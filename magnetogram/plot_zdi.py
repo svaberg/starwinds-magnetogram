@@ -96,8 +96,10 @@ def plot_energy_by_degree(zc, ax=None):
     return ax.figure, ax
 
 
-def plot_map(zdi_magnetogram, star_name):
-    zg = magnetogram.geometry.ZdiGeometry(61)
+def plot_map(zdi_magnetogram, star_name, zg=None):
+
+    if zg is None:
+        zg = magnetogram.geometry.ZdiGeometry(61)
 
     polar_centers, azimuth_centers = zg.centers()
 
@@ -123,7 +125,7 @@ def plot_map(zdi_magnetogram, star_name):
         abs_b_radial_max_polar = b_radial_min_polar
         abs_b_radial_max_azimuth = b_radial_min_azimuth
 
-    abs_b_radial_mean = np.sum(np.abs(b_radial) * zg.areas()) / (4 * np.pi)
+    abs_b_radial_mean = np.sum(np.abs(b_radial) * zg.areas()) / (4 * np.pi)  # Scaled by area
 
     log.info("|B_r|_max = %4.4g Gauss" % abs_b_radial_max)
     log.info("|B_r|_max at az=%2.2f deg, pl=%3.2f deg" % (np.rad2deg(abs_b_radial_max_azimuth),

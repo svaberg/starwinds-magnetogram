@@ -2,7 +2,6 @@ import numpy as np
 import scipy.special
 import logging
 
-import stellarwinds.magnetogram.plot_pfss
 
 log = logging.getLogger(__name__)
 
@@ -12,7 +11,8 @@ from tests.magnetogram import magnetograms
 
 # Local
 import stellarwinds.magnetogram.pfss_magnetogram as pfss_stanford
-from stellarwinds.magnetogram import plots
+from stellarwinds.magnetogram import plots  #TODO: remove this.
+from stellarwinds.magnetogram import plot_pfss
 from stellarwinds.magnetogram import geometry
 
 
@@ -81,7 +81,7 @@ def test_plot_pfss_equirectangular(request,
     magnetogram = magnetograms.get_radial(magnetogram_name)
 
     with context.PlotNamer(__file__, request.node.name) as (pn, plt):
-        fig, axs = stellarwinds.magnetogram.plot_pfss.plot_equirectangular(magnetogram)
+        fig, axs = plot_pfss.plot_equirectangular(magnetogram)
         plt.savefig(pn.get())
 
 
@@ -91,7 +91,7 @@ def test_plot_pfss_slice(request,
     magnetogram = magnetograms.get_radial(magnetogram_name)
 
     with context.PlotNamer(__file__, request.node.name) as (pn, plt):
-        fig, axs = stellarwinds.magnetogram.plot_pfss.plot_slice(magnetogram)
+        fig, axs = plot_pfss.plot_slice(magnetogram)
         fig.savefig(pn.get())
 
 
@@ -166,7 +166,7 @@ def test_plot_pfss_streamtraces(request,
 
     magnetogram = magnetograms.get_radial(magnetogram_name)
     with context.PlotNamer(__file__, request.node.name) as (pn, plt):
-        fig, ax = stellarwinds.magnetogram.plot_pfss.plot_streamtraces(magnetogram)
+        fig, ax = plot_pfss.plot_streamtraces(magnetogram)
         fig.savefig(pn.get())
 
 

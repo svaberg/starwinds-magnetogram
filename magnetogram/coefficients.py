@@ -165,6 +165,8 @@ class Coefficients(object):
 
     def __truediv__(self, value): return multiply(self, value**-1)
 
+    def truncated(self, degree_max): return truncated(self, degree_max)
+
 
 def noise(degree_max=15, noisinator=numpy.random.normal, beta=0):
     coeffs = Coefficients()
@@ -215,6 +217,21 @@ def empty_like(shc):
     Get empty set of spherical harmonics coefficients with same type of coefficients.
     """
     return Coefficients(shc.default_coefficients)
+
+
+def truncated(shc, degree_max):
+    """
+    Get coefficients truncated to degree
+    :param shc: coefficients object
+    :param degree_max: degree to which to truncate
+    :return: truncated coefficients
+    """
+    output = empty_like(shc)
+    for (degree, order), coeffs in shc.contents():
+        if degree <= degree_max:
+            output.append(degree, order, coeffs)
+
+    return output
 
 
 def add(shc0, shc1):

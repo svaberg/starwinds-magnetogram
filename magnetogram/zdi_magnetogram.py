@@ -19,7 +19,7 @@ class ZdiMagnetogram:
                  gamma_lm=None,
                  dpml_method="gradient",  # For testing
                  ):
-        """
+        r"""
         Construct from coefficients.
         :param degrees_l: Array of degree indices
         :param orders_m:  Array of order indices
@@ -111,7 +111,7 @@ class ZdiMagnetogram:
                 )
 
     def get_polar_poloidal_field(self, points_polar, points_azimuth):
-        """
+        r"""
         Get the polar component of the poloidal field $B_{\phi, pol}$.
         :param points_polar:
         :param points_azimuth:
@@ -132,7 +132,7 @@ class ZdiMagnetogram:
         return np.real(field_polar_poloidal)
 
     def get_polar_toroidal_field(self, points_polar, points_azimuth):
-        """
+        r"""
         Get the polar component of the toroidal field $B_{\phi, tor}$.
         :param points_polar:
         :param points_azimuth:
@@ -154,7 +154,7 @@ class ZdiMagnetogram:
         return np.real(field_polar_toroidal)
 
     def get_polar_field(self, points_polar, points_azimuth):
-        """
+        r"""
         Get the total polar component of the field $B_{\phi}$.
         :param points_polar:
         :param points_azimuth:
@@ -166,7 +166,7 @@ class ZdiMagnetogram:
                 )
 
     def get_azimuthal_poloidal_field(self, points_polar, points_azimuth):
-        """
+        r"""
         Get the azimuthal component of the poloidal field $B_{\theta, pol}$.
         :param points_polar:
         :param points_azimuth:
@@ -188,7 +188,7 @@ class ZdiMagnetogram:
         return np.real(field_azimuthal_poloidal)
 
     def get_azimuthal_toroidal_field(self, points_polar, points_azimuth):
-        """
+        r"""
         Get the azimuthal component of the toroidal field $B_{\theta, tor}$.
         :param points_polar:
         :param points_azimuth:
@@ -209,7 +209,7 @@ class ZdiMagnetogram:
         return np.real(field_azimuthal_toroidal)
 
     def get_azimuthal_field(self, points_polar, points_azimuth):
-        """
+        r"""
         Get the total azimuthal component of the field $B_{\theta}$.
         :param points_polar:
         :param points_azimuth:
@@ -222,7 +222,7 @@ class ZdiMagnetogram:
 
     # When should the real values be taken?
     def get_field_strength(self, points_polar, points_azimuth):
-        """
+        r"""
         Get field strength $B$.
         :param points_polar:
         :param points_azimuth:
@@ -236,7 +236,7 @@ class ZdiMagnetogram:
         return (field_radial**2 + field_polar**2 + field_azimuthal**2)**.5
 
     def get_all(self):
-        """
+        r"""
         Get all the things in a dictionary.
         :param points_polar:
         :param points_azimuth:

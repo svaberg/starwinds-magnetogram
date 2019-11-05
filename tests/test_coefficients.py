@@ -28,9 +28,6 @@ def test_methods_not_failing(default):
     c.contents()
     c.as_arrays()
 
-    # THis is dodgy
-    # c.as_zdi(accept_negative_orders=False)
-
 
 @pytest.mark.parametrize("default", _defaults)
 def test_add(default):

@@ -58,7 +58,7 @@ def _plot_energy(zc, name="total", negative_orders=False, ax=None):
     ax.yaxis.set_minor_locator(IndexLocator(base=1, offset=0))
     ax.tick_params(axis='both', color='none')
     ax.set_xlabel("Order $m$")
-    ax.set_ylabel("Degree $\ell$")
+    ax.set_ylabel(r"Degree $\ell$")
     ax.set_title("Coefficient %s energy (ZDI)" % name)
 
     if energy.shape[0] != energy.shape[1]:
@@ -89,13 +89,14 @@ def plot_energy_by_degree(zc, ax=None):
                 color=_lt[0].get_color())
     ax.grid()
     ax.legend(ncol=2)
-    ax.set_xlabel("Degree $\ell$")
+    ax.set_xlabel(r"Degree $\ell$")
     ax.set_ylabel("Summed component energy [B$^2$]")
-    ax.set_title("Energy as a function of $\ell$")
+    ax.set_title(r"Energy as a function of $\ell$")
 
     return ax.figure, ax
 
 
+# Expand to plot other than radial??
 def plot_map(zdi_magnetogram, star_name, zg=None):
 
     if zg is None:
@@ -189,7 +190,7 @@ def plot_map(zdi_magnetogram, star_name, zg=None):
              np.rad2deg(b_radial_min_polar), 'yv',
              label='Min $B_r=%s$ G' % latex_float(b_radial_min))
 
-    plt.title('%s: $|B_r|_\mathrm{mean}=%4.4g$ G' % (star_name, abs_b_radial_mean))
+    plt.title(r'%s: $|B_r|_\mathrm{mean}=%4.4g$ G' % (star_name, abs_b_radial_mean))
     ax.invert_yaxis()
 
     ## Dipole max
@@ -213,11 +214,151 @@ def plot_map(zdi_magnetogram, star_name, zg=None):
 
     ax.set_aspect('equal')
 
-    plt.title('%s: $|B_r|_\mathrm{mean}=%4.4g$ G. Dipole at %4.4g deg' % (star_name,
+    plt.title(r'%s: $|B_r|_\mathrm{mean}=%4.4g$ G. Dipole at %4.4g deg' % (star_name,
                                                                 abs_b_radial_mean,
                                                                 np.rad2deg(np.min([b_radial_max_polar, b_radial_min_polar]))))
 
     return fig, ax
+
+
+# Expand to plot other than radial??
+# TODO This is a hack to get field strength quickly to match the Kappa Ceti paper. Fix up later!
+def plot_map_strength(getter_fn, star_name=None, zg=None, symmetric=False, cmap=None):
+
+    if zg is None:
+        zg = magnetogram.geometry.ZdiGeometry(61)
+
+    if symmetric and cmap is None:
+        cmap = "RdBu_r"
+    elif cmap is None:
+        cmap = "jet"
+
+
+    polar_centers, azimuth_centers = zg.centers()
+
+    field = getter_fn(polar_centers, azimuth_centers)
+
+    fig, ax = plt.subplots(figsize=(10, 4))
+    polar_corners, azimuth_corners = zg.corners()
+    img1 = ax.pcolormesh(np.rad2deg(azimuth_corners),
+                         np.rad2deg(polar_corners),
+                         field,
+                         cmap=cmap)
+    cb = fig.colorbar(img1, ax=ax)
+
+    if symmetric:
+        img1.set_clim(np.array([-1, 1]) * np.max(np.abs(img1.get_clim())))
+
+        zero_contour = ax.contour(np.rad2deg(zg.centers()[1]),
+                        np.rad2deg(zg.centers()[0]),
+                        field,
+                        0,
+                        linewidths=1,
+                        colors='k',
+                        )
+
+        zero_contour.collections[1].set_label('$B_r=0$ G')  # Even if there is only one line, the collections array has 3 elements.
+        cb.add_lines(zero_contour)
+
+        if np.abs(np.max(field)) > np.abs(np.min(field)):
+            # cb.ax.axhline(y=np.min(field), color='k', marker='v')
+            cb.ax.plot(.5, np.min(field), color='k', marker='v')
+        else:
+            # cb.ax.axhline(y=np.max(field), color='k', marker='^')
+            cb.ax.plot(.5, np.max(field), color='k', marker='^')
+
+        cb.ax.plot(.5, np.max(field), color='k', marker='^')
+        cb.ax.plot(.5, np.min(field), color='k', marker='v')
+
+    i2 = ax.contour(np.rad2deg(zg.centers()[1]),
+                    np.rad2deg(zg.centers()[0]),
+                    field,
+                    cb.get_ticks(),
+                    linewidths=.5,
+                    colors='k',
+                    linestyles='dashed'
+                    )
+
+    i2.collections[0].set_label('$\\Delta B_r = %g$ G' % (cb.get_ticks()[1] - cb.get_ticks()[0]))
+    # import pdb; pdb.set_trace()
+    # ax.clabel(i2, fmt='%2.1f', colors='k', fontsize=6)
+    # h2, _ =
+    # for _id, h2l in enumerate(i2.collections):
+    #     h2l.set_label(_id)
+
+    cb.add_lines(i2)
+
+    ax.xaxis.set_ticks(np.arange(0, 361, 45))
+    ax.yaxis.set_ticks(np.arange(0, 181, 30))
+    plt.grid()
+
+    ax.invert_yaxis()
+
+    ax.set_aspect('equal')
+
+    add_range(azimuth_centers, polar_centers, field, zg)
+
+    # _title = ""
+    # plt.title('%s: $|B_r|_\mathrm{mean}=%4.4g$ G' % (star_name, abs_field_mean))
+    #
+    # plt.title('%s: $|B_r|_\mathrm{mean}=%4.4g$ G. Dipole at %4.4g deg' % (star_name,
+    #                                                             abs_field_mean,
+    #                                                             np.rad2deg(np.min([field_max_polar, field_min_polar]))))
+
+    plt.legend(ncol=3, loc='lower left')
+    return fig, ax
+
+
+def add_abs_range(azimuth_centers, polar_centers, field, zg):
+    field_max_indices = np.unravel_index(np.argmax(field, axis=None), field.shape)
+    field_max_polar = polar_centers[field_max_indices]
+    field_max_azimuth = azimuth_centers[field_max_indices]
+    field_max = field[field_max_indices]
+
+    field_min_indices = np.unravel_index(np.argmin(field, axis=None), field.shape)
+    field_min_polar = polar_centers[field_min_indices]
+    field_min_azimuth = azimuth_centers[field_min_indices]
+    field_min = field[field_min_indices]
+
+    if np.abs(field_max) > np.abs(field_min):
+        abs_field_max = np.abs(field_max)
+        abs_field_max_polar = field_max_polar
+        abs_field_max_azimuth = field_max_azimuth
+    else:
+        abs_field_max = np.abs(field_min)
+        abs_field_max_polar = field_min_polar
+        abs_field_max_azimuth = field_min_azimuth
+
+    abs_field_mean = np.sum(np.abs(field) * zg.areas()) / (4 * np.pi)  # Scaled by area
+
+    log.info("|B_r|_max = %4.4g Gauss" % abs_field_max)
+    log.info("|B_r|_max at az=%2.2f deg, pl=%3.2f deg" % (np.rad2deg(abs_field_max_azimuth),
+                                                          np.rad2deg(abs_field_max_polar)))
+    log.info("|B_r|_mean = %4.4g Gauss" % abs_field_mean)
+    plt.plot(np.rad2deg(field_max_azimuth),
+             np.rad2deg(field_max_polar), 'k^',
+             label='Max $B_r=%s$ G' % latex_float(field_max))
+    plt.plot(np.rad2deg(field_min_azimuth),
+             np.rad2deg(field_min_polar), 'kv',
+             label='Min $B_r=%s$ G' % latex_float(field_min))
+
+
+def add_range(azimuth_centers, polar_centers, field, zg):
+    field_max_indices = np.unravel_index(np.argmax(field, axis=None), field.shape)
+    field_max_polar = polar_centers[field_max_indices]
+    field_max_azimuth = azimuth_centers[field_max_indices]
+    field_min_indices = np.unravel_index(np.argmin(field, axis=None), field.shape)
+    field_min_polar = polar_centers[field_min_indices]
+    field_min_azimuth = azimuth_centers[field_min_indices]
+    field_max = field[field_max_indices]
+    field_min = field[field_min_indices]
+
+    plt.plot(np.rad2deg(field_max_azimuth),
+             np.rad2deg(field_max_polar), 'k^',
+             label='Max $B_r=%s$ G' % latex_float(field_max))
+    plt.plot(np.rad2deg(field_min_azimuth),
+             np.rad2deg(field_min_polar), 'kv',
+             label='Min $B_r=%s$ G' % latex_float(field_min))
 
 
 def pole_walk(zdi_magnetogram, geometry=None, ax=None):

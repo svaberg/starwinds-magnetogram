@@ -390,3 +390,25 @@ def test_plot_zdi_magnetogram_energy(request):
 
         fig, axs = stellarwinds.magnetogram.plot_zdi.plot_energy(zc, types=("poloidal", "toroidal"))
         fig.savefig(pn.get())
+
+
+
+
+def test_plot_strength(request, magnetogram_name="mengel"):
+    lz = stellarwinds.magnetogram.zdi_magnetogram.from_coefficients(magnetograms.get_all(magnetogram_name))
+
+    with context.PlotNamer(__file__, request.node.name) as (pn, plt):
+        fig, ax = stellarwinds.magnetogram.plot_zdi.plot_map_strength(lz.get_field_strength, "Mengel", zg=None)
+        fig.savefig(pn.get())
+
+
+
+
+def test_plot_radial_field(request, magnetogram_name="mengel"):
+    lz = stellarwinds.magnetogram.zdi_magnetogram.from_coefficients(magnetograms.get_all(magnetogram_name))
+
+    with context.PlotNamer(__file__, request.node.name) as (pn, plt):
+        fig, ax = stellarwinds.magnetogram.plot_zdi.plot_map_strength(lz.get_radial_field, "Mengel", zg=None,
+                                                                      symmetric=True)
+        fig.savefig(pn.get())
+

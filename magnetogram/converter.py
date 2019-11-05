@@ -68,7 +68,6 @@ def map_to_positive_orders(magnetogram):
     return output
 
 
-# TODO small change here to return 3 shparm objects
 def read_magnetogram_file(fname, types=("radial",)):
     """
     Read zdipy magnetogram file.

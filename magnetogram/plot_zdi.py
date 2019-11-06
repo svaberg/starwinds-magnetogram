@@ -270,13 +270,13 @@ def plot_map_strength(getter_fn, zg=None, symmetric=None, cmap=None):
                np.max(field), color='k', marker='2')
 
     contours = ax.contour(np.rad2deg(zg.centers()[1]),
-                    np.rad2deg(zg.centers()[0]),
-                    field,
-                    cb.get_ticks(),
-                    linewidths=.5,
-                    colors='k',
-                    linestyles='dashed'
-                    )
+                          np.rad2deg(zg.centers()[0]),
+                          field,
+                          cb.get_ticks(),
+                          linewidths=.5,
+                          colors='k',
+                          linestyles='dashed'
+                          )
     contours.collections[0].set_label(r'$\Delta B_r = %g$ G' % (cb.get_ticks()[1] - cb.get_ticks()[0]))
     cb.add_lines(contours)
 

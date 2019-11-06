@@ -17,6 +17,8 @@ from stellarwinds.magnetogram import plots
 import stellarwinds.magnetogram.coefficients as shc
 # This import registers the 3D projection, but is otherwise unused.
 from mpl_toolkits.mplot3d import Axes3D  # noqa: F401 unused import
+import pytest
+
 
 def test_properties(request):
     """Use ZdiGeometry object with ZdiMagnetogram object to calculate properties"""
@@ -398,17 +400,35 @@ def test_plot_strength(request, magnetogram_name="mengel"):
     lz = stellarwinds.magnetogram.zdi_magnetogram.from_coefficients(magnetograms.get_all(magnetogram_name))
 
     with context.PlotNamer(__file__, request.node.name) as (pn, plt):
-        fig, ax = stellarwinds.magnetogram.plot_zdi.plot_map_strength(lz.get_field_strength, "Mengel", zg=None)
+        fig, ax = stellarwinds.magnetogram.plot_zdi.plot_map_strength(lz.get_field_strength)
         fig.savefig(pn.get())
-
-
+        plt.close()
 
 
 def test_plot_radial_field(request, magnetogram_name="mengel"):
     lz = stellarwinds.magnetogram.zdi_magnetogram.from_coefficients(magnetograms.get_all(magnetogram_name))
 
     with context.PlotNamer(__file__, request.node.name) as (pn, plt):
-        fig, ax = stellarwinds.magnetogram.plot_zdi.plot_map_strength(lz.get_radial_field, "Mengel", zg=None,
-                                                                      symmetric=True)
+        fig, ax = stellarwinds.magnetogram.plot_zdi.plot_map_strength(lz.get_radial_field)
         fig.savefig(pn.get())
+        plt.close()
+
+
+@pytest.mark.parametrize("method", ("get_radial_field",
+                                    "get_polar_field",
+                                    "get_azimuthal_field",
+                                    "get_field_strength"))
+@pytest.mark.parametrize("magnetogram_name", ("mengel",))
+def test_plot_field(request, method, magnetogram_name):
+    lz = stellarwinds.magnetogram.zdi_magnetogram.from_coefficients(magnetograms.get_all(magnetogram_name))
+
+    _method = getattr(lz, method)
+
+    with context.PlotNamer(__file__, request.node.name) as (pn, plt):
+        fig, ax = stellarwinds.magnetogram.plot_zdi.plot_map_strength(_method,
+                                                                      zg=None,
+                                                                      symmetric=None)
+        ax.set_title(method)
+        fig.savefig(pn.get())
+        plt.close()
 

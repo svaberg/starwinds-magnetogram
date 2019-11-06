@@ -223,20 +223,23 @@ def plot_map(zdi_magnetogram, star_name, zg=None):
 
 # Expand to plot other than radial??
 # TODO This is a hack to get field strength quickly to match the Kappa Ceti paper. Fix up later!
-def plot_map_strength(getter_fn, star_name=None, zg=None, symmetric=False, cmap=None):
+def plot_map_strength(getter_fn, zg=None, symmetric=None, cmap=None):
 
     if zg is None:
         zg = magnetogram.geometry.ZdiGeometry(61)
+
+    polar_centers, azimuth_centers = zg.centers()
+    field = getter_fn(polar_centers, azimuth_centers)
+    if symmetric is None:
+        if np.min(field) < 0 < np.max(field):
+            symmetric = True
+        else:
+            symmetric = False
 
     if symmetric and cmap is None:
         cmap = "RdBu_r"
     elif cmap is None:
         cmap = "jet"
-
-
-    polar_centers, azimuth_centers = zg.centers()
-
-    field = getter_fn(polar_centers, azimuth_centers)
 
     fig, ax = plt.subplots(figsize=(10, 4))
     polar_corners, azimuth_corners = zg.corners()
@@ -250,27 +253,23 @@ def plot_map_strength(getter_fn, star_name=None, zg=None, symmetric=False, cmap=
         img1.set_clim(np.array([-1, 1]) * np.max(np.abs(img1.get_clim())))
 
         zero_contour = ax.contour(np.rad2deg(zg.centers()[1]),
-                        np.rad2deg(zg.centers()[0]),
-                        field,
-                        0,
-                        linewidths=1,
-                        colors='k',
-                        )
+                                  np.rad2deg(zg.centers()[0]),
+                                  field,
+                                  0,
+                                  linewidths=1,
+                                  colors='k',
+                                  )
 
-        zero_contour.collections[1].set_label('$B_r=0$ G')  # Even if there is only one line, the collections array has 3 elements.
+        # Even if there is only one line, the collections array has 3 elements.
+        zero_contour.collections[1].set_label('$B_r=0$ G')
         cb.add_lines(zero_contour)
 
-        if np.abs(np.max(field)) > np.abs(np.min(field)):
-            # cb.ax.axhline(y=np.min(field), color='k', marker='v')
-            cb.ax.plot(.5, np.min(field), color='k', marker='v')
-        else:
-            # cb.ax.axhline(y=np.max(field), color='k', marker='^')
-            cb.ax.plot(.5, np.max(field), color='k', marker='^')
+    cb.ax.plot(np.mean(cb.ax.get_xlim()),
+               np.min(field), color='k', marker='1')
+    cb.ax.plot(np.mean(cb.ax.get_xlim()),
+               np.max(field), color='k', marker='2')
 
-        cb.ax.plot(.5, np.max(field), color='k', marker='^')
-        cb.ax.plot(.5, np.min(field), color='k', marker='v')
-
-    i2 = ax.contour(np.rad2deg(zg.centers()[1]),
+    contours = ax.contour(np.rad2deg(zg.centers()[1]),
                     np.rad2deg(zg.centers()[0]),
                     field,
                     cb.get_ticks(),
@@ -278,15 +277,8 @@ def plot_map_strength(getter_fn, star_name=None, zg=None, symmetric=False, cmap=
                     colors='k',
                     linestyles='dashed'
                     )
-
-    i2.collections[0].set_label('$\\Delta B_r = %g$ G' % (cb.get_ticks()[1] - cb.get_ticks()[0]))
-    # import pdb; pdb.set_trace()
-    # ax.clabel(i2, fmt='%2.1f', colors='k', fontsize=6)
-    # h2, _ =
-    # for _id, h2l in enumerate(i2.collections):
-    #     h2l.set_label(_id)
-
-    cb.add_lines(i2)
+    contours.collections[0].set_label(r'$\Delta B_r = %g$ G' % (cb.get_ticks()[1] - cb.get_ticks()[0]))
+    cb.add_lines(contours)
 
     ax.xaxis.set_ticks(np.arange(0, 361, 45))
     ax.yaxis.set_ticks(np.arange(0, 181, 30))
@@ -297,13 +289,6 @@ def plot_map_strength(getter_fn, star_name=None, zg=None, symmetric=False, cmap=
     ax.set_aspect('equal')
 
     add_range(azimuth_centers, polar_centers, field, zg)
-
-    # _title = ""
-    # plt.title('%s: $|B_r|_\mathrm{mean}=%4.4g$ G' % (star_name, abs_field_mean))
-    #
-    # plt.title('%s: $|B_r|_\mathrm{mean}=%4.4g$ G. Dipole at %4.4g deg' % (star_name,
-    #                                                             abs_field_mean,
-    #                                                             np.rad2deg(np.min([field_max_polar, field_min_polar]))))
 
     plt.legend(ncol=3, loc='lower left')
     return fig, ax
@@ -354,10 +339,10 @@ def add_range(azimuth_centers, polar_centers, field, zg):
     field_min = field[field_min_indices]
 
     plt.plot(np.rad2deg(field_max_azimuth),
-             np.rad2deg(field_max_polar), 'k^',
+             np.rad2deg(field_max_polar), 'k2',
              label='Max $B_r=%s$ G' % latex_float(field_max))
     plt.plot(np.rad2deg(field_min_azimuth),
-             np.rad2deg(field_min_polar), 'kv',
+             np.rad2deg(field_min_polar), 'k1',
              label='Min $B_r=%s$ G' % latex_float(field_min))
 
 

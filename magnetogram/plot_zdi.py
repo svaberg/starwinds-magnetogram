@@ -294,40 +294,6 @@ def plot_map_strength(getter_fn, zg=None, symmetric=None, cmap=None):
     return fig, ax
 
 
-def add_abs_range(azimuth_centers, polar_centers, field, zg):
-    field_max_indices = np.unravel_index(np.argmax(field, axis=None), field.shape)
-    field_max_polar = polar_centers[field_max_indices]
-    field_max_azimuth = azimuth_centers[field_max_indices]
-    field_max = field[field_max_indices]
-
-    field_min_indices = np.unravel_index(np.argmin(field, axis=None), field.shape)
-    field_min_polar = polar_centers[field_min_indices]
-    field_min_azimuth = azimuth_centers[field_min_indices]
-    field_min = field[field_min_indices]
-
-    if np.abs(field_max) > np.abs(field_min):
-        abs_field_max = np.abs(field_max)
-        abs_field_max_polar = field_max_polar
-        abs_field_max_azimuth = field_max_azimuth
-    else:
-        abs_field_max = np.abs(field_min)
-        abs_field_max_polar = field_min_polar
-        abs_field_max_azimuth = field_min_azimuth
-
-    abs_field_mean = np.sum(np.abs(field) * zg.areas()) / (4 * np.pi)  # Scaled by area
-
-    log.info("|B_r|_max = %4.4g Gauss" % abs_field_max)
-    log.info("|B_r|_max at az=%2.2f deg, pl=%3.2f deg" % (np.rad2deg(abs_field_max_azimuth),
-                                                          np.rad2deg(abs_field_max_polar)))
-    log.info("|B_r|_mean = %4.4g Gauss" % abs_field_mean)
-    plt.plot(np.rad2deg(field_max_azimuth),
-             np.rad2deg(field_max_polar), 'k^',
-             label='Max $B_r=%s$ G' % latex_float(field_max))
-    plt.plot(np.rad2deg(field_min_azimuth),
-             np.rad2deg(field_min_polar), 'kv',
-             label='Min $B_r=%s$ G' % latex_float(field_min))
-
-
 def add_range(azimuth_centers, polar_centers, field, zg):
     field_max_indices = np.unravel_index(np.argmax(field, axis=None), field.shape)
     field_max_polar = polar_centers[field_max_indices]

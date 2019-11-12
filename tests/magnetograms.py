@@ -430,7 +430,6 @@ def data_mengel():
             _cf = _magn[_id, 2] + 1.0j * _magn[_id, 3]
             _coeffs.append(_deg_l, _ord_m, _cf)
 
-    # import pdb; pdb.set_trace()
     return shc.hstack(coefficients)
 
 

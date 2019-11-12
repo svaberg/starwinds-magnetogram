@@ -104,7 +104,6 @@ class Coefficients(object):
     #
     #     # Create one coefficient row and use it to determine length of coefficient rows
     #     _c0 = self.default_coefficients
-    #     import pdb; pdb.set_trace()
     #     coeffs = np.zeros((len(degrees), len(self.default_coefficients)))
     #     for row_id in range(len(degrees)):
     #         coeffs[row_id] = self.get(degrees[row_id], orders[row_id])

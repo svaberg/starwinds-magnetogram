@@ -99,8 +99,6 @@ def test_alfven_slice(request,
 
     alfven_mach_number = velocity / (1e-4*bmag / np.sqrt(scipy.constants.mu_0 * density))
 
-    # import pdb; pdb.set_trace()
-
     with context.PlotNamer(__file__, request.node.name) as (pn, plt):
 
         fig, ax = plt.subplots(figsize=(9, 6))

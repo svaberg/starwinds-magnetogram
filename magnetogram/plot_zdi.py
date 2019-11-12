@@ -163,7 +163,7 @@ def plot_map(zdi_magnetogram, star_name, zg=None):
                     )
 
     i2.collections[0].set_label('$\\Delta B_r = %g$ G' % (cb.get_ticks()[1] - cb.get_ticks()[0]))
-    # import pdb; pdb.set_trace()
+
     # ax.clabel(i2, fmt='%2.1f', colors='k', fontsize=6)
     # h2, _ =
     # for _id, h2l in enumerate(i2.collections):

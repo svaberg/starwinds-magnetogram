@@ -400,7 +400,7 @@ def test_plot_strength(request, magnetogram_name="mengel"):
     lz = stellarwinds.magnetogram.zdi_magnetogram.from_coefficients(magnetograms.get_all(magnetogram_name))
 
     with context.PlotNamer(__file__, request.node.name) as (pn, plt):
-        fig, ax = stellarwinds.magnetogram.plot_zdi.plot_map_strength(lz.get_field_strength)
+        fig, ax = stellarwinds.magnetogram.plot_zdi.plot_zdi_field(lz.get_field_strength)
         fig.savefig(pn.get())
         plt.close()
 
@@ -409,7 +409,7 @@ def test_plot_radial_field(request, magnetogram_name="mengel"):
     lz = stellarwinds.magnetogram.zdi_magnetogram.from_coefficients(magnetograms.get_all(magnetogram_name))
 
     with context.PlotNamer(__file__, request.node.name) as (pn, plt):
-        fig, ax = stellarwinds.magnetogram.plot_zdi.plot_map_strength(lz.get_radial_field)
+        fig, ax = stellarwinds.magnetogram.plot_zdi.plot_zdi_field(lz.get_radial_field)
         fig.savefig(pn.get())
         plt.close()
 
@@ -425,9 +425,9 @@ def test_plot_field(request, method, magnetogram_name):
     _method = getattr(lz, method)
 
     with context.PlotNamer(__file__, request.node.name) as (pn, plt):
-        fig, ax = stellarwinds.magnetogram.plot_zdi.plot_map_strength(_method,
-                                                                      zg=None,
-                                                                      symmetric=None)
+        fig, ax = stellarwinds.magnetogram.plot_zdi.plot_zdi_field(_method,
+                                                                   zg=None,
+                                                                   symmetric=None)
         ax.set_title(method)
         fig.savefig(pn.get())
         plt.close()

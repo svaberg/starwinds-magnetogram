@@ -88,6 +88,11 @@ class ParkerSolution(AnalyticBase):
                              (self.radius_sonic / self.stellar_radius) ** -2 * \
                              (self.speed_sonic / self.speed_surface) ** -1
 
+    def __str__(self):
+        s0 = "Parker solution T_c=%2.2G K, Rho_c=%2.2G kg/m3, " % (self.temperature, self.base_density)
+        s1 = "R=%2.2G, M=%2.2G," % (self.stellar_radius, self.stellar_mass)
+        return s0 + s1
+
     def speed(self, radii):
         """
 

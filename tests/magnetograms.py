@@ -434,14 +434,18 @@ def data_mengel():
 
 
 def dipole():
-    """A dipole"""
+    """
+    A dipole oriented along the z axis. The strength is 1 Gauss;
+    a different strength can be obtained by multiplying the result by the desired
+    value, i.e. coefficients = coefficients * 2
+    """
     coefficients = shc.Coefficients(np.zeros(3, dtype=complex))
     coefficients.append(1, 0, np.array([1.0+0.0j, 0.0+0.0j, 0.0+0.0j]))
     return coefficients
 
 
 def quadrupole():
-    """A dipole"""
+    """A quadrupole"""
     coefficients = shc.Coefficients(np.zeros(3, dtype=complex))
     coefficients.append(2, 0, np.array([1.0+0.0j, 0.0+0.0j, 0.0+0.0j]))
     coefficients.append(2, 1, np.array([0.0+1.0j, 0.0+0.0j, 0.0+0.0j]))

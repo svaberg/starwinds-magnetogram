@@ -284,7 +284,7 @@ class ZdiMagnetogram:
 
     def energy(self):
         """
-        Assume units are Gauss
+        Calculate energy as it is done in ZDIPy
         :return:
         """
 

@@ -206,6 +206,17 @@ def evaluate_in_space(
 
 
 def evaluate_on_slice(coefficients, px, py, pz, radius_source_surface, radius_star):
+    """
+    Is this really on a slice, or just in cartesian coordinates ??
+    :param coefficients:
+    :param px:
+    :param py:
+    :param pz:
+    :param radius_source_surface:
+    :param radius_star:
+    :return:
+    """
+
     pr, pp, pa = coordinate_transforms.spherical_coordinates_from_rectangular(px, py, pz)
     degree_l, order_m, alpha_lm = coefficients.as_arrays(include_unset=False)
     fr, fp, fa = evaluate_in_space(degree_l, order_m,
@@ -230,6 +241,13 @@ def evaluate_on_slice(coefficients, px, py, pz, radius_source_surface, radius_st
 
 
 def normal_plane(p1, p2, normal):
+    """
+    Return normal plane (does not alter magnetogram)
+    :param p1:
+    :param p2:
+    :param normal:
+    :return:
+    """
     p3 = np.zeros_like(p1)
     if normal == "x":
         return p3[..., np.newaxis], p1[..., np.newaxis], p2[..., np.newaxis]

@@ -30,6 +30,17 @@ def b_alfven(u, rho):
     return u * (scipy.constants.mu_0 * rho)**.5
 
 
+def get_alfven_mach_number(bmag, density, velocity):
+    """
+    NOTE CONVERTS FROM GAUSS TO TESLA!!
+    :param bmag:
+    :param density:
+    :param velocity:
+    :return:
+    """
+    return velocity / (1e-4 * bmag / np.sqrt(scipy.constants.mu_0 * density))
+
+
 def test_alfven_field_temperature(request):
     """
     Calculates the magnetic field required for the Alfven surface to fall at a given point.
@@ -147,16 +158,18 @@ def test_slice(request,
                magnetogram_name):
     """
     Use the PFSS method to plot a two-dimensional slice of the magnetic field.
+    This is in magnetogram units, i.e. Gauss
     TODO Should move this to test_plot_pfss (which does not exist).
     :param request:
     :param magnetogram_name:
     :return:
     """
 
-    radial_coefficients = magnetograms.get_radial(magnetogram_name) * 10
+    radial_coefficients = tests.magnetogram.magnetograms.get_radial(magnetogram_name) * 10
 
     with context.PlotNamer(__file__, request.node.name) as (pn, plt):
         fig, ax = plot_pfss.plot_slice(radial_coefficients)
+        ax.set_title("Radial field strength (magnetogram units)")
         fig.savefig(pn.get())
         plt.close()
 
@@ -214,7 +227,7 @@ def test_alfven_shape(request):
 
             # These are also two-dimensional arrays
             bmag = (fr**2 + fp**2 + fa**2)**.5
-            alfven_mach_number = velocity / (1e-4*bmag / np.sqrt(scipy.constants.mu_0 * density))
+            alfven_mach_number = get_alfven_mach_number(bmag, density, velocity)
 
             # Add this only for the first iteration.
             if _id == 0:
@@ -299,7 +312,7 @@ def test_alfven_shape_simple(request):
 
     # These are also two-dimensional arrays
     bmag = (fr**2 + fp**2 + fa**2)**.5
-    alfven_mach_number = velocity / (1e-4*bmag / np.sqrt(scipy.constants.mu_0 * density))
+    alfven_mach_number = get_alfven_mach_number(bmag, density, velocity)
 
     with context.PlotNamer(__file__, request.node.name) as (pn, plt):
         prop_cycle = plt.rcParams['axes.prop_cycle']
@@ -420,16 +433,22 @@ def test_alfven_slice(request,
     # This returns a stellarwinds.magnetogram.coefficients.Coefficients object.
     radial_coefficients = tests.magnetogram.magnetograms.get_radial(magnetogram_name)
 
-    # import pdb; pdb.set_trace()
     f_rpa_xyz = pfss_magnetogram.evaluate_on_slice(radial_coefficients, *pxyz,
-                                                   radius_source_surface, radius_star)
+                                                   radius_source_surface=radius_source_surface,
+                                                   radius_star=radius_star,
+                                                   )
 
-    import pdb; pdb.set_trace()
-    f_rpa_xyz = pfss_magnetogram.evaluate_on_slice(radial_coefficients,
-                                                   np.atleast_3d(0),
-                                                   np.atleast_3d(0),
+    if magnetogram_name == "dipole":
+        f_rpa = pfss_magnetogram.evaluate_in_space(radial_coefficients,
                                                    np.atleast_3d(1),
-                                                   radius_source_surface, radius_star)
+                                                   np.atleast_3d(0),
+                                                   np.atleast_3d(0),
+                                                   radius_source_surface=radius_source_surface,
+                                                   radius_star=radius_star,
+                                                   )
+
+        assert np.allclose(f_rpa[0], 1)  # Just one element inside a triple array
+
     # Drop the extra dimension
     pxyz = [np.squeeze(p) for p in pxyz]
     px, py, pz = pxyz
@@ -443,7 +462,7 @@ def test_alfven_slice(request,
 
     bmag = (fr**2 + fp**2 + fa**2)**.5
 
-    alfven_mach_number = velocity / (1e-4*bmag / np.sqrt(scipy.constants.mu_0 * density))
+    alfven_mach_number = get_alfven_mach_number(bmag, density, velocity)
 
     with context.PlotNamer(__file__, request.node.name) as (pn, plt):
 
@@ -472,13 +491,10 @@ def test_alfven_slice(request,
 
             fig.colorbar(im).set_label('Radial field strength')
 
-            import pdb; pdb.set_trace()
-            log.info("")
-            maxpos = np.argwhere(bmag == bmax)
-
-            for _id in range(maxpos.shape[0]):
-                ax.plot(p1[maxpos[_id, 0], maxpos[_id, 1]],
-                        p2[maxpos[_id, 0], maxpos[_id, 1]], 'kx')
+            max_pos = np.argwhere(bmag == bmax)
+            for _id in range(max_pos.shape[0]):
+                ax.plot(p1[max_pos[_id, 0], max_pos[_id, 1]],
+                        p2[max_pos[_id, 0], max_pos[_id, 1]], 'kx')
 
         elif plot_name == "B":
             norm = mpl.colors.LogNorm()
@@ -517,7 +533,8 @@ def test_alfven_slice(request,
         ax.set_xlabel(r'Distance $x/R_{\star}$')
         ax.set_ylabel(r'Distance $z/R_{\star}$')
 
-        plt.legend(loc="lower left")
+        ax.legend(loc="lower left")
+        ax.grid(True)
 
         ax.text(1.0 - 0.01, 1.0 - 0.01, str(p),
                 horizontalalignment='right',
@@ -546,15 +563,13 @@ def test_max_alfven_radius_by_field_strength(request,
             magnetogram *= magnetogram_scale
             degree_l, order_m, alpha_lm = magnetogram.as_arrays(include_unset=False)
 
-            polar_max, azimuth_max, bmax = source_surface_field_maximum(degree_l, order_m,
-                                                                        np.real(alpha_lm),
-                                                                        np.imag(alpha_lm),
+            polar_max, azimuth_max, bmax = source_surface_field_maximum(magnetogram,
                                                                         rs, rss)
 
-            field_radial, field_polar, field_azimuth = evaluate_along_ray(radial_points, polar_max, azimuth_max,
-                                                                          degree_l, order_m,
-                                                                          np.real(alpha_lm),
-                                                                          np.imag(alpha_lm),
+            field_radial, field_polar, field_azimuth = evaluate_along_ray(magnetogram,
+                                                                          radial_points,
+                                                                          polar_max,
+                                                                          azimuth_max,
                                                                           rs, rss)
 
             p = ParkerSolution()
@@ -596,17 +611,14 @@ def test_max_alfven_radius_by_density(request,
 
         for density_scale in (.1, 1, 10):
             magnetogram = tests.magnetogram.magnetograms.get_radial(magnetogram_name)
-            degree_l, order_m, alpha_lm = magnetogram.as_arrays(include_unset=False)
 
-            polar_max, azimuth_max, bmax = source_surface_field_maximum(degree_l, order_m,
-                                                                        np.real(alpha_lm),
-                                                                        np.imag(alpha_lm),
+            polar_max, azimuth_max, bmax = source_surface_field_maximum(magnetogram,
                                                                         rs, rss)
 
-            field_radial, field_polar, field_azimuth = evaluate_along_ray(radial_points, polar_max, azimuth_max,
-                                                                          degree_l, order_m,
-                                                                          np.real(alpha_lm),
-                                                                          np.imag(alpha_lm),
+            field_radial, field_polar, field_azimuth = evaluate_along_ray(magnetogram,
+                                                                          radial_points,
+                                                                          polar_max,
+                                                                          azimuth_max,
                                                                           rs, rss)
 
             p = ParkerSolution(base_density=p0.base_density * density_scale)
@@ -645,17 +657,14 @@ def test_max_alfven_radius_by_temperature(request,
 
         for temperature_scale in 2**np.linspace(-2, 2, 5):
             magnetogram = tests.magnetogram.magnetograms.get_radial(magnetogram_name)
-            degree_l, order_m, alpha_lm = magnetogram.as_arrays(include_unset=False)
 
-            polar_max, azimuth_max, bmax = source_surface_field_maximum(degree_l, order_m,
-                                                                        np.real(alpha_lm),
-                                                                        np.imag(alpha_lm),
+            polar_max, azimuth_max, bmax = source_surface_field_maximum(magnetogram,
                                                                         rs, rss)
 
-            field_radial, field_polar, field_azimuth = evaluate_along_ray(radial_points, polar_max, azimuth_max,
-                                                                          degree_l, order_m,
-                                                                          np.real(alpha_lm),
-                                                                          np.imag(alpha_lm),
+            field_radial, field_polar, field_azimuth = evaluate_along_ray(magnetogram,
+                                                                          radial_points,
+                                                                          polar_max,
+                                                                          azimuth_max,
                                                                           rs, rss)
 
             p = ParkerSolution(temperature=p0.temperature * temperature_scale)
@@ -679,7 +688,7 @@ def test_max_alfven_radius_by_temperature(request,
         plt.close()
 
 
-def source_surface_field_maximum(degree_l, order_m, g_lm, h_lm, rs, rss):
+def source_surface_field_maximum(magnetogram, rs, rss):
 
     """
     Find the spherical coordinates of the point where the magnetic field strength is maximal
@@ -687,9 +696,12 @@ def source_surface_field_maximum(degree_l, order_m, g_lm, h_lm, rs, rss):
     this will remain the strongest field location.
     :return:
     """
+
+    degree_l, order_m, alpha_lm = magnetogram.as_arrays(include_unset=False)
+
     points_polar, points_azimuth = ZdiGeometry().centers()
     field_radial, field_polar, field_azimuthal = pfss_magnetogram.evaluate_on_sphere(
-        degree_l, order_m, g_lm, h_lm,
+        degree_l, order_m, np.real(alpha_lm), np.imag(alpha_lm),
         points_polar, points_azimuth,
         radius=rss, radius_star=rs, radius_source_surface=rss)
 
@@ -703,8 +715,8 @@ def source_surface_field_maximum(degree_l, order_m, g_lm, h_lm, rs, rss):
     return points_polar[indices], points_azimuth[indices], field_radial[indices]
 
 
-def evaluate_along_ray(pr, pp, pa,
-                       degree_l, order_m, g_lm, h_lm,
+def evaluate_along_ray(magnetogram,
+                       pr, pp, pa,
                        rs, rss):
     """
     Calculate field strength along ray
@@ -723,7 +735,7 @@ def evaluate_along_ray(pr, pp, pa,
 
     field_radial, \
     field_polar, \
-    field_azimuthal = pfss_magnetogram.evaluate_in_space(degree_l, order_m, g_lm, h_lm,
+    field_azimuthal = pfss_magnetogram.evaluate_in_space(magnetogram,
                                                          pr, pp, pa,
                                                          radius_star=rs,
                                                          radius_source_surface=rss)

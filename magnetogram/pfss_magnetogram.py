@@ -28,9 +28,10 @@ def theta_lm(deg_l, ord_m, points_polar):
 
     value = _inner(deg_l, ord_m, points_polar)
 
-
-    # Estimate derivative of Legendre polynomial (TODO different approach??)
-    # This is a hack.
+    # Estimate derivative of associated Legendre polynomial (TODO different approach??)
+    # This is a hack. TODO this does not work for zero
+    # This derivative goes all over the place at the endpoints.
+    # http://www.autodiff.org/ad16/Oral/Buecker_Legendre.pdf
     if len(points_polar.shape) > 2:
         _dp = 1e-2
         dv = _inner(deg_l, ord_m, points_polar + _dp) - value
@@ -39,6 +40,11 @@ def theta_lm(deg_l, ord_m, points_polar):
         deriv = -dv/du * dudx
     else:
         deriv = (value - np.roll(value, 1)) / (np.cos(points_polar) - np.roll(np.cos(points_polar), 1)) * np.sin(points_polar)
+
+    # Hack continues; if polar is 0 or pi, set the derivative to 0
+    # At least it is better than infinity
+    if deg_l == 1:
+        deriv[points_polar == 0] = 0
 
     return value, deriv
 
@@ -94,7 +100,8 @@ def evaluate_on_sphere(
         radius=None, radius_star=1, radius_source_surface=3):
     """
     Evaluate the radial, polar and azimuthal field components of a magnetogram represented
-    as a set of real spherical harmonics on Stanford PFSS form.
+    as a set of real spherical harmonics on Stanford PFSS form. The unit is the same as the
+    unit of the magnetogram, normally Gauss.
     :param degree_l: Degree $\ell$ of coefficients
     :param order_m:  Order $m$ of coefficients
     :param cosine_coefficients_g: Cosine-like real $g_{\ell m}$ coefficients
@@ -139,16 +146,16 @@ def evaluate_on_sphere(
 
 
 def evaluate_in_space(
-        degree_l, order_m, cosine_coefficients_g, sine_coefficients_h,
+        # degree_l, order_m, cosine_coefficients_g, sine_coefficients_h,
+        coefficients,
         points_radial, points_polar, points_azimuth,
         radius_star=1, radius_source_surface=3):
     """
     Evaluate the radial, polar and azimuthal field components of a magnetogram represented
-    as a set of real spherical harmonics on Stanford PFSS form.
-    :param degree_l: Degree $\ell$ of coefficients
-    :param order_m:  Order $m$ of coefficients
-    :param cosine_coefficients_g: Cosine-like real $g_{\ell m}$ coefficients
-    :param sine_coefficients_h: Sine-like real  $h_{\ell m}$  coefficients
+    as a set of real spherical harmonics on Stanford PFSS form. The unit is the same as the
+    unit of the magnetogram, normally Gauss.
+    TODO this is not dry with evaluate on sphere
+    :param coefficients: Coefficients object
     :param points_radial: 3d array of radial coordinate values
     :param points_polar: 3d array of polar coordinate values
     :param points_azimuth: 3d array of azimuth coordinate values
@@ -156,23 +163,28 @@ def evaluate_in_space(
     :param radius_source_surface: Source surface radius
     :return:
     """
-    assert(points_polar.shape == points_azimuth.shape)
-    assert np.min(order_m) >= 0, "Stanford PFSS expects only positive orders (TBC)."
+    assert points_polar.shape == points_azimuth.shape, "Shape mismatch."
 
-    # The pfss method is not valid inside the star!
+    # The PFSS method is not valid inside the star
     _invalid_inner_ids = np.where(points_radial < radius_star)
-    # The pfss method is not valid outside the source surface!
+    # The PFSS method is not valid outside the source surface
     _invalid_outer_ids = np.where(points_radial > radius_source_surface)
     original_radius = points_radial
     points_radial = np.minimum(points_radial, radius_source_surface)
 
     # Initialize field variables
-    field_radial = np.zeros_like(points_polar)
-    field_polar = np.zeros_like(field_radial)
-    field_azimuthal = np.zeros_like(field_radial)
+    field_radial = np.zeros_like(points_polar, dtype=float)
+    field_polar = np.zeros_like(field_radial, dtype=float)
+    field_azimuthal = np.zeros_like(field_radial, dtype=float)
+
+    degree_l, order_m, alpha_lm = coefficients.as_arrays(include_unset=False)
+    assert np.min(order_m) >= 0, "Stanford PFSS expects only positive orders (TBC)."
 
     # Loop over magnetogram coefficient lines
-    for (deg_l, ord_m, g_lm, h_lm) in zip(degree_l, order_m, cosine_coefficients_g, sine_coefficients_h):
+    for (deg_l, ord_m, g_lm, h_lm) in zip(degree_l,
+                                          order_m,
+                                          np.real(alpha_lm),
+                                          np.imag(alpha_lm)):
 
         _r_l = r_l(deg_l, points_radial, radius_star, radius_source_surface)
         _theta_lm = theta_lm(deg_l, ord_m, points_polar)
@@ -188,18 +200,14 @@ def evaluate_in_space(
                                      out=np.zeros_like(field_azimuthal),
                                      where=unscaled_azimuthal != 0)
 
+    # Set field inside star to zero
+    field_radial[_invalid_inner_ids] = 0.0
+    field_polar[_invalid_inner_ids] = 0.0
+    field_azimuthal[_invalid_inner_ids] = 0.0
 
-    field_radial[_invalid_inner_ids] = 0
-    field_polar[_invalid_inner_ids] = 0
-    field_azimuthal[_invalid_inner_ids] = 0
-
-    # field_radial[_invalid_outer_ids] = 0
-    # field_polar[_invalid_outer_ids]  = 0
-    # field_azimuthal[_invalid_outer_ids] = 0
-
-
-    field_radial[_invalid_outer_ids] *= (points_radial[_invalid_outer_ids]/original_radius[_invalid_outer_ids])**2
-    field_polar[_invalid_outer_ids] *= (points_radial[_invalid_outer_ids]/original_radius[_invalid_outer_ids])**2
+    # Extrapolate field outside source surface from source surface values.
+    field_radial[_invalid_outer_ids]    *= (points_radial[_invalid_outer_ids]/original_radius[_invalid_outer_ids])**2
+    field_polar[_invalid_outer_ids]     *= (points_radial[_invalid_outer_ids]/original_radius[_invalid_outer_ids])**2
     field_azimuthal[_invalid_outer_ids] *= (points_radial[_invalid_outer_ids]/original_radius[_invalid_outer_ids])**2
 
     return field_radial, field_polar, field_azimuthal
@@ -207,7 +215,8 @@ def evaluate_in_space(
 
 def evaluate_on_slice(coefficients, px, py, pz, radius_source_surface, radius_star):
     """
-    Is this really on a slice, or just in cartesian coordinates ??
+    Is this really on a slice, or just in cartesian coordinates ?? The unit is the same as the
+    unit of the magnetogram, normally Gauss.
     :param coefficients:
     :param px:
     :param py:
@@ -218,13 +227,10 @@ def evaluate_on_slice(coefficients, px, py, pz, radius_source_surface, radius_st
     """
 
     pr, pp, pa = coordinate_transforms.spherical_coordinates_from_rectangular(px, py, pz)
-    degree_l, order_m, alpha_lm = coefficients.as_arrays(include_unset=False)
-    fr, fp, fa = evaluate_in_space(degree_l, order_m,
-                                                    np.real(alpha_lm),
-                                                    np.imag(alpha_lm),
-                                                    pr, pp, pa,
-                                                    radius_star=radius_star,
-                                                    radius_source_surface=radius_source_surface)
+    fr, fp, fa = evaluate_in_space(coefficients,
+                                   pr, pp, pa,
+                                   radius_star=radius_star,
+                                   radius_source_surface=radius_source_surface)
     assert fr.shape == pr.shape
     assert fp.shape == pr.shape
     assert fa.shape == pr.shape

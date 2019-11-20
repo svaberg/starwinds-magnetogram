@@ -32,17 +32,15 @@ def theta_lm(deg_l, ord_m, points_polar):
     # This is a hack. TODO this does not work for zero
     # This derivative goes all over the place at the endpoints.
     # http://www.autodiff.org/ad16/Oral/Buecker_Legendre.pdf
-    if len(points_polar.shape) > 2:
-        _dp = 1e-2
-        dv = _inner(deg_l, ord_m, points_polar + _dp) - value
-        du =.5 * (np.cos(points_polar + _dp) - np.cos(points_polar - _dp))
-        dudx = np.sin(points_polar)
-        deriv = -dv/du * dudx
-    else:
-        deriv = (value - np.roll(value, 1)) / (np.cos(points_polar) - np.roll(np.cos(points_polar), 1)) * np.sin(points_polar)
+    _dp = 1e-2
+    dv = _inner(deg_l, ord_m, points_polar + _dp) - value
+    du = .5 * (np.cos(points_polar + _dp) - np.cos(points_polar - _dp))
+    dudx = np.sin(points_polar)
+    deriv = -dv/du * dudx
 
     # Hack continues; if polar is 0 or pi, set the derivative to 0
     # At least it is better than infinity
+    # Only if $\ell=1$.
     if deg_l == 1:
         deriv[points_polar == 0] = 0
 

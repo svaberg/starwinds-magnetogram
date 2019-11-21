@@ -1,11 +1,13 @@
+import logging
+log = logging.getLogger(__name__)
 import numpy as np
 import scipy as sp
-
-import logging
-
 from stellarwinds import coordinate_transforms
 
-log = logging.getLogger(__name__)
+
+# This is the default in the SWMF so follow them.
+default_radius_star = 1
+default_radius_source_surface = 2.5
 
 
 def theta_lm(deg_l, ord_m, points_polar):
@@ -98,61 +100,11 @@ def phi_lm(ord_m, g_lm, h_lm, phi):
     return value, deriv
 
 
-# def evaluate_spherical(
-#         degree_l, order_m, cosine_coefficients_g, sine_coefficients_h,
-#         points_polar, points_azimuth,
-#         radius=None, radius_star=1, radius_source_surface=3):
-#     r"""
-#     Evaluate the radial, polar and azimuthal field components of a magnetogram represented
-#     as a set of real spherical harmonics on Stanford PFSS form. The unit is the same as the
-#     unit of the magnetogram, normally Gauss.
-#     :param degree_l: Degree $\ell$ of coefficients
-#     :param order_m:  Order $m$ of coefficients
-#     :param cosine_coefficients_g: Cosine-like real $g_{\ell m}$ coefficients
-#     :param sine_coefficients_h: Sine-like real  $h_{\ell m}$  coefficients
-#     :param points_polar: 2d array of polar coordinate values
-#     :param points_azimuth: 2d array of azimuth coordinate values
-#     :param radius: Evaluation radius
-#     :param radius_star: Stellar radius
-#     :param radius_source_surface: Source surface radius
-#     :return:
-#     """
-#     assert points_polar.shape == points_azimuth.shape
-#     assert np.min(order_m) >= 0, "Stanford PFSS expects only positive orders (TBC)."
-#     assert radius_star < radius_source_surface
-#
-#     if radius is None:
-#         radius = radius_star
-#
-#     # Initialize field variables
-#     field_radial = np.zeros_like(points_polar)
-#     field_polar = np.zeros_like(field_radial)
-#     field_azimuthal = np.zeros_like(field_radial)
-#
-#     # Loop over magnetogram coefficient lines
-#     for (deg_l, ord_m, g_lm, h_lm) in zip(degree_l, order_m, cosine_coefficients_g, sine_coefficients_h):
-#
-#         _r_l = r_l(deg_l, radius, radius_star, radius_source_surface)
-#         _theta_lm = theta_lm(deg_l, ord_m, points_polar)
-#         _phi_lm = phi_lm(ord_m, g_lm, h_lm, points_azimuth)
-#
-#         unscaled_radial    = _r_l[1] * _theta_lm[0] * _phi_lm[0]
-#         unscaled_polar     = _r_l[0] * _theta_lm[1] * _phi_lm[0]
-#         unscaled_azimuthal = _r_l[0] * _theta_lm[0] * _phi_lm[1]
-#
-#         field_radial    -= unscaled_radial
-#         field_polar     -= unscaled_polar / radius
-#         field_azimuthal -= np.divide(unscaled_azimuthal, radius * np.sin(points_polar),
-#                                      out=np.zeros_like(field_azimuthal),
-#                                      where=unscaled_azimuthal != 0)
-#
-#     return field_radial, field_polar, field_azimuthal
-
-
 def evaluate_cartesian(
         coefficients,
         px, py, pz,
-        radius_star=1, radius_source_surface=3):
+        radius_star=None,
+        radius_source_surface=None):
     r"""
     Evaluate the radial, polar and azimuthal field components of a magnetogram represented
     as a set of real spherical harmonics on Stanford PFSS form. The unit is the same as the
@@ -166,6 +118,12 @@ def evaluate_cartesian(
     :param radius_source_surface: Source surface radius
     :return:
     """
+    if radius_star is None:
+        radius_star = default_radius_star
+
+    if radius_source_surface is None:
+        radius_source_surface = default_radius_source_surface
+
     assert radius_star < radius_source_surface
 
     px = np.atleast_1d(px)
@@ -210,7 +168,8 @@ def evaluate_cartesian(
 def evaluate_spherical(
         coefficients,
         points_radial, points_polar, points_azimuth,
-        radius_star=1, radius_source_surface=3):
+        radius_star=None,
+        radius_source_surface=None):
     r"""
     Evaluate the radial, polar and azimuthal field components of a magnetogram represented
     as a set of real spherical harmonics on Stanford PFSS form. The unit is the same as the
@@ -224,6 +183,14 @@ def evaluate_spherical(
     :param radius_source_surface: Source surface radius
     :return:
     """
+    if radius_star is None:
+        radius_star = default_radius_star
+
+    if radius_source_surface is None:
+        radius_source_surface = default_radius_source_surface
+
+    assert radius_star < radius_source_surface
+
     points_radial = np.atleast_1d(points_radial)
     points_polar = np.atleast_1d(points_polar)
     points_azimuth = np.atleast_1d(points_azimuth)

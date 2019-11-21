@@ -9,7 +9,7 @@ from stellarwinds.magnetogram import plots
 from stellarwinds.magnetogram.geometry import ZdiGeometry
 
 
-def plot_equirectangular(coefficients, geometry=None, radius_source_surface=3):
+def plot_equirectangular(coefficients, geometry=None, radius_source_surface=None):
     r"""
     Plot a 2-by-3 arangement of PFSS field components at the stellar surface and
     at the source surface.
@@ -22,6 +22,9 @@ def plot_equirectangular(coefficients, geometry=None, radius_source_surface=3):
     if geometry is None:
         geometry = ZdiGeometry()
 
+    if radius_source_surface is None:
+        radius_source_surface = pfss_magnetogram.default_radius_source_surface
+
     #
     # Evaluate magnetic field at coordinates.
     #
@@ -30,12 +33,14 @@ def plot_equirectangular(coefficients, geometry=None, radius_source_surface=3):
     Bs = pfss_magnetogram.evaluate_spherical(
         coefficients,
         1, polar, azimuth,
-        radius_star=1, radius_source_surface=radius_source_surface)
+        radius_star=1,
+        radius_source_surface=radius_source_surface)
 
     Bss = pfss_magnetogram.evaluate_spherical(
         coefficients,
-        1, polar, azimuth,
-        radius_star=1.5, radius_source_surface=radius_source_surface)
+        1.5, polar, azimuth,
+        radius_star=1,
+        radius_source_surface=radius_source_surface)
 
     fig, axs_mat = plt.subplots(2, 3, figsize=(12, 5))
     fig.subplots_adjust(right=0.8)  # Make space for colorbar.
@@ -71,7 +76,15 @@ def plot_equirectangular(coefficients, geometry=None, radius_source_surface=3):
 
 
 def plot_slice(coefficients, normal="x", rmax=8,
-               radius_source_surface=3, radius_star=1):
+               radius_source_surface=None, radius_star=None):
+
+    if radius_star is None:
+        radius_star = pfss_magnetogram.default_radius_star
+
+    if radius_source_surface is None:
+        radius_source_surface = pfss_magnetogram.default_radius_source_surface
+
+    assert radius_star < radius_source_surface
 
     # Points in slice plane xy coordinate system.
     p1 = np.linspace(-1, 1, 302) * rmax
@@ -112,7 +125,6 @@ def plot_slice(coefficients, normal="x", rmax=8,
 
 def plot_streamtraces(coefficients, geometry=ZdiGeometry()):
 
-    degree_l, order_m, alpha_lm = coefficients.as_arrays(include_unset=False)
     polar, azimuth = geometry.centers()
 
     B_radial, B_polar, B_azimuthal = pfss_magnetogram.evaluate_spherical(

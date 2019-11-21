@@ -184,8 +184,8 @@ def test_alfven_shape(request):
     """
 
     normal = "x"
-    radius_star = 1
-    radius_source_surface = 2.5
+    radius_star = pfss_magnetogram.default_radius_star  # The default is 1
+    radius_source_surface = pfss_magnetogram.default_radius_source_surface
     radius_max = 10
 
     # Create points in slice plane xy coordinate system.
@@ -279,7 +279,7 @@ def test_alfven_shape_simple(request):
 
     normal = "x"
     radius_star = 1
-    radius_source_surface = 2.5
+    radius_source_surface = pfss_magnetogram.default_radius_source_surface
     radius_max = 10
 
     # Create points in slice plane xy coordinate system.
@@ -404,7 +404,7 @@ def test_alfven_shape_simple(request):
 
 
 @pytest.mark.parametrize("magnetogram_name", ("dipole", "mengel"))
-@pytest.mark.parametrize("plot_name", ("B_r", "B", "c_A"))
+@pytest.mark.parametrize("plot_name", ("B_r", "B", "M_A"))
 def test_alfven_slice(request,
                       magnetogram_name,
                       plot_name):
@@ -418,8 +418,8 @@ def test_alfven_slice(request,
     """
 
     normal = "x"
-    radius_star = 1
-    radius_source_surface = 2.5
+    radius_star = pfss_magnetogram.default_radius_star
+    radius_source_surface = pfss_magnetogram.default_radius_source_surface
     radius_max = 6
 
     # Create points in slice plane xy coordinate system.
@@ -449,9 +449,12 @@ def test_alfven_slice(request,
         assert np.allclose(f_rpa[0], 1)  # Just one element inside a triple array
 
     # Drop the extra dimension
-    pxyz = [np.squeeze(p) for p in pxyz]
+    pxyz = (p[..., 0] for p in pxyz)
+    f_rpa_xyz = (f[..., 0] for f in f_rpa_xyz)
+
     px, py, pz = pxyz
-    f_rpa_xyz = [np.squeeze(f) for f in f_rpa_xyz]
+    pr = (px**2 + py**2 + pz**2)**.5
+
     fr, fp, fa, fx, fy, fz = f_rpa_xyz
 
     p = ParkerSolution()
@@ -459,7 +462,8 @@ def test_alfven_slice(request,
     velocity = p.speed(radial_distance)
     density = p.density(radial_distance)
 
-    bmag = (fr**2 + fp**2 + fa**2)**.5
+    bmag = (fx**2 + fy**2 + fz**2)**.5
+    assert np.allclose(bmag, (fr**2 + fp**2 + fa**2)**.5)
 
     alfven_mach_number = get_alfven_mach_number(bmag, density, velocity)
 
@@ -687,7 +691,7 @@ def test_max_alfven_radius_by_temperature(request,
         plt.close()
 
 
-def source_surface_field_maximum(magnetogram, rs, rss):
+def source_surface_field_maximum(magnetogram, radius_star, radius_source_surface):
 
     """
     Find the spherical coordinates of the point where the magnetic field strength is maximal
@@ -698,8 +702,9 @@ def source_surface_field_maximum(magnetogram, rs, rss):
     points_polar, points_azimuth = ZdiGeometry().centers()
     field_radial, field_polar, field_azimuthal = pfss_magnetogram.evaluate_spherical(
         magnetogram,
-        rss, points_polar, points_azimuth,
-        radius_star=rs, radius_source_surface=rss)
+        radius_source_surface, points_polar, points_azimuth,  # Use R_ss for radius
+        radius_star=radius_star,
+        radius_source_surface=radius_source_surface)
 
     # On the source surface (and outside) the polar and azimuthal components are zero.
     assert np.allclose(field_polar, 0)
@@ -713,7 +718,7 @@ def source_surface_field_maximum(magnetogram, rs, rss):
 
 def evaluate_along_ray(magnetogram,
                        pr, pp, pa,
-                       rs, rss):
+                       radius_star, radius_source_surface):
     """
     Calculate field strength along ray
     :param pr:
@@ -723,8 +728,8 @@ def evaluate_along_ray(magnetogram,
     :param order_m:
     :param g_lm:
     :param h_lm:
-    :param rs:
-    :param rss:
+    :param radius_star:
+    :param radius_source_surface:
     :return:
     """
     pr, pp, pa = np.meshgrid(pr, pp, pa)
@@ -733,14 +738,14 @@ def evaluate_along_ray(magnetogram,
     field_polar, \
     field_azimuthal = pfss_magnetogram.evaluate_spherical(magnetogram,
                                                           pr, pp, pa,
-                                                          radius_star=rs,
-                                                          radius_source_surface=rss)
+                                                          radius_star=radius_star,
+                                                          radius_source_surface=radius_source_surface)
     assert field_radial.shape == pr.shape
     assert field_polar.shape == pr.shape
     assert field_azimuthal.shape == pr.shape
 
-    # assert np.all(field_polar[np.where(pr > rss)] == 0)  # This is NaN now.
-    assert np.all(field_azimuthal[np.where(pr > rss)] == 0)
+    # assert np.all(field_polar[np.where(pr > radius_source_surface)] == 0)  # This is NaN now.
+    assert np.all(field_azimuthal[np.where(pr > radius_source_surface)] == 0)
 
     pr = np.squeeze(pr)
 

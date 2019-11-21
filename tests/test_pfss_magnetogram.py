@@ -139,8 +139,6 @@ def test_plot_pfss_magnitudes(request,
     coefficients = magnetograms.get_radial(magnetogram_name)
     polar, azimuth = geometry.ZdiGeometry().centers()
 
-    radius_source_surface = 3
-
     with context.PlotNamer(__file__, request.node.name) as (pn, plt):
 
         fig, axs = plt.subplots(1, 2)
@@ -148,9 +146,7 @@ def test_plot_pfss_magnitudes(request,
         for radius, ax in zip((1, 3), axs):
             field_rpa = pfss_stanford.evaluate_spherical(
                 coefficients,
-                radius, polar, azimuth,
-                radius_star=1,
-                radius_source_surface=radius_source_surface)
+                radius, polar, azimuth)
             field_magnitude = np.sqrt(np.sum([f**2 for f in field_rpa], axis=0))
             img = plots.plot_equirectangular(_geometry, field_magnitude, ax, cmap='viridis')
             fig.colorbar(img, ax=ax, orientation='horizontal')

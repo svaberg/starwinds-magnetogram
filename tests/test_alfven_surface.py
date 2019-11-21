@@ -38,7 +38,8 @@ def get_alfven_mach_number(bmag, density, velocity):
     :param velocity:
     :return:
     """
-    return velocity / (1e-4 * bmag / np.sqrt(scipy.constants.mu_0 * density))
+    with np.errstate(divide='ignore'):
+        return velocity / (1e-4 * bmag / (scipy.constants.mu_0 * density)**.5)
 
 
 def test_alfven_field_temperature(request):

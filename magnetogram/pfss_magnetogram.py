@@ -28,17 +28,23 @@ def theta_lm(deg_l, ord_m, points_polar):
 
     value = _inner(deg_l, ord_m, points_polar)
 
-    # Estimate derivative of associated Legendre polynomial (TODO different approach??)
-    # This is a hack. TODO this does not work for zero
-    # This derivative goes all over the place at the endpoints.
+    #
+    # Estimate derivative of associated Legendre polynomial.
+    #
+    # This is a hack, find a better method.
+    # The analytic derivative goes all over the place at the endpoints.
     # http://www.autodiff.org/ad16/Oral/Buecker_Legendre.pdf
     _dp = 1e-2
     dv = _inner(deg_l, ord_m, points_polar + _dp) - value
     du = .5 * (np.cos(points_polar + _dp) - np.cos(points_polar - _dp))
     dudx = np.sin(points_polar)
-    deriv = -dv/du * dudx
 
-    # Hack continues; if polar is 0 or pi, set the derivative to 0
+    # This is just a fancy way of writing `deriv = -dv/du * dudx` to get better poles
+    with np.errstate(divide='ignore'):
+        dvdu = np.divide(dv, du, out=np.zeros_like(dv), where=du != 0)
+        deriv = -dvdu * dudx
+
+    # Hack continues; if `polar` is 0 or pi, set the derivative to 0
     # At least it is better than infinity
     # Only if $\ell=1$.
     if deg_l == 1:

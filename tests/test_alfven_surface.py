@@ -694,14 +694,11 @@ def source_surface_field_maximum(magnetogram, rs, rss):
     this will remain the strongest field location.
     :return:
     """
-
-    degree_l, order_m, alpha_lm = magnetogram.as_arrays(include_unset=False)
-
     points_polar, points_azimuth = ZdiGeometry().centers()
-    field_radial, field_polar, field_azimuthal = pfss_magnetogram.evaluate_on_sphere(
-        degree_l, order_m, np.real(alpha_lm), np.imag(alpha_lm),
-        points_polar, points_azimuth,
-        radius=rss, radius_star=rs, radius_source_surface=rss)
+    field_radial, field_polar, field_azimuthal = pfss_magnetogram.evaluate_spherical(
+        magnetogram,
+        rss, points_polar, points_azimuth,
+        radius_star=rs, radius_source_surface=rss)
 
     # On the source surface (and outside) the polar and azimuthal components are zero.
     assert np.allclose(field_polar, 0)

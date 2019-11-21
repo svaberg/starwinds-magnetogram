@@ -10,7 +10,7 @@ from stellarwinds.magnetogram.geometry import ZdiGeometry
 
 
 def plot_equirectangular(coefficients, geometry=None, radius_source_surface=3):
-    """
+    r"""
     Plot a 2-by-3 arangement of PFSS field components at the stellar surface and
     at the source surface.
     :param coefficients:
@@ -25,24 +25,17 @@ def plot_equirectangular(coefficients, geometry=None, radius_source_surface=3):
     #
     # Evaluate magnetic field at coordinates.
     #
-    degree_l, order_m, alpha_lm = coefficients.as_arrays(include_unset=False)
     polar, azimuth = geometry.centers()
 
-    Bs = pfss_magnetogram.evaluate_on_sphere(
-        degree_l,
-        order_m,
-        np.real(alpha_lm),
-        np.imag(alpha_lm),
-        polar, azimuth,
-        radius=1, radius_source_surface=radius_source_surface)
+    Bs = pfss_magnetogram.evaluate_spherical(
+        coefficients,
+        1, polar, azimuth,
+        radius_star=1, radius_source_surface=radius_source_surface)
 
-    Bss = pfss_magnetogram.evaluate_on_sphere(
-        degree_l,
-        order_m,
-        np.real(alpha_lm),
-        np.imag(alpha_lm),
-        polar, azimuth,
-        radius=1.5, radius_source_surface=radius_source_surface)
+    Bss = pfss_magnetogram.evaluate_spherical(
+        coefficients,
+        1, polar, azimuth,
+        radius_star=1.5, radius_source_surface=radius_source_surface)
 
     fig, axs_mat = plt.subplots(2, 3, figsize=(12, 5))
     fig.subplots_adjust(right=0.8)  # Make space for colorbar.
@@ -64,15 +57,15 @@ def plot_equirectangular(coefficients, geometry=None, radius_source_surface=3):
         cax = place_colorbar_axis_right(ax_row[2])
         fig.colorbar(img, cax=cax)
 
-        ax_row[0].set_title("Radial field $B_r$ at $r = %2.1f r_\star$" % radius)
-        ax_row[1].set_title("Polar field $B_\\theta$ at $r = %2.1f r_\star$" % radius)
-        ax_row[2].set_title("Azimuthal field $B_\\phi$ at $r = %2.1f r_\star$" % radius)
+        ax_row[0].set_title(r"Radial field $B_r$ at $r = %2.1f r_\star$" % radius)
+        ax_row[1].set_title(r"Polar field $B_\theta$ at $r = %2.1f r_\star$" % radius)
+        ax_row[2].set_title(r"Azimuthal field $B_\phi$ at $r = %2.1f r_\star$" % radius)
 
-        ax_row[0].set_ylabel("Polar angle $\\theta$ [deg]")
+        ax_row[0].set_ylabel(r"Polar angle $\theta$ [deg]")
 
-        ax_row[0].set_xlabel("Azimuth angle $\\phi$ [deg]")
-        ax_row[1].set_xlabel("Azimuth angle $\\phi$ [deg]")
-        ax_row[2].set_xlabel("Azimuth angle $\\phi$ [deg]")
+        ax_row[0].set_xlabel(r"Azimuth angle $\phi$ [deg]")
+        ax_row[1].set_xlabel(r"Azimuth angle $\phi$ [deg]")
+        ax_row[2].set_xlabel(r"Azimuth angle $\phi$ [deg]")
 
     return fig, axs_mat
 
@@ -107,8 +100,8 @@ def plot_slice(coefficients, normal="x", rmax=8,
     fig.colorbar(im).set_label('Radial field strength')
 
     ax.set_aspect('equal')
-    ax.set_xlabel('Distance $x/r_{\\star}$')
-    ax.set_ylabel('Distance $z/r_{\\star}$')
+    ax.set_xlabel(r'Distance $x/r_{\star}$')
+    ax.set_ylabel(r'Distance $z/r_{\star}$')
 
     # Add star and source surface.
     radial_distance = np.squeeze((px**2 + py**2 + pz**2)**.5)
@@ -122,12 +115,9 @@ def plot_streamtraces(coefficients, geometry=ZdiGeometry()):
     degree_l, order_m, alpha_lm = coefficients.as_arrays(include_unset=False)
     polar, azimuth = geometry.centers()
 
-    B_radial, B_polar, B_azimuthal = pfss_magnetogram.evaluate_on_sphere(
-        degree_l,
-        order_m,
-        np.real(alpha_lm),
-        np.imag(alpha_lm),
-        polar, azimuth)
+    B_radial, B_polar, B_azimuthal = pfss_magnetogram.evaluate_spherical(
+        coefficients,
+        1, polar, azimuth)
 
     B_tangential_mag = np.sqrt(B_polar ** 2 + B_azimuthal ** 2)
     B_radial_abs_max = np.max(np.abs(B_radial))
@@ -158,7 +148,7 @@ def plot_streamtraces(coefficients, geometry=ZdiGeometry()):
     _ba = ax.contour(180 / np.pi * azimuth.T, 180 / np.pi * polar.T, B_azimuthal.T, levels=[0], colors=('r',), linewidths=1)
 
     legend_items = [_br.collections[0], _bp.collections[0], _ba.collections[0]]
-    legend_strs = ["Radial $B_r = 0$", "Polar $B_\\theta = 0$", "Azimuth $B_\phi = 0$"]
+    legend_strs = [r"Radial $B_r = 0$", r"Polar $B_\theta = 0$", r"Azimuth $B_\phi = 0$"]
 
     locator = MaxNLocator(nbins=3, prune="lower")
     line_values = locator.tick_values(np.min(B_tangential_mag), np.max(B_tangential_mag))

@@ -33,12 +33,9 @@ def test_reference(request,
         polar, azimuth)
 
 
-    B2 = pfss_stanford.evaluate_on_sphere(
-        degree_l,
-        order_m,
-        np.real(alpha_lm),
-        np.imag(alpha_lm),
-        polar, azimuth)
+    B2 = pfss_stanford.evaluate_spherical(
+        magnetogram,
+        1, polar, azimuth)
 
     assert(np.allclose(B2[0], B1[0]))
     log.debug("Implementations match for B_radial.")
@@ -139,8 +136,7 @@ def test_plot_pfss_magnitudes(request,
                 magnetogram_name="mengel"):
 
     _geometry = geometry.ZdiGeometry()
-    magnetogram = magnetograms.get_radial(magnetogram_name)
-    degree_l, order_m, alpha_lm = magnetogram.as_arrays(include_unset=False)
+    coefficients = magnetograms.get_radial(magnetogram_name)
     polar, azimuth = geometry.ZdiGeometry().centers()
 
     radius_source_surface = 3
@@ -150,13 +146,10 @@ def test_plot_pfss_magnitudes(request,
         fig, axs = plt.subplots(1, 2)
 
         for radius, ax in zip((1, 3), axs):
-            field_rpa = pfss_stanford.evaluate_on_sphere(
-                degree_l,
-                order_m,
-                np.real(alpha_lm),
-                np.imag(alpha_lm),
-                polar, azimuth,
-                radius=radius,
+            field_rpa = pfss_stanford.evaluate_spherical(
+                coefficients,
+                radius, polar, azimuth,
+                radius_star=1,
                 radius_source_surface=radius_source_surface)
             field_magnitude = np.sqrt(np.sum([f**2 for f in field_rpa], axis=0))
             img = plots.plot_equirectangular(_geometry, field_magnitude, ax, cmap='viridis')
@@ -171,15 +164,11 @@ def test_plot_pfss_quiver(request,
 
     _geometry = geometry.ZdiGeometry()
     magnetogram = magnetograms.get_radial(magnetogram_name)
-    degree_l, order_m, alpha_lm = magnetogram.as_arrays(include_unset=False)
     polar, azimuth = geometry.ZdiGeometry().centers()
 
-    field_rpa = pfss_stanford.evaluate_on_sphere(
-        degree_l,
-        order_m,
-        np.real(alpha_lm),
-        np.imag(alpha_lm),
-        polar, azimuth)
+    field_rpa = pfss_stanford.evaluate_spherical(
+        magnetogram,
+        1, polar, azimuth)
 
     field_pa_mag = np.sqrt(field_rpa[1] ** 2 + field_rpa[2] ** 2)
 

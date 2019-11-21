@@ -288,7 +288,7 @@ def add_range(azimuth_centers, polar_centers, field):
 #                     linestyles='dashed'
 #                     )
 #
-#     i2.collections[0].set_label('$\\Delta B_r = %g$ G' % (cb.get_ticks()[1] - cb.get_ticks()[0]))
+#     i2.collections[0].set_label(r'$\Delta B_r = %g$ G' % (cb.get_ticks()[1] - cb.get_ticks()[0]))
 #
 #     # ax.clabel(i2, fmt='%2.1f', colors='k', fontsize=6)
 #     # h2, _ =

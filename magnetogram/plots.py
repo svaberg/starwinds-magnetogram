@@ -27,7 +27,7 @@ def plot_equirectangular(geometry, value, ax, vmin=None, vmax=None, cmap='RdBu_r
     ax.set_xticks(180 / np.pi * np.linspace(corners_azimuth[0, 0], corners_azimuth[-1, -1], 9))
     ax.set_xlabel('Azimuth angle $\phi$')
     ax.set_yticks(180 / np.pi * np.linspace(corners_polar[0, 0], corners_polar[-1, -1], 5))
-    ax.set_ylabel('Polar angle $\\theta$')
+    ax.set_ylabel(r'Polar angle $\theta$')
     ax.set_aspect('equal')
     ax.invert_yaxis()
     ax.grid()

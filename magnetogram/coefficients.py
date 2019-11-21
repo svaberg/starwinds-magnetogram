@@ -33,9 +33,10 @@ class Coefficients(object):
     def set(self, degree, order, data):
         """Set (overwrite) coefficients for a given degree and order."""
         data = np.atleast_1d(data)
+        data = data.astype(self.default_coefficients.dtype)
 
         assert np.abs(order) <= degree, "Order must be between -l and l for degree l."
-        assert data.shape == self._default_coefficients.shape, "Incompatible coefficients."
+        assert data.shape == self._default_coefficients.shape, "Incompatible coefficient shapes."
 
         assert type(degree) == int, "Degree index must be integer"
         assert type(order) == int, "Order index must be integer"

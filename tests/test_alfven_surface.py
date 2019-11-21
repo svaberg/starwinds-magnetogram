@@ -184,7 +184,7 @@ def test_alfven_shape(request):
 
     normal = "x"
     radius_star = 1
-    radius_source_surface = 3
+    radius_source_surface = 2.5
     radius_max = 10
 
     # Create points in slice plane xy coordinate system.
@@ -194,9 +194,7 @@ def test_alfven_shape(request):
 
     pxyz = pfss_magnetogram.normal_plane(p1, p2, normal)
 
-
     p = ParkerSolution()
-
 
     with context.PlotNamer(__file__, request.node.name) as (pn, plt):
 
@@ -209,10 +207,11 @@ def test_alfven_shape(request):
             # This returns a stellarwinds.magnetogram.coefficients.Coefficients object.
             radial_coefficients = tests.magnetogram.magnetograms.get_radial("dipole") * _scale
 
-            f_rpa_xyz = pfss_magnetogram.evaluate_on_slice(radial_coefficients,
-                                                           *pxyz,
-                                                           radius_source_surface,
-                                                           radius_star)
+            f_rpa_xyz = pfss_magnetogram.evaluate_cartesian(radial_coefficients,
+                                                            *pxyz,
+                                                            radius_star,
+                                                            radius_source_surface,
+                                                            )
 
             # Drop the extra dimension
             pxyz = [np.squeeze(p) for p in pxyz]
@@ -279,7 +278,7 @@ def test_alfven_shape_simple(request):
 
     normal = "x"
     radius_star = 1
-    radius_source_surface = 3
+    radius_source_surface = 2.5
     radius_max = 10
 
     # Create points in slice plane xy coordinate system.
@@ -294,10 +293,10 @@ def test_alfven_shape_simple(request):
     # This returns a stellarwinds.magnetogram.coefficients.Coefficients object.
     radial_coefficients = tests.magnetogram.magnetograms.get_radial("dipole")
 
-    f_rpa_xyz = pfss_magnetogram.evaluate_on_slice(radial_coefficients,
-                                                   *pxyz,
-                                                   radius_source_surface,
-                                                   radius_star)
+    f_rpa_xyz = pfss_magnetogram.evaluate_cartesian(radial_coefficients,
+                                                    *pxyz,
+                                                    radius_star,
+                                                    radius_source_surface,)
 
     # Drop the extra dimension
     pxyz = [np.squeeze(p) for p in pxyz]
@@ -371,7 +370,6 @@ def test_alfven_shape_simple(request):
         fig.colorbar(r_a)
         fig.savefig(pn.get())
 
-
         fig, ax = plt.subplots()
 
         prop_cycle = plt.rcParams['axes.prop_cycle']
@@ -420,7 +418,7 @@ def test_alfven_slice(request,
 
     normal = "x"
     radius_star = 1
-    radius_source_surface = 3
+    radius_source_surface = 2.5
     radius_max = 6
 
     # Create points in slice plane xy coordinate system.
@@ -433,19 +431,19 @@ def test_alfven_slice(request,
     # This returns a stellarwinds.magnetogram.coefficients.Coefficients object.
     radial_coefficients = tests.magnetogram.magnetograms.get_radial(magnetogram_name)
 
-    f_rpa_xyz = pfss_magnetogram.evaluate_on_slice(radial_coefficients, *pxyz,
-                                                   radius_source_surface=radius_source_surface,
-                                                   radius_star=radius_star,
-                                                   )
+    f_rpa_xyz = pfss_magnetogram.evaluate_cartesian(radial_coefficients, *pxyz,
+                                                    radius_star=radius_star,
+                                                    radius_source_surface=radius_source_surface,
+                                                    )
 
     if magnetogram_name == "dipole":
-        f_rpa = pfss_magnetogram.evaluate_in_space(radial_coefficients,
-                                                   np.atleast_3d(1),
-                                                   np.atleast_3d(0),
-                                                   np.atleast_3d(0),
-                                                   radius_source_surface=radius_source_surface,
-                                                   radius_star=radius_star,
-                                                   )
+        f_rpa = pfss_magnetogram.evaluate_spherical(radial_coefficients,
+                                                    np.atleast_3d(1),
+                                                    np.atleast_3d(0),
+                                                    np.atleast_3d(0),
+                                                    radius_star=radius_star,
+                                                    radius_source_surface=radius_source_surface,
+                                                    )
 
         assert np.allclose(f_rpa[0], 1)  # Just one element inside a triple array
 
@@ -735,10 +733,10 @@ def evaluate_along_ray(magnetogram,
 
     field_radial, \
     field_polar, \
-    field_azimuthal = pfss_magnetogram.evaluate_in_space(magnetogram,
-                                                         pr, pp, pa,
-                                                         radius_star=rs,
-                                                         radius_source_surface=rss)
+    field_azimuthal = pfss_magnetogram.evaluate_spherical(magnetogram,
+                                                          pr, pp, pa,
+                                                          radius_star=rs,
+                                                          radius_source_surface=rss)
     assert field_radial.shape == pr.shape
     assert field_polar.shape == pr.shape
     assert field_azimuthal.shape == pr.shape

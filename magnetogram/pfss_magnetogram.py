@@ -9,7 +9,7 @@ log = logging.getLogger(__name__)
 
 
 def theta_lm(deg_l, ord_m, points_polar):
-    """
+    r"""
     Calculate $\Theta_{\ell m}(\theta)$
     :param deg_l: Degree $\ell$ of coefficient
     :param ord_m: Order $m$ of coefficient
@@ -48,7 +48,7 @@ def theta_lm(deg_l, ord_m, points_polar):
 
 
 def r_l(deg_l, r, r0, rss):
-    """
+    r"""
     Calculate $R_\ell(r;r_\star, r_\text{ss})$
     :param deg_l: Degree $\ell$ of coefficient
     :param r: Evaluation radius
@@ -78,7 +78,7 @@ def r_l(deg_l, r, r0, rss):
 
 
 def phi_lm(ord_m, g_lm, h_lm, phi):
-    """
+    r"""
     Calculate $Phi_{\ell m}(\phi)$
     :param ord_m: Order $m$ of coefficient
     :param g_lm: Cosine-like real $g_{\ell m}$ coefficient
@@ -96,7 +96,7 @@ def evaluate_on_sphere(
         degree_l, order_m, cosine_coefficients_g, sine_coefficients_h,
         points_polar, points_azimuth,
         radius=None, radius_star=1, radius_source_surface=3):
-    """
+    r"""
     Evaluate the radial, polar and azimuthal field components of a magnetogram represented
     as a set of real spherical harmonics on Stanford PFSS form. The unit is the same as the
     unit of the magnetogram, normally Gauss.
@@ -111,8 +111,9 @@ def evaluate_on_sphere(
     :param radius_source_surface: Source surface radius
     :return:
     """
-    assert(points_polar.shape == points_azimuth.shape)
+    assert points_polar.shape == points_azimuth.shape
     assert np.min(order_m) >= 0, "Stanford PFSS expects only positive orders (TBC)."
+    assert radius_star < radius_source_surface
 
     if radius is None:
         radius = radius_star
@@ -142,13 +143,69 @@ def evaluate_on_sphere(
     return field_radial, field_polar, field_azimuthal
 
 
+def evaluate_cartesian(
+        coefficients,
+        px, py, pz,
+        radius_star=1, radius_source_surface=3):
+    r"""
+    Evaluate the radial, polar and azimuthal field components of a magnetogram represented
+    as a set of real spherical harmonics on Stanford PFSS form. The unit is the same as the
+    unit of the magnetogram, normally Gauss.
 
-def evaluate_in_space(
-        # degree_l, order_m, cosine_coefficients_g, sine_coefficients_h,
+    :param coefficients: Coefficients object
+    :param px: Array of x coordinates
+    :param py: Array of y coordinates
+    :param pz: Array of z coordinates
+    :param radius_star: Stellar radius
+    :param radius_source_surface: Source surface radius
+    :return:
+    """
+    assert radius_star < radius_source_surface
+
+    px = np.atleast_1d(px)
+    py = np.atleast_1d(py)
+    pz = np.atleast_1d(pz)
+    assert px.shape == py.shape
+    assert px.shape == pz.shape
+
+    pr, pp, pa = coordinate_transforms.spherical_coordinates_from_rectangular(px, py, pz)
+    assert pr.shape == px.shape
+    assert pp.shape == px.shape
+    assert pa.shape == px.shape
+
+    fr, fp, fa = evaluate_spherical(coefficients,
+                                    pr, pp, pa,
+                                    radius_star=radius_star,
+                                    radius_source_surface=radius_source_surface)
+
+    assert fr.shape == pr.shape
+    assert fp.shape == pr.shape
+    assert fa.shape == pr.shape
+
+    # To carry out the transformation, flatten the polar coordinate arrays and stack them
+    # calculate the transformation matrix, and apply it to the stack Frpa.
+    Frpa = np.stack([c.flatten() for c in (fr, fp, fa)], axis=-1)
+
+    transformation_matrix = coordinate_transforms.spherical_to_rectangular_transformation_matrix(pp.flatten(),
+                                                                                                 pa.flatten())
+    Fxyz = transformation_matrix @ Frpa[:, :, np.newaxis]
+
+    # Get rid of last dimension which is has length 1
+    assert Fxyz.shape[-1] == 1, "Last dimension of Fxyz must have size 1"
+    Fxyz = Fxyz[..., 0]
+
+    # Reshape fx-fz to the original shape of fr
+    fx = Fxyz[:, 0].reshape(px.shape)
+    fy = Fxyz[:, 1].reshape(px.shape)
+    fz = Fxyz[:, 2].reshape(px.shape)
+    return fr, fp, fa, fx, fy, fz
+
+
+def evaluate_spherical(
         coefficients,
         points_radial, points_polar, points_azimuth,
         radius_star=1, radius_source_surface=3):
-    """
+    r"""
     Evaluate the radial, polar and azimuthal field components of a magnetogram represented
     as a set of real spherical harmonics on Stanford PFSS form. The unit is the same as the
     unit of the magnetogram, normally Gauss.
@@ -162,6 +219,7 @@ def evaluate_in_space(
     :return:
     """
     assert points_polar.shape == points_azimuth.shape, "Shape mismatch."
+    assert radius_star < radius_source_surface
 
     # The PFSS method is not valid inside the star
     _invalid_inner_ids = np.where(points_radial < radius_star)
@@ -211,41 +269,8 @@ def evaluate_in_space(
     return field_radial, field_polar, field_azimuthal
 
 
-def evaluate_on_slice(coefficients, px, py, pz, radius_source_surface, radius_star):
-    """
-    Is this really on a slice, or just in cartesian coordinates ?? The unit is the same as the
-    unit of the magnetogram, normally Gauss.
-    :param coefficients:
-    :param px:
-    :param py:
-    :param pz:
-    :param radius_source_surface:
-    :param radius_star:
-    :return:
-    """
-
-    pr, pp, pa = coordinate_transforms.spherical_coordinates_from_rectangular(px, py, pz)
-    fr, fp, fa = evaluate_in_space(coefficients,
-                                   pr, pp, pa,
-                                   radius_star=radius_star,
-                                   radius_source_surface=radius_source_surface)
-    assert fr.shape == pr.shape
-    assert fp.shape == pr.shape
-    assert fa.shape == pr.shape
-    Frpa = np.stack([c.flatten() for c in (fr, fp, fa)], axis=-1)
-    transformation_matrix = coordinate_transforms.spherical_to_rectangular_transformation_matrix(pp.flatten(),
-                                                                                                 pa.flatten())
-    Fxyz = transformation_matrix @ Frpa[:, :, np.newaxis]
-    # Get rid of last dimension which is 1
-    Fxyz = np.squeeze(Fxyz)
-    fx = Fxyz[:, 0].reshape(px.shape)
-    fy = Fxyz[:, 1].reshape(px.shape)
-    fz = Fxyz[:, 2].reshape(px.shape)
-    return fr, fp, fa, fx, fy, fz
-
-
 def normal_plane(p1, p2, normal):
-    """
+    r"""
     Return normal plane (does not alter magnetogram)
     :param p1:
     :param p2:

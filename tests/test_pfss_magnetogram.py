@@ -77,6 +77,44 @@ def test_reference(request,
     assert(np.allclose(B2[2], B1[2]))
 
 
+@pytest.mark.parametrize("points_shape", ((1,), (2,), (2, 3), (2, 3, 5), (5, 8, 2, 2, 1, 3)))
+@pytest.mark.parametrize("magnetogram_name", ("mengel",))
+def test_evaluate_cartesian(request,
+                            points_shape,
+                            magnetogram_name):
+
+    coeffs = magnetograms.get_radial(magnetogram_name)
+
+    px = 1 + np.random.rand(*points_shape)
+    py = 1 + np.random.rand(*points_shape)
+    pz = 1 + np.random.rand(*points_shape)
+
+    fr, fp, fa, fx, fy, fz = pfss_stanford.evaluate_cartesian(
+        coeffs,
+        px, py, pz)
+
+    assert fr.shape == points_shape
+
+
+@pytest.mark.parametrize("points_shape", ((1,), (2,), (2, 3), (2, 3, 5), (5, 8, 2, 2, 1, 3)))
+@pytest.mark.parametrize("magnetogram_name", ("mengel",))
+def test_evaluate_spherical(request,
+                            points_shape,
+                            magnetogram_name):
+
+    coeffs = magnetograms.get_radial(magnetogram_name)
+
+    pr = 1 + np.random.rand(*points_shape)
+    pp = np.pi * np.random.rand(*points_shape)
+    pa = 2 * np.pi * np.random.rand(*points_shape)
+
+    fr, fp, fa = pfss_stanford.evaluate_spherical(
+        coeffs,
+        pr, pp, pa)
+
+    assert fr.shape == points_shape
+
+
 def test_plot_pfss_equirectangular(request,
                            magnetogram_name="mengel"):
 

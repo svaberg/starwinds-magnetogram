@@ -87,8 +87,8 @@ def plot_slice(coefficients, normal="x", rmax=8,
 
     px, py, pz = pfss_magnetogram.normal_plane(p1, p2, normal)
 
-    fr, fp, fa, fx, fy, fz = pfss_magnetogram.evaluate_on_slice(coefficients, px, py, pz,
-                                                                radius_source_surface, radius_star)
+    fr, fp, fa, fx, fy, fz = pfss_magnetogram.evaluate_cartesian(coefficients, px, py, pz,
+                                                                 radius_star, radius_source_surface)
 
     #
     # Plot stars here...

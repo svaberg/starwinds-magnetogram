@@ -18,7 +18,7 @@ def test_dimensionless(request):
     :param request:
     :return:
     """
-    s = np.logspace(-1, np.log10(8), 1e2)
+    s = np.logspace(-1, np.log10(8), 100)
 
     w = ParkerSolution.find_parker_analytic(s)
     wp0, wn1 = ParkerSolution.find_parker_analytic(s, all_sols=True)
@@ -66,7 +66,7 @@ def test_speed(request):
                      horizontalalignment='right', verticalalignment='bottom')
 
         plt.ticklabel_format(style='sci', axis='y', scilimits=(0, 0), useMathText=True)
-        plt.xlabel('Height over chromosphere [$R_{\star}$]')
+        plt.xlabel(r'Height over chromosphere [$R_{\star}$]')
         plt.ylabel('Speed [m/s]')
 
         plt.grid(True)

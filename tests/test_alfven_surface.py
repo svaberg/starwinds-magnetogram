@@ -455,7 +455,7 @@ def test_alfven_slice(request,
     fr, fp, fa, fx, fy, fz = f_rpa_xyz
 
     p = ParkerSolution()
-    radial_distance = fr * p.stellar_radius
+    radial_distance = pr * p.stellar_radius
     velocity = p.speed(radial_distance)
     density = p.density(radial_distance)
 

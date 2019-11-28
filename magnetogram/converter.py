@@ -161,7 +161,7 @@ def write_magnetogram_file(coeffs, fname, degree_max=None):
         for degree in range(0, degree_max + 1):
             for order in range(0, degree + 1):
                 coeff = coeffs.get(degree, order)
-                f.write("%d %d %e %e\n" % (degree, order, np.real(coeff), np.imag(coeff)))
+                f.write("%3d  %3d  %13e  %13e\n" % (degree, order, np.real(coeff), np.imag(coeff)))
 
     log.info("Finished writing magnetogram file \"%s\"." % fname)
 

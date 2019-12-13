@@ -24,12 +24,14 @@ def test_rotate_magnetogram_around_z(request, magnetogram_name, alpha_deg):
 
     original = magnetograms.get_radial(magnetogram_name)
     rotated = rm.rotate_magnetogram_euler_zyz_deg(original, (alpha_deg, 0, 0))
+    folded = converter.map_to_positive_orders(rotated)
 
     zg = zdi_geometry.ZdiGeometry()
-    field_values = get_field_values(zg, original, rotated)
+    field_values = get_field_values(zg, original, rotated, folded)
 
     assert np.allclose(np.imag(field_values[0]), 0), "No imaginary component expected."
     assert np.allclose(np.imag(field_values[1]), 0), "No imaginary component expected."
+    assert np.allclose(np.imag(field_values[2]), 0), "No imaginary component expected."
 
     # At least the min, max should not change. A bit tolerance as exact values depend on the discretization.
     assert np.isclose(np.min(field_values[0]), np.min(field_values[1]), rtol=1e-2), "Minimum value should be unchanged."
@@ -39,7 +41,7 @@ def test_rotate_magnetogram_around_z(request, magnetogram_name, alpha_deg):
     # Values at specific points.
     #
     zl0 = zdi_magnetogram.from_coefficients(original)
-    zl1 = zdi_magnetogram.from_coefficients(rotated)
+    zl1 = zdi_magnetogram.from_coefficients(folded)
 
     # Existing functionality to get points - yay!
     px, py, pz = fibonacci_sphere.fibonacci_sphere(10)

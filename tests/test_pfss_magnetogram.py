@@ -69,7 +69,7 @@ def test_reference(request,
                 ax.invert_yaxis()
 
             plt.savefig(pn.get())
-
+            plt.close(fig)
     # Why do these not match??
     assert(np.allclose(B2[2], B1[2]))
 
@@ -120,6 +120,7 @@ def test_plot_pfss_equirectangular(request,
     with context.PlotNamer(__file__, request.node.name) as (pn, plt):
         fig, axs = plot_pfss.plot_equirectangular(magnetogram)
         plt.savefig(pn.get())
+        plt.close(fig)
 
 
 def test_plot_pfss_slice(request,
@@ -130,6 +131,7 @@ def test_plot_pfss_slice(request,
     with context.PlotNamer(__file__, request.node.name) as (pn, plt):
         fig, axs = plot_pfss.plot_slice(magnetogram)
         fig.savefig(pn.get())
+        plt.close(fig)
 
 
 def test_plot_pfss_magnitudes(request,
@@ -153,6 +155,7 @@ def test_plot_pfss_magnitudes(request,
             ax.set_title("Bmag at r=%2.1f" % radius)
 
         plt.savefig(pn.get())
+        plt.close(fig)
 
 
 def test_plot_pfss_quiver(request,
@@ -171,8 +174,8 @@ def test_plot_pfss_quiver(request,
     with context.PlotNamer(__file__, request.node.name) as (pn, plt):
 
         fig, ax = plt.subplots()
-        hstride = int(2);
-        vstride = int(hstride / 2);
+        hstride = int(2)
+        vstride = int(hstride / 2)
         img = plots.plot_equirectangular(_geometry, field_pa_mag, ax, cmap='viridis')
         fig.colorbar(img, ax=ax, orientation='horizontal')
 
@@ -184,6 +187,7 @@ def test_plot_pfss_quiver(request,
         ax.set_title("Surface tangential field strength")
 
         plt.savefig(pn.get())
+        plt.close(fig)
 
 
 def test_plot_pfss_streamtraces(request,
@@ -193,6 +197,7 @@ def test_plot_pfss_streamtraces(request,
     with context.PlotNamer(__file__, request.node.name) as (pn, plt):
         fig, ax = plot_pfss.plot_streamtraces(magnetogram)
         fig.savefig(pn.get())
+        plt.close(fig)
 
 
 # TODO which reference implementation is this? Do we even have a reference implementation?

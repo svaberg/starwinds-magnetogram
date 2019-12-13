@@ -45,7 +45,9 @@ def collect_sines(r, alpha, s, beta):
 
 def map_to_positive_orders(magnetogram):
     """
-
+    After rotation, a set of coefficients may have nonzero negative orders; this is normally
+    not part of the ZDI magnetogram definition. Use this to "fold" the negative orders onto the
+    positive orders without changing the magnetogram.
     :param magnetogram:
     :return:
     """

@@ -78,7 +78,10 @@ def test_read():
 
 
 def test_map_to_positive_orders(request):
-
+    """
+    Test that the mapping to positive orders for rotated ZDI magnetograms work
+    by comparing the computed values at a set of points.
+    """
     degree_l_max = 5
 
     for degree_l in range(degree_l_max+1):
@@ -153,16 +156,17 @@ def compare_values(request, m0, m1):
             raise
 
 
-def get_field_values(zg, m0, m1):
-
+def get_field_values(zg, *magnetograms):
+    """
+    Get ZDI field values on the geometry zg for the supplied magnetograms.
+    """
     field_values = []
-    for magnetogram in (m0, m1):
+    for magnetogram in magnetograms:
         degrees, orders, coefficients = magnetogram.as_arrays()
         lz = zdi_magnetogram.ZdiMagnetogram(degrees, orders, coefficients)
         field_values.append(lz.get_radial_field(*zg.centers()))
 
     return field_values
-
 
 
 def test_collect_cosines():

@@ -3,6 +3,7 @@ log = logging.getLogger(__name__)
 import numpy as np
 import matplotlib
 import pytest
+from itertools import chain
 
 from contextlib import contextmanager
 from time import time
@@ -99,25 +100,25 @@ def lic_flow_numpy(vectors, len_pix=10, direction="both"):
     if two != 2:
         raise ValueError("Last dimension must be 2")
 
-    yxids = np.zeros((2 * len_pix + 1, m, n, 2), dtype=int)
-    yxids.fill(-9999)
-
     origin = len_pix
 
+    if direction == "both":
+        step_id_range = chain(range(origin + 1, origin + 1 + len_pix),
+                              reversed(range(0, origin)))
+    elif direction == "forward":
+        step_id_range = range(origin + 1, origin + 1 + len_pix)
+    elif direction == "backward":
+        step_id_range = reversed(range(0, origin))
+    step_id_range = list(step_id_range)
+
+    yxids = np.zeros((2 * len_pix + 1, m, n, 2), dtype=int)
+    yxids.fill(-9999)
     yxids[origin, :, :, 0] = np.arange(m)[:, np.newaxis]
     yxids[origin, :, :, 1] = np.arange(n)[np.newaxis, :]
 
     fxys = 0.5 * np.ones_like(yxids, dtype=float)
     fxs = fxys[..., 0]
     fys = fxys[..., 1]
-
-    from itertools import chain
-    step_id_range = chain(range(origin + 1, origin + 1 + len_pix),
-                    reversed(range(0, origin)))
-    # step_id_range = range(origin + 1, origin + 1 + len_pix)
-    # k_range = reversed(range(0, origin))
-
-    step_id_range = list(step_id_range)
 
     for step_1 in step_id_range:
 
@@ -154,7 +155,11 @@ def lic_flow_numpy(vectors, len_pix=10, direction="both"):
         yxids[step_1, :, :, 0] = np.clip(yxids[step_1, :, :, 0], 0, m-1)
         yxids[step_1, :, :, 1] = np.clip(yxids[step_1, :, :, 1], 0, n-1)
 
-    return yxids[step_id_range, ...]
+    import pdb; pdb.set_trace()
+    # if direction == "forward":
+    return yxids[origin:]
+    # else:
+    #     return yxids[(*step_id_range), ...]
 
 
 def plot_lic(ax, X, Y, U, V, **kwargs):
@@ -215,7 +220,7 @@ def test_reference(request):
     with timing("Initial"):
         result = lic_flow(UV, 30)
     with timing("Vectorised"):
-        result1 = lic_flow_numpy(UV, 30)
+        result1 = lic_flow_numpy(UV, 30, direction="forward")
 
     tx = result[..., 0]
     ty = result[..., 1]
@@ -236,7 +241,7 @@ def test_reference(request):
         plt.savefig(pn.get())
 
         fig, axs = plt.subplots(1, 2)
-        for ax, c in zip (axs, (C, C1)):
+        for ax, c in zip(axs, (C, C1)):
             ax.imshow(S, extent=(-1, 1, -1, 1), origin='lower', interpolation='bicubic', cmap='RdBu_r')
             ax.imshow(c, alpha=.1, extent=(-1, 1, -1, 1), origin='lower', interpolation='bicubic', cmap='gray')
             ax.grid(False)

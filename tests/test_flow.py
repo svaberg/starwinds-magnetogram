@@ -90,7 +90,7 @@ def lic_flow(vectors, len_pix=10):
     return result
 
 
-def lic_flow_numpy(vectors, len_pix=10):
+def lic_flow_numpy(vectors, len_pix=10, direction="both"):
     """
 
     """
@@ -100,57 +100,67 @@ def lic_flow_numpy(vectors, len_pix=10):
         raise ValueError("Last dimension must be 2")
 
     yxids = np.zeros((2 * len_pix + 1, m, n, 2), dtype=int)
-    center = len_pix
-    yxids[center, :, :, 0] = np.arange(m)[:, np.newaxis]
-    yxids[center, :, :, 1] = np.arange(n)[np.newaxis, :]
+    yxids.fill(-9999)
+
+    origin = len_pix
+
+    yxids[origin, :, :, 0] = np.arange(m)[:, np.newaxis]
+    yxids[origin, :, :, 1] = np.arange(n)[np.newaxis, :]
 
     fxys = 0.5 * np.ones_like(yxids, dtype=float)
     fxs = fxys[..., 0]
     fys = fxys[..., 1]
 
-    for k in range(center + 1, center + 1 + len_pix):
+    from itertools import chain
+    step_id_range = chain(range(origin + 1, origin + 1 + len_pix),
+                    reversed(range(0, origin)))
+    # step_id_range = range(origin + 1, origin + 1 + len_pix)
+    # k_range = reversed(range(0, origin))
 
-        yids = yxids[k - 1, :, :, 0]
-        xids = yxids[k - 1, :, :, 1]
+    step_id_range = list(step_id_range)
 
-        _t = vectors[yids, xids, :]
-        txys = ((_t >= 0) - fxys[k - 1]) / _t
+    for step_1 in step_id_range:
+
+        sgn = np.sign(step_1-origin)
+        step_0 = step_1 - sgn
+        log.debug("From %d to %d" % (step_0, step_1))
+
+        yids_0 = yxids[step_0, :, :, 0]
+        xids_0 = yxids[step_0, :, :, 1]
+
+        _t = vectors[yids_0, xids_0, :] * sgn
+        txys = ((_t >= 0) - fxys[step_0]) / _t
 
 
-        #
-        #
-        #
-        yxids[k] = yxids[k-1]
-
+        yxids[step_1] = yxids[step_0]
         # X step indices ix, jx
         ix, jx = np.where(txys[..., 0] < txys[..., 1])
-        _vx = vectors[yids[ix, jx], xids[ix, jx], :]
+        _vx = vectors[yids_0[ix, jx], xids_0[ix, jx], :] * sgn
 
         # Y step indices iy, jy
         iy, jy = np.where(txys[..., 0] >= txys[..., 1])
-        _vy = vectors[yids[iy, jy], xids[iy, jy], :]
+        _vy = vectors[yids_0[iy, jy], xids_0[iy, jy], :] * sgn
 
         # These are not merged as ix and iy do not generally have the same length
-        fxys[k, ix, jx, 0] = _vx[..., 0] <= 0
-        fxys[k, ix, jx, 1] = fxys[k - 1, ix, jx, 1] + _vx[..., 1] * txys[ix, jx, 0]
+        fxys[step_1, ix, jx, 0] = _vx[..., 0] <= 0
+        fxys[step_1, ix, jx, 1] = fxys[step_0, ix, jx, 1] + _vx[..., 1] * txys[ix, jx, 0]
+        yxids[step_1, ix, jx, 1] += np.sign(_vx[..., 0]).astype(int)
 
-        fxys[k, iy, jy, 0] = fxys[k - 1, iy, jy, 0] + _vy[..., 0] * txys[iy, jy, 1]
-        fxys[k, iy, jy, 1] = _vy[..., 1] <= 0
-
-        yxids[k, iy, jy, 0] += np.sign(_vy[..., 1]).astype(int)
-        yxids[k, ix, jx, 1] += np.sign(_vx[..., 0]).astype(int)
+        fxys[step_1, iy, jy, 0] = fxys[step_0, iy, jy, 0] + _vy[..., 0] * txys[iy, jy, 1]
+        fxys[step_1, iy, jy, 1] = _vy[..., 1] <= 0
+        yxids[step_1, iy, jy, 0] += np.sign(_vy[..., 1]).astype(int)
 
         # Don't go outside the domain
-        yxids[k, :, :, 0] = np.clip(yxids[k, :, :, 0], 0, m-1)
-        yxids[k, :, :, 1] = np.clip(yxids[k, :, :, 1], 0, n-1)
+        yxids[step_1, :, :, 0] = np.clip(yxids[step_1, :, :, 0], 0, m-1)
+        yxids[step_1, :, :, 1] = np.clip(yxids[step_1, :, :, 1], 0, n-1)
 
-    return yxids[center:, ...]
+    return yxids[step_id_range, ...]
 
 
-def plot_lic(ax, X, Y, U, V):
+def plot_lic(ax, X, Y, U, V, **kwargs):
     S = (U ** 2 + V ** 2) ** .5
     ax.pcolormesh(X, Y, S, cmap='RdBu_r')
-    result = add_lic(ax, X, Y, U, V)
+    result = add_lic(ax, X, Y, U, V, **kwargs)
 
 
 def add_lic(ax, X, Y, U, V, length=None, alpha=.1, img=None, seed=None):
@@ -158,7 +168,8 @@ def add_lic(ax, X, Y, U, V, length=None, alpha=.1, img=None, seed=None):
 
     """
     if length is None:
-        length = np.max(X.shape)//4
+        length = np.min(X.shape)//10
+        log.debug('Using length %d' % length)
 
     if seed is not None:
         np.random.seed(seed)
@@ -178,6 +189,7 @@ def add_lic(ax, X, Y, U, V, length=None, alpha=.1, img=None, seed=None):
                     alpha=alpha,
                     extent=(np.min(X), np.max(X), np.min(Y), np.max(Y)),
                     origin='lower',
+                    # origin='upper',
                     interpolation='bicubic',
                     cmap='gray',
                     zorder=10)
@@ -245,5 +257,5 @@ def test_lic(request):
 
     with context.PlotNamer(__file__, request.node.name) as (pn, plt):
         fig, ax = plt.subplots(1, 1)
-        plot_lic(ax, X, Y, U, V)
+        plot_lic(ax, X, Y, U, V, length=30)
         plt.savefig(pn.get())

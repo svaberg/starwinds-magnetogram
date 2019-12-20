@@ -7,7 +7,7 @@ import logging
 import stellarwinds.magnetogram.plot_zdi
 from tests import context  # Test context
 from tests.magnetogram import magnetograms
-
+from tests.magnetogram import test_flow
 log = logging.getLogger(__name__)
 
 # Local
@@ -394,8 +394,6 @@ def test_plot_zdi_magnetogram_energy(request):
         fig.savefig(pn.get())
 
 
-
-
 def test_plot_strength(request, magnetogram_name="mengel"):
     lz = stellarwinds.magnetogram.zdi_magnetogram.from_coefficients(magnetograms.get_all(magnetogram_name))
 
@@ -410,6 +408,57 @@ def test_plot_radial_field(request, magnetogram_name="mengel"):
 
     with context.PlotNamer(__file__, request.node.name) as (pn, plt):
         fig, ax = stellarwinds.magnetogram.plot_zdi.plot_zdi_field(lz.get_radial_field)
+        fig.savefig(pn.get())
+        plt.close()
+
+
+def test_plot_radial_field_lic(request, magnetogram_name="mengel"):
+    lz = stellarwinds.magnetogram.zdi_magnetogram.from_coefficients(magnetograms.get_all(magnetogram_name))
+
+    zg = stellarwinds.magnetogram.geometry.ZdiGeometry(411)
+    polar_centers, azimuth_centers = zg.centers()
+    polar_corners, azimuth_corners = zg.corners()
+
+    radial_field_centers = lz.get_radial_field(polar_centers, azimuth_centers)
+    az_field_centers = lz.get_azimuthal_field(polar_centers, azimuth_centers)
+    pl_field_centers = lz.get_polar_field(polar_centers, azimuth_centers)
+
+    with context.PlotNamer(__file__, request.node.name) as (pn, plt):
+        fig, ax = plt.subplots(figsize=(10, 4))
+        stellarwinds.magnetogram.plot_zdi.plot_magnetic_field(ax, azimuth_centers, polar_centers, radial_field_centers,
+                            polar_corners=polar_corners, azimuth_corners=azimuth_corners)
+        fig.savefig(pn.get())
+        plt.close()
+
+        fig, ax = plt.subplots(figsize=(10, 4))
+
+        test_flow.add_lic(ax,
+                          np.rad2deg(azimuth_centers).transpose(),
+                          np.rad2deg(polar_centers).transpose(),
+                          az_field_centers.transpose(),
+                          -pl_field_centers.transpose(),
+                          alpha=.3,
+                          # length=40
+                          )
+
+        stellarwinds.magnetogram.plot_zdi.plot_magnetic_field(ax,
+                                                              azimuth_centers,
+                                                              polar_centers,
+                                                              radial_field_centers,
+                                                              polar_corners=polar_corners,
+                                                              azimuth_corners=azimuth_corners)
+
+        # _plot = ax.streamplot(np.rad2deg(_a.transpose()),
+        #                       np.rad2deg(_p.transpose()),
+        #                       _fa.transpose(),
+        #                       # Note carefully that -_fp has to be used instead of _fp to flip the
+        #                       # polar axis - it has to be flipped not only for
+        #                       # the _p coordinate but for the vector component as well.
+        #                       -_fp.transpose(),
+        #                       color=((_fa ** 2 + _fp ** 2) ** (1 / 2)).transpose())
+
+        # ax.invert_yaxis()
+
         fig.savefig(pn.get())
         plt.close()
 

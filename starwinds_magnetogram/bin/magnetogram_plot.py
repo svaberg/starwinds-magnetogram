@@ -7,6 +7,9 @@ from stellarwinds.magnetogram import converter
 from stellarwinds.magnetogram import zdi_magnetogram
 from stellarwinds.magnetogram import plot_zdi
 
+from stellarwinds.magnetogram import pfss_magnetogram
+from stellarwinds.magnetogram import converter
+
 
 def main():
     parser = argparse.ArgumentParser(description='Plot magnetograms')
@@ -17,15 +20,22 @@ def main():
                         const=logging.WARNING, default=logging.INFO, help='only log warnings and errors')
     parser.add_argument('-v', '--verbose', dest='log_level', action='store_const',
                         const=logging.DEBUG, help='generate and log detailed debug output')
+    parser.add_argument('-y', '--type', type=str, help='magnetogram type (zdi/pfss)', default='zdi')
     args = parser.parse_args()
 
     logging.getLogger("stellarwinds").setLevel(args.log_level)  # Set for entire stellarwinds package.
 
     coefficients = converter.read_magnetogram_file(args.input_file)
+
+    if args.type == "pfss":
+        log.debug("Converting from PFSS scaling to ZDI format")
+        coefficients.apply_scaling(converter.forward_conversion_factor, -1)
+
     lz = zdi_magnetogram.from_coefficients(coefficients)
 
     if args.plot_type == 'map':
-        fig, _ = plot_zdi.plot_map(lz, guess_star_name_from_filename(args.input_file))
+        fig, ax = plot_zdi.plot_zdi_field(lz.get_radial_field)
+        ax.set_title(guess_star_name_from_filename(args.input_file))
     elif args.plot_type == 'spectrum':
         fig, _ = plot_zdi.plot_energy_by_degree(lz)
     elif args.plot_type == 'matrix':

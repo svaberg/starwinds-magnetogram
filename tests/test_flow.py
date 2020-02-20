@@ -155,7 +155,7 @@ def lic_flow_numpy(vectors, len_pix=10, direction="both"):
         yxids[step_1, :, :, 0] = np.clip(yxids[step_1, :, :, 0], 0, m-1)
         yxids[step_1, :, :, 1] = np.clip(yxids[step_1, :, :, 1], 0, n-1)
 
-    import pdb; pdb.set_trace()
+    # import pdb; pdb.set_trace()
     # if direction == "forward":
     return yxids[origin:]
     # else:

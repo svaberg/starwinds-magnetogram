@@ -172,7 +172,14 @@ def plot_magnetic_field(ax,
                                   )
 
         # Even if there is only one line, the collections array has 3 elements.
-        zero_contour.collections[1].set_label('$B_r=0$ G')
+        # At least it has in matplotlib 3.1.1 but on the HPC (currently matplotlib 2.1.2)
+        # this has only 1 element
+        try:
+            collection = zero_contour.collections[1]
+        except IndexError:
+            collection = zero_contour.collections[0]
+        finally:
+            collection.set_label('$B_r=0$ G')
         cb.add_lines(zero_contour)
 
     cb.ax.plot(np.mean(cb.ax.get_xlim()),

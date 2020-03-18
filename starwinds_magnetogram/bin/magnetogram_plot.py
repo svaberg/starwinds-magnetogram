@@ -1,14 +1,13 @@
 import logging
+logging.basicConfig()
 log = logging.getLogger(__name__)
+
 import argparse
 import os.path
 
 from stellarwinds.magnetogram import converter
 from stellarwinds.magnetogram import zdi_magnetogram
 from stellarwinds.magnetogram import plot_zdi
-
-from stellarwinds.magnetogram import pfss_magnetogram
-from stellarwinds.magnetogram import converter
 
 
 def main():
@@ -28,20 +27,30 @@ def main():
     coefficients = converter.read_magnetogram_file(args.input_file)
 
     if args.type == "pfss":
-        log.debug("Converting from PFSS scaling to ZDI format")
+        log.debug("Converting from PFSS scaling to ZDI format.")
         coefficients.apply_scaling(converter.forward_conversion_factor, -1)
+    elif args.type == "zdi":
+        log.debug("Using ZDI format (native).")
+    else:
+        raise NotImplementedError(f"Unknown magnetogram type \"{args.type}\".")
 
     lz = zdi_magnetogram.from_coefficients(coefficients)
 
     if args.plot_type == 'map':
-        fig, ax = plot_zdi.plot_zdi_field(lz.get_radial_field)
-        ax.set_title(guess_star_name_from_filename(args.input_file))
+        _func = lz.get_radial_field
+        _field_name = " ".join(_func.__name__.split("_")[1:])
+        _star_name = guess_star_name_from_filename(args.input_file)
+        fig, ax = plot_zdi.plot_zdi_field(_func)
+        ax.set_title(f"{_star_name} {_field_name}")
     elif args.plot_type == 'spectrum':
         fig, _ = plot_zdi.plot_energy_by_degree(lz)
     elif args.plot_type == 'matrix':
         fig, _ = plot_zdi.plot_energy(lz)
-    elif args.plot_type == 'walk':
-        fig, _ = plot_zdi.pole_walk(lz)
+    elif args.plot_type == 'energy':
+        lz.energy()
+        quit(0)
+    else:
+        raise NotImplementedError(f"Unknown plot type \"{args.plot_type}\".")
 
     #
     # Show or save plot

@@ -114,6 +114,12 @@ def plot_zdi_field(getter_fn, zg=None, symmetric=None, cmap=None):
                         symmetric=symmetric,
                         cmap=cmap)
 
+    abs_field_mean = np.sum(np.abs(field_centers) * zg.areas()) / (4 * np.pi)  # Scaled by area
+    ax.text(1, 0, f"abs mean: {abs_field_mean:.2G} G ",
+            transform=ax.transAxes,
+            horizontalalignment='right',
+            verticalalignment='bottom')
+
     return fig, ax
 
 
@@ -208,7 +214,10 @@ def plot_magnetic_field(ax,
 
     add_range(azimuth_centers, polar_centers, field_centers)
 
-    plt.legend(ncol=3, loc='lower left')
+    plt.legend(ncol=2, loc='lower left')
+
+    ax.set_xlabel("Azimuth angle [deg]")
+    ax.set_ylabel("Polar angle [deg]")
 
 
 def add_range(azimuth_centers, polar_centers, field):

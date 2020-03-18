@@ -282,12 +282,12 @@ class ZdiMagnetogram:
 
         return ZdiMagnetogram(*new_args, self._dpml_method)
 
-    def energy(self):
+    def energy(self, show_fractions=False):
         """
         Calculate energy as it is done in ZDIPy
         :return:
         """
-
+        # import pdb; pdb.set_trace()
         # First calculate energy associated with each coefficient
         energy_alpha = self._energy_helper(self.alpha)
         energy_beta = self._energy_helper(self.beta)
@@ -296,21 +296,23 @@ class ZdiMagnetogram:
         total_energy = np.sum(energy_alpha) + np.sum(energy_beta) + np.sum(energy_gamma)
         total_energy_poloidal = np.sum(energy_alpha) + np.sum(energy_beta)
         total_energy_toroidal = np.sum(energy_gamma)
-        log.info('Total energy: %g (B^2)' % total_energy)
 
-        log.info("radial  %g (%% tot)" % (np.sum(energy_alpha) / total_energy))
-        log.info('poloidal %g (%% tot)' % (total_energy_poloidal / total_energy))
-        log.info('toroidal %g (%% tot)' % (total_energy_toroidal / total_energy))
+        if show_fractions:
+            print('Fraction of magnetic energy in each component. Should sum to 1.')
+            print('l   m    E(alpha)   E(beta)    E(gamma)')
+            for i in range(len(self.alpha)):
+                print('%2i %2i %10.5g %10.5g %10.5g' % (self.degrees_l[i],
+                                                           self.orders_m[i],
+                                                           energy_alpha[i] / total_energy,
+                                                           energy_beta[i] / total_energy,
+                                                           energy_gamma[i] / total_energy))
 
-        log.info ('Fraction of magnetic energy in each component')
-        log.info ('This can be summed, and should sum to 1.')
-        log.info ('l   m    E(alpha)   E(beta)    E(gamma)')
-        for i in range(len(self.alpha)):
-            log.info('%2i %2i %10.5f %10.5f %10.5f' % (self.degrees_l[i],
-                                                       self.orders_m[i],
-                                                       energy_alpha[i] / total_energy,
-                                                       energy_beta[i] / total_energy,
-                                                       energy_gamma[i] / total_energy))
+        print('Total energy: %g (B^2)' % total_energy)
+
+        print('Radial   energy* %g %%' % (100 * np.sum(energy_alpha) / total_energy))
+        print('Poloidal energy  %g %%' % (100 * total_energy_poloidal / total_energy))
+        print('Toroidal energy  %g %%' % (100 * total_energy_toroidal / total_energy))
+        print('* The radial energy is part of the poloidal energy.')
 
         return energy_alpha, energy_beta, energy_gamma
 

@@ -94,6 +94,14 @@ def read_magnetogram_file(fname, types=("radial",)):
     (...)
     15 15 -2.021262e+01  6.270638e-01
     """
+    _valid_types = (("radial",), ("radial", "poloidal", "toroidal"))
+    _valid = False
+    for _vt in _valid_types:
+        if types == _vt:
+            _valid = True
+
+    if not _valid:
+        raise KeyError(f"Argument \"types\" was {types}; must be one of {_valid_types}.")
 
     log.debug("Begin reading magnetogram file \"%s\"..." % fname)
     with open(fname) as f:
@@ -105,6 +113,7 @@ def read_magnetogram_file(fname, types=("radial",)):
     full_coeffs = []
     line_offset = 0
 
+    # Note this is hacky: Only the length of types is really used.
     for coeffs_types in types:
         header_lines = []
 
@@ -121,18 +130,18 @@ def read_magnetogram_file(fname, types=("radial",)):
                 imag_coeff = float(line_tokens[3])
 
                 coeffs.append(degree_l, order_m, real_coeff + 1j * imag_coeff)
-                log.debug("Read coefficient line %d: \"%s\"" % (line_no, line))
+                # log.debug("Read coefficient line %d: \"%s\"" % (line_no, line))
             except (ValueError, IndexError):
                 if coeffs.size == 0:
-                    log.debug("Read header line: %d: \"%s\"" % (len(header_lines), line))
+                    # log.debug("Read header line: %d: \"%s\"" % (len(header_lines), line))
                     header_lines.append(line)
                 else:
-                    log.debug("Read non-coefficient line \"%s\", finished reading %s." % (line, coeffs_types))
+                    # log.debug("Read non-coefficient line \"%s\", finished reading %s." % (line, coeffs_types))
                     line_offset = line_no
                     break
 
-        log.debug("Read %d header lines and %d %s coefficient lines." % (len(header_lines), coeffs.size, coeffs_types))
-        log.debug("l\tm\tg_lm\th_lm")
+        log.info("Read %d header lines and %d %s coefficient lines." % (len(header_lines), coeffs.size, coeffs_types))
+        # log.debug("l\tm\tg_lm\th_lm")
         # for coeff in coeffs.contents():
         #     log.debug("%d\t%d\t%e\t%e" % (coeff[0][0],coeff[0][1],coeff[1][0],coeff[1][1]))
 

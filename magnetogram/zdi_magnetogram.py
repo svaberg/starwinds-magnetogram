@@ -11,6 +11,9 @@ class ZdiMagnetogram:
     Reference implementation based on equation 5 in Lehmann et al. (2018).
     Produces same plots as Folsom (2016, 2018) except that the sign of
     the polar and azimuthal components is always (?) reversed.
+
+    In the ZDI world the B field is represented by radial, azimuthal, and meridional components in that
+    order. Note: The  azimuthal B component is not last, but rather in the middle.
     """
     def __init__(self,
                  degrees_l, orders_m,
@@ -110,12 +113,17 @@ class ZdiMagnetogram:
                 + self.get_radial_toroidal_field(points_polar, points_azimuth)
                 )
 
-    def get_polar_poloidal_field(self, points_polar, points_azimuth):
+    def get_azimuthal_poloidal_field(self, points_polar, points_azimuth):
         r"""
         Get the polar component of the poloidal field $B_{\phi, pol}$.
         :param points_polar:
         :param points_azimuth:
         :return: polar component of the poloidal field
+
+        According to eq. (2-4, 5) and the text in Lehmann et al. (2018), this is the
+        azimuthal component of the poloidal field.
+        $B_{\phi ,\mathrm{pol}} =- \sum _{\ell m} \beta _{\ell m}
+        \frac{im P_{\ell m} {\rm e}^{im\phi }}{(\ell + 1) \sin \theta }$
         """
         field_polar_poloidal = np.zeros_like(points_azimuth, dtype=complex)
 
@@ -131,7 +139,7 @@ class ZdiMagnetogram:
 
         return np.real(field_polar_poloidal)
 
-    def get_polar_toroidal_field(self, points_polar, points_azimuth):
+    def get_azimuthal_toroidal_field(self, points_polar, points_azimuth):
         r"""
         Get the polar component of the toroidal field $B_{\phi, tor}$.
         :param points_polar:
@@ -153,7 +161,7 @@ class ZdiMagnetogram:
 
         return np.real(field_polar_toroidal)
 
-    def get_polar_field(self, points_polar, points_azimuth):
+    def get_azimuthal_field(self, points_polar, points_azimuth):
         r"""
         Get the total polar component of the field $B_{\phi}$.
         :param points_polar:
@@ -161,11 +169,11 @@ class ZdiMagnetogram:
         :return: polar field component
         """
         return (
-                self.get_polar_poloidal_field(points_polar, points_azimuth)
-                + self.get_polar_toroidal_field(points_polar, points_azimuth)
+                self.get_azimuthal_poloidal_field(points_polar, points_azimuth)
+                + self.get_azimuthal_toroidal_field(points_polar, points_azimuth)
                 )
 
-    def get_azimuthal_poloidal_field(self, points_polar, points_azimuth):
+    def get_polar_poloidal_field(self, points_polar, points_azimuth):
         r"""
         Get the azimuthal component of the poloidal field $B_{\theta, pol}$.
         :param points_polar:
@@ -187,7 +195,7 @@ class ZdiMagnetogram:
 
         return np.real(field_azimuthal_poloidal)
 
-    def get_azimuthal_toroidal_field(self, points_polar, points_azimuth):
+    def get_polar_toroidal_field(self, points_polar, points_azimuth):
         r"""
         Get the azimuthal component of the toroidal field $B_{\theta, tor}$.
         :param points_polar:
@@ -208,7 +216,7 @@ class ZdiMagnetogram:
 
         return np.real(field_azimuthal_toroidal)
 
-    def get_azimuthal_field(self, points_polar, points_azimuth):
+    def get_polar_field(self, points_polar, points_azimuth):
         r"""
         Get the total azimuthal component of the field $B_{\theta}$.
         :param points_polar:
@@ -216,8 +224,8 @@ class ZdiMagnetogram:
         :return: azimuthal field component
         """
         return (
-                self.get_azimuthal_poloidal_field(points_polar, points_azimuth)
-                + self.get_azimuthal_toroidal_field(points_polar, points_azimuth)
+                self.get_polar_poloidal_field(points_polar, points_azimuth)
+                + self.get_polar_toroidal_field(points_polar, points_azimuth)
                 )
 
     # When should the real values be taken?

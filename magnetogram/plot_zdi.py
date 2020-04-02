@@ -98,6 +98,13 @@ def plot_energy_by_degree(zc, ax=None):
 
     return ax.figure, ax
 
+def place_colorbar_axis_right(ax, dx=.22):
+    p0 = ax.get_position().p0
+    p1 = ax.get_position().p1
+
+    cbar_ax = ax.figure.add_axes((p0[0] + dx, p0[1], .01, p1[1] - p0[1]))
+    return cbar_ax
+
 
 def plot_zdi_components(mgm, radius=1, axs=None, zg=None, symmetric=None, cmap=None):
     """
@@ -110,35 +117,51 @@ def plot_zdi_components(mgm, radius=1, axs=None, zg=None, symmetric=None, cmap=N
     if axs is None:
         fig, axs = plt.subplots(1, 3, figsize=(24, 6))
 
+    getter_fns = (mgm.get_radial_field, mgm.get_polar_field, mgm.get_azimuthal_field)
+
     polar_centers, azimuth_centers = zg.centers()
     polar_corners, azimuth_corners = zg.corners()
 
-    axs[0].figure.subplots_adjust(right=0.8)  # Make space for colorbar.
-
-    getter_fns = (mgm.get_radial_field, mgm.get_polar_field, mgm.get_azimuthal_field)
+    latex_names = ('B_r', r'B_\theta', r'B_\phi')
+    extremum_markers = ('ox', '^v', '<>')
     Brpa = np.array([g(polar_centers, azimuth_centers) for g in getter_fns])
     # import pdb; pdb.set_trace()
 
-    def place_colorbar_axis_right(ax, dx=.22):
-        p0 = ax.get_position().p0
-        p1 = ax.get_position().p1
-
-        cbar_ax = axs[0].figure.add_axes((p0[0] + dx, p0[1], .01, p1[1] - p0[1]))
-        return cbar_ax
-
     abs_max = np.max(np.abs(Brpa))
-    for ax, Bi in zip(axs, Brpa):
+    axs[0].figure.subplots_adjust(right=0.8)  # Make space for colorbar.
+    for ax, Bi, latex_name, markers in zip(axs, Brpa, latex_names, extremum_markers):
         log.debug("Axis " + str(ax))
-        img = stellarwinds.magnetogram.plots.plot_equirectangular(zg, Bi, ax, vmin=-abs_max, vmax=abs_max)
-        ax.set_ylabel(None)
 
-        # plot_magnetic_field(ax,
-        #                     azimuth_centers, polar_centers, Bi,
-        #                     polar_corners=polar_corners, azimuth_corners=azimuth_corners)
+        _p = stellarwinds.magnetogram.plots
 
+        img, zero_contour = _p.plot_magnetic_field(ax,
+                            azimuth_centers, polar_centers, Bi,
+                            polar_corners=polar_corners, azimuth_corners=azimuth_corners, legend_str=latex_name,
+                                                   abs_max=abs_max)
+
+        _p.add_extrema(azimuth_centers, polar_centers, Bi, ax, legend_str=latex_name, markers=markers)
 
     cax = place_colorbar_axis_right(ax)
-    ax.figure.colorbar(img, cax=cax)
+    cb = ax.figure.colorbar(img, ax=ax, cax=cax)
+
+    if zero_contour:
+        cb.add_lines(zero_contour)
+    for Bi, markers in zip(Brpa, extremum_markers):
+        cb.ax.plot(np.mean(cb.ax.get_xlim()),
+                   np.max(Bi), color='k', marker=markers[0], linestyle="none", markersize=6, fillstyle='none')
+        cb.ax.plot(np.mean(cb.ax.get_xlim()),
+                   np.min(Bi), color='k', marker=markers[1], linestyle="none", markersize=6, fillstyle='none')
+
+
+    # cb=_p.add_colorbar(img, azimuth_centers, polar_centers, Brpa[0], axs[0], zero_contour, legend_str=latex_name, cax=cax)
+
+
+
+    for ax, Bi, latex_name in zip(axs, Brpa, latex_names):
+        _p.add_contours(azimuth_centers, polar_centers, Bi, ax, legend_str=latex_name, cb=cb)
+
+    for ax in axs:
+        ax.legend(ncol=2, loc='lower left')
 
     axs[0].set_title(r"Radial field $B_r$ at $r = %2.1f r_\star$" % radius)
     axs[1].set_title(r"Polar field $B_\theta$ at $r = %2.1f r_\star$" % radius)
@@ -174,11 +197,20 @@ def plot_zdi_field(getter_fn, ax=None, zg=None, symmetric=None, cmap=None, legen
 
     field_centers = getter_fn(polar_centers, azimuth_centers)
 
-    plot_magnetic_field(ax, azimuth_centers, polar_centers, field_centers,
+    _p = stellarwinds.magnetogram.plots
+    img, zero_contour = _p.plot_magnetic_field(ax, azimuth_centers, polar_centers, field_centers,
                         polar_corners=polar_corners, azimuth_corners=azimuth_corners,
                         symmetric=symmetric,
                         cmap=cmap,
                         legend_str=legend_str)
+
+    _p.add_extrema(azimuth_centers, polar_centers, field_centers, ax, legend_str=legend_str)
+
+    cb = _p.add_colorbar(img, azimuth_centers, polar_centers, field_centers, ax, zero_contour, legend_str=legend_str)
+
+    _p.add_contours(azimuth_centers, polar_centers, field_centers, ax, legend_str=legend_str, cb=cb)
+
+    ax.legend(ncol=2, loc='lower left')
 
     abs_field_mean = np.sum(np.abs(field_centers) * zg.areas()) / (4 * np.pi)  # Scaled by area
     ax.text(1, 0, f"abs mean: {abs_field_mean:.3G} G ",
@@ -188,118 +220,3 @@ def plot_zdi_field(getter_fn, ax=None, zg=None, symmetric=None, cmap=None, legen
 
     return fig, ax
 
-
-def plot_magnetic_field(ax,
-                        azimuth_centers, polar_centers, field_centers,
-                        polar_corners=None, azimuth_corners=None,
-                        symmetric=None,
-                        cmap=None,
-                        legend_str='X'):
-    """
-    Used by plot_zdi_field to plot magnetic fields, also used by quicklook.py
-    :param ax: matplotlib axis on which to plot
-    :param azimuth_centers:
-    :param polar_centers:
-    :param field_centers:
-    :param polar_corners: Used in pcolormesh (if specified)
-    :param azimuth_corners: Used in pcolormesh (if specified)
-    :param symmetric: Setting this to True forces the colour scale to be symmetric around 0.
-    :param cmap: Use the given matplotlib colormap. Otherwise "jet" or "RdBu_r" will be used.
-    :return:
-    """
-
-    if symmetric is None:
-        if np.min(field_centers) < 0 < np.max(field_centers):
-            symmetric = True
-        else:
-            symmetric = False
-
-    if symmetric and cmap is None:
-        cmap = "RdBu_r"
-    elif cmap is None:
-        cmap = "viridis"
-
-    # Prefer to use corners/centers
-    if polar_corners is not None and azimuth_corners is not None:
-        img1 = ax.pcolormesh(np.rad2deg(azimuth_corners),
-                             np.rad2deg(polar_corners),
-                             field_centers,
-                             cmap=cmap)
-    else:
-        img1 = ax.pcolormesh(np.rad2deg(azimuth_centers),
-                             np.rad2deg(polar_centers),
-                             field_centers,
-                             cmap=cmap)
-
-    cb = ax.figure.colorbar(img1, ax=ax)
-
-    if symmetric:
-        img1.set_clim(np.array([-1, 1]) * np.max(np.abs(img1.get_clim())))
-
-        zero_contour = ax.contour(np.rad2deg(azimuth_centers),
-                                  np.rad2deg(polar_centers),
-                                  field_centers,
-                                  0,
-                                  linewidths=1,
-                                  colors='k',
-                                  )
-
-        # Even if there is only one line, the collections array has 3 elements.
-        # At least it has in matplotlib 3.1.1 but on the HPC (currently matplotlib 2.1.2)
-        # this has only 1 element
-        try:
-            collection = zero_contour.collections[1]
-        except IndexError:
-            collection = zero_contour.collections[0]
-        finally:
-            collection.set_label(f'${legend_str}=0$ G')
-        cb.add_lines(zero_contour)
-
-    cb.ax.plot(np.mean(cb.ax.get_xlim()),
-               np.min(field_centers), color='k', marker='1')
-    cb.ax.plot(np.mean(cb.ax.get_xlim()),
-               np.max(field_centers), color='k', marker='2')
-
-    contours = ax.contour(np.rad2deg(azimuth_centers),
-                          np.rad2deg(polar_centers),
-                          field_centers,
-                          cb.get_ticks(),
-                          linewidths=.5,
-                          colors='k',
-                          linestyles='dashed'
-                          )
-    contours.collections[0].set_label(fr'$\Delta {legend_str} = %g$ G' % (cb.get_ticks()[1] - cb.get_ticks()[0]))
-    cb.add_lines(contours)
-
-    ax.xaxis.set_ticks(np.arange(0, 361, 45))
-    ax.yaxis.set_ticks(np.arange(0, 181, 30))
-    plt.grid()
-
-    ax.invert_yaxis()
-
-    ax.set_aspect('equal')
-
-    add_range(azimuth_centers, polar_centers, field_centers, legend_str)
-
-    plt.legend(ncol=2, loc='lower left')
-
-    ax.set_xlabel("Azimuth angle [deg]")
-    ax.set_ylabel("Polar angle [deg]")
-
-
-def add_range(azimuth_centers, polar_centers, field, legend_str='x'):
-    field_max_indices = np.unravel_index(np.argmax(field, axis=None), field.shape)
-    field_max_polar = polar_centers[field_max_indices]
-    field_max_azimuth = azimuth_centers[field_max_indices]
-    field_min_indices = np.unravel_index(np.argmin(field, axis=None), field.shape)
-    field_min_polar = polar_centers[field_min_indices]
-    field_min_azimuth = azimuth_centers[field_min_indices]
-    field_max = field[field_max_indices]
-    field_min = field[field_min_indices]
-
-    plt.plot(np.rad2deg(field_max_azimuth),
-             np.rad2deg(field_max_polar), 'k2',
-             label=f'Max ${legend_str}={stellarwinds.magnetogram.plots.latex_float(field_max)}$ G')
-    plt.plot(np.rad2deg(field_min_azimuth),
-             np.rad2deg(field_min_polar), 'k1',
-             label=f'Min ${legend_str}={stellarwinds.magnetogram.plots.latex_float(field_min)}$ G')

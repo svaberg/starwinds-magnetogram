@@ -42,7 +42,6 @@ def test_independent_implementation(l, m):
     assert(np.isclose(cm_result, expected_result))
 
 
-# TODO use the temp folder
 def test_read():
     content = r"""General poloidal plus toroidal field
 4 3 -3
@@ -73,8 +72,9 @@ def test_read():
     coeffs = cm.read_magnetogram_file(path)
 
     coeffs.apply_scaling(cm.forward_conversion_factor)
+    radial_coeffs, *_ = shc.hsplit(coeffs)
 
-    cm.write_magnetogram_file(coeffs, fname=context.default_artifact_directory + '/test_field_wso.dat')
+    cm.write_magnetogram_file(radial_coeffs, fname=context.default_artifact_directory + '/test_field_wso.dat')
 
 
 def test_map_to_positive_orders(request):

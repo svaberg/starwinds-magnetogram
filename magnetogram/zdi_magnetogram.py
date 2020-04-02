@@ -246,8 +246,6 @@ class ZdiMagnetogram:
     def get_all(self):
         r"""
         Get all the things in a dictionary.
-        :param points_polar:
-        :param points_azimuth:
         :return:
         """
         _dict = {}

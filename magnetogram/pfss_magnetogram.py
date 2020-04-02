@@ -174,7 +174,6 @@ def evaluate_spherical(
     Evaluate the radial, polar and azimuthal field components of a magnetogram represented
     as a set of real spherical harmonics on Stanford PFSS form. The unit is the same as the
     unit of the magnetogram, normally Gauss.
-    TODO this is not dry with evaluate on sphere
     :param coefficients: Coefficients object
     :param points_radial: 3d array of radial coordinate values
     :param points_polar: 3d array of polar coordinate values

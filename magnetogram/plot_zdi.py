@@ -1,3 +1,6 @@
+import logging
+log = logging.getLogger(__name__)
+
 import numpy as np
 from matplotlib import pyplot as plt, colors
 from matplotlib.ticker import IndexLocator
@@ -5,7 +8,7 @@ from mpl_toolkits.axes_grid1 import make_axes_locatable
 
 from stellarwinds import magnetogram
 import stellarwinds.magnetogram.geometry
-from stellarwinds.magnetogram.plots import log, latex_float
+import stellarwinds.magnetogram.plots
 
 
 def plot_energy(zc, types="total", negative_orders=False, axs=None):
@@ -96,26 +99,89 @@ def plot_energy_by_degree(zc, ax=None):
     return ax.figure, ax
 
 
-# Expand to plot other than radial??
-# TODO This is a hack to get field strength quickly to match the Kappa Ceti paper. Fix up later!
-def plot_zdi_field(getter_fn, zg=None, symmetric=None, cmap=None):
+def plot_zdi_components(mgm, radius=1, axs=None, zg=None, symmetric=None, cmap=None):
+    """
+    Plot the 3 components of the magnetic field.
+    """
 
     if zg is None:
         zg = magnetogram.geometry.ZdiGeometry(61)
+
+    if axs is None:
+        fig, axs = plt.subplots(1, 3, figsize=(24, 6))
+
+    polar_centers, azimuth_centers = zg.centers()
+    polar_corners, azimuth_corners = zg.corners()
+
+    axs[0].figure.subplots_adjust(right=0.8)  # Make space for colorbar.
+
+    getter_fns = (mgm.get_radial_field, mgm.get_polar_field, mgm.get_azimuthal_field)
+    Brpa = np.array([g(polar_centers, azimuth_centers) for g in getter_fns])
+    # import pdb; pdb.set_trace()
+
+    def place_colorbar_axis_right(ax, dx=.22):
+        p0 = ax.get_position().p0
+        p1 = ax.get_position().p1
+
+        cbar_ax = axs[0].figure.add_axes((p0[0] + dx, p0[1], .01, p1[1] - p0[1]))
+        return cbar_ax
+
+    abs_max = np.max(np.abs(Brpa))
+    for ax, Bi in zip(axs, Brpa):
+        log.debug("Axis " + str(ax))
+        img = stellarwinds.magnetogram.plots.plot_equirectangular(zg, Bi, ax, vmin=-abs_max, vmax=abs_max)
+        ax.set_ylabel(None)
+
+        # plot_magnetic_field(ax,
+        #                     azimuth_centers, polar_centers, Bi,
+        #                     polar_corners=polar_corners, azimuth_corners=azimuth_corners)
+
+
+    cax = place_colorbar_axis_right(ax)
+    ax.figure.colorbar(img, cax=cax)
+
+    axs[0].set_title(r"Radial field $B_r$ at $r = %2.1f r_\star$" % radius)
+    axs[1].set_title(r"Polar field $B_\theta$ at $r = %2.1f r_\star$" % radius)
+    axs[2].set_title(r"Azimuthal field $B_\phi$ at $r = %2.1f r_\star$" % radius)
+    axs[0].set_ylabel(r"Polar angle $\theta$ [deg]")
+
+    for ax in axs:
+        ax.set_xlabel(r"Azimuth angle $\phi$ [deg]")
+
+    abs_field_mean = np.sum(np.abs(Brpa) * zg.areas()) / (4 * np.pi)  # Scaled by area
+    log.debug(f"Mean fiend strength {abs_field_mean:.3G} G")
+    axs[1].text(.5, .5, #1, 0,
+                f"abs mean: {abs_field_mean:.3G} G ",
+            transform=ax.transAxes,
+            horizontalalignment='right',
+            verticalalignment='bottom')
+
+    return axs
+
+
+# Expand to plot other than radial??
+# TODO This is a hack to get field strength quickly to match the plots in the kappa Ceti paper.
+def plot_zdi_field(getter_fn, ax=None, zg=None, symmetric=None, cmap=None, legend_str='X'):
+
+    if zg is None:
+        zg = magnetogram.geometry.ZdiGeometry(61)
+
+    if ax is None:
+        fig, ax = plt.subplots(figsize=(10, 4))
 
     polar_centers, azimuth_centers = zg.centers()
     polar_corners, azimuth_corners = zg.corners()
 
     field_centers = getter_fn(polar_centers, azimuth_centers)
 
-    fig, ax = plt.subplots(figsize=(10, 4))
     plot_magnetic_field(ax, azimuth_centers, polar_centers, field_centers,
                         polar_corners=polar_corners, azimuth_corners=azimuth_corners,
                         symmetric=symmetric,
-                        cmap=cmap)
+                        cmap=cmap,
+                        legend_str=legend_str)
 
     abs_field_mean = np.sum(np.abs(field_centers) * zg.areas()) / (4 * np.pi)  # Scaled by area
-    ax.text(1, 0, f"abs mean: {abs_field_mean:.2G} G ",
+    ax.text(1, 0, f"abs mean: {abs_field_mean:.3G} G ",
             transform=ax.transAxes,
             horizontalalignment='right',
             verticalalignment='bottom')
@@ -127,7 +193,8 @@ def plot_magnetic_field(ax,
                         azimuth_centers, polar_centers, field_centers,
                         polar_corners=None, azimuth_corners=None,
                         symmetric=None,
-                        cmap=None):
+                        cmap=None,
+                        legend_str='X'):
     """
     Used by plot_zdi_field to plot magnetic fields, also used by quicklook.py
     :param ax: matplotlib axis on which to plot
@@ -150,7 +217,7 @@ def plot_magnetic_field(ax,
     if symmetric and cmap is None:
         cmap = "RdBu_r"
     elif cmap is None:
-        cmap = "jet"
+        cmap = "viridis"
 
     # Prefer to use corners/centers
     if polar_corners is not None and azimuth_corners is not None:
@@ -185,7 +252,7 @@ def plot_magnetic_field(ax,
         except IndexError:
             collection = zero_contour.collections[0]
         finally:
-            collection.set_label('$B_r=0$ G')
+            collection.set_label(f'${legend_str}=0$ G')
         cb.add_lines(zero_contour)
 
     cb.ax.plot(np.mean(cb.ax.get_xlim()),
@@ -201,7 +268,7 @@ def plot_magnetic_field(ax,
                           colors='k',
                           linestyles='dashed'
                           )
-    contours.collections[0].set_label(r'$\Delta B_r = %g$ G' % (cb.get_ticks()[1] - cb.get_ticks()[0]))
+    contours.collections[0].set_label(fr'$\Delta {legend_str} = %g$ G' % (cb.get_ticks()[1] - cb.get_ticks()[0]))
     cb.add_lines(contours)
 
     ax.xaxis.set_ticks(np.arange(0, 361, 45))
@@ -212,7 +279,7 @@ def plot_magnetic_field(ax,
 
     ax.set_aspect('equal')
 
-    add_range(azimuth_centers, polar_centers, field_centers)
+    add_range(azimuth_centers, polar_centers, field_centers, legend_str)
 
     plt.legend(ncol=2, loc='lower left')
 
@@ -220,7 +287,7 @@ def plot_magnetic_field(ax,
     ax.set_ylabel("Polar angle [deg]")
 
 
-def add_range(azimuth_centers, polar_centers, field):
+def add_range(azimuth_centers, polar_centers, field, legend_str='x'):
     field_max_indices = np.unravel_index(np.argmax(field, axis=None), field.shape)
     field_max_polar = polar_centers[field_max_indices]
     field_max_azimuth = azimuth_centers[field_max_indices]
@@ -232,176 +299,7 @@ def add_range(azimuth_centers, polar_centers, field):
 
     plt.plot(np.rad2deg(field_max_azimuth),
              np.rad2deg(field_max_polar), 'k2',
-             label='Max $B_r=%s$ G' % latex_float(field_max))
+             label=f'Max ${legend_str}={stellarwinds.magnetogram.plots.latex_float(field_max)}$ G')
     plt.plot(np.rad2deg(field_min_azimuth),
              np.rad2deg(field_min_polar), 'k1',
-             label='Min $B_r=%s$ G' % latex_float(field_min))
-
-#
-# # Expand to plot other than radial??
-# def plot_map(zdi_magnetogram, star_name, zg=None):
-#
-#     if zg is None:
-#         zg = magnetogram.geometry.ZdiGeometry(61)
-#
-#     polar_centers, azimuth_centers = zg.centers()
-#
-#     stellarwinds.magnetogram.geometry.numerical_description(zg, zdi_magnetogram)
-#
-#     b_radial = zdi_magnetogram.get_radial_field(polar_centers, azimuth_centers)
-#     b_radial_max_indices = np.unravel_index(np.argmax(b_radial, axis=None), b_radial.shape)
-#     b_radial_max_polar = polar_centers[b_radial_max_indices]
-#     b_radial_max_azimuth = azimuth_centers[b_radial_max_indices]
-#     b_radial_max = b_radial[b_radial_max_indices]
-#
-#     b_radial_min_indices = np.unravel_index(np.argmin(b_radial, axis=None), b_radial.shape)
-#     b_radial_min_polar = polar_centers[b_radial_min_indices]
-#     b_radial_min_azimuth = azimuth_centers[b_radial_min_indices]
-#     b_radial_min = b_radial[b_radial_min_indices]
-#
-#     if np.abs(b_radial_max) > np.abs(b_radial_min):
-#         abs_b_radial_max = np.abs(b_radial_max)
-#         abs_b_radial_max_polar = b_radial_max_polar
-#         abs_b_radial_max_azimuth = b_radial_max_azimuth
-#     else:
-#         abs_b_radial_max = np.abs(b_radial_min)
-#         abs_b_radial_max_polar = b_radial_min_polar
-#         abs_b_radial_max_azimuth = b_radial_min_azimuth
-#
-#     abs_b_radial_mean = np.sum(np.abs(b_radial) * zg.areas()) / (4 * np.pi)  # Scaled by area
-#
-#     log.info("|B_r|_max = %4.4g Gauss" % abs_b_radial_max)
-#     log.info("|B_r|_max at az=%2.2f deg, pl=%3.2f deg" % (np.rad2deg(abs_b_radial_max_azimuth),
-#                                                           np.rad2deg(abs_b_radial_max_polar)))
-#     log.info("|B_r|_mean = %4.4g Gauss" % abs_b_radial_mean)
-#
-#     fig, ax = plt.subplots(figsize=(10, 4))
-#     polar_corners, azimuth_corners = zg.corners()
-#     img1 = ax.pcolormesh(np.rad2deg(azimuth_corners),
-#                          np.rad2deg(polar_corners),
-#                          b_radial,
-#                          vmin=-abs_b_radial_max, vmax=abs_b_radial_max,
-#                          cmap="RdBu_r")
-#     cb = fig.colorbar(img1, ax=ax)
-#
-#     i1 = ax.contour(np.rad2deg(zg.centers()[1]),
-#                     np.rad2deg(zg.centers()[0]),
-#                     b_radial,
-#                     0,
-#                     linewidths=1,
-#                     colors='k',
-#                     )
-#
-#     i1.collections[1].set_label('$B_r=0$ G')  # Even if there is only one line, the collections array has 3 elements.
-#     cb.add_lines(i1)
-#
-#     i2 = ax.contour(np.rad2deg(zg.centers()[1]),
-#                     np.rad2deg(zg.centers()[0]),
-#                     b_radial,
-#                     cb.get_ticks(),
-#                     linewidths=.5,
-#                     colors='k',
-#                     linestyles='dashed'
-#                     )
-#
-#     i2.collections[0].set_label(r'$\Delta B_r = %g$ G' % (cb.get_ticks()[1] - cb.get_ticks()[0]))
-#
-#     # ax.clabel(i2, fmt='%2.1f', colors='k', fontsize=6)
-#     # h2, _ =
-#     # for _id, h2l in enumerate(i2.collections):
-#     #     h2l.set_label(_id)
-#
-#     cb.add_lines(i2)
-#
-#     # _ticks = cb.get_ticks()
-#     if np.abs(b_radial_max) > np.abs(b_radial_min):
-#         cb.ax.axhline(y=b_radial_min, color='y')
-#         _value_to_add = b_radial_min
-#     else:
-#         cb.ax.axhline(y=b_radial_max, color='g')
-#         _value_to_add = b_radial_max
-#
-#     ax.xaxis.set_ticks(np.arange(0, 361, 45))
-#     ax.yaxis.set_ticks(np.arange(0, 181, 30))
-#     plt.grid()
-#
-#     plt.plot(np.rad2deg(b_radial_max_azimuth),
-#              np.rad2deg(b_radial_max_polar), 'g^',
-#              label='Max $B_r=%s$ G' % latex_float(b_radial_max))
-#     plt.plot(np.rad2deg(b_radial_min_azimuth),
-#              np.rad2deg(b_radial_min_polar), 'yv',
-#              label='Min $B_r=%s$ G' % latex_float(b_radial_min))
-#
-#     plt.title(r'%s: $|B_r|_\mathrm{mean}=%4.4g$ G' % (star_name, abs_b_radial_mean))
-#     ax.invert_yaxis()
-#
-#     ## Dipole max
-#     b_radial = zdi_magnetogram.as_dipole().get_radial_field(polar_centers, azimuth_centers)
-#     b_radial_max_indices = np.unravel_index(np.argmax(b_radial, axis=None), b_radial.shape)
-#     b_radial_max_polar = polar_centers[b_radial_max_indices]
-#     b_radial_max_azimuth = azimuth_centers[b_radial_max_indices]
-#     b_radial_max = b_radial[b_radial_max_indices]
-#
-#     b_radial_min_indices = np.unravel_index(np.argmin(b_radial, axis=None), b_radial.shape)
-#     b_radial_min_polar = polar_centers[b_radial_min_indices]
-#     b_radial_min_azimuth = azimuth_centers[b_radial_min_indices]
-#     b_radial_min = b_radial[b_radial_min_indices]
-#
-#     log.info("Dipole polar angle %g deg" % np.rad2deg(np.min([b_radial_max_polar, b_radial_min_polar])))
-#
-#     plt.plot(np.rad2deg(b_radial_max_azimuth, ), np.rad2deg(b_radial_max_polar), 'g^', fillstyle='none', label='Dipole $B_r=%s$ G' % latex_float(b_radial_max))
-#     plt.plot(np.rad2deg(b_radial_min_azimuth, ), np.rad2deg(b_radial_min_polar), 'yv', fillstyle='none', label='Dipole $B_r=%s$ G' % latex_float(b_radial_min))
-#
-#     plt.legend(ncol=3, loc='lower left')
-#
-#     ax.set_aspect('equal')
-#
-#     plt.title(r'%s: $|B_r|_\mathrm{mean}=%4.4g$ G. Dipole at %4.4g deg' % (star_name,
-#                                                                 abs_b_radial_mean,
-#                                                                 np.rad2deg(np.min([b_radial_max_polar, b_radial_min_polar]))))
-#
-#     return fig, ax
-#
-
-#
-# def pole_walk(zdi_magnetogram, geometry=None, ax=None):
-#     """
-#     Plot the "path" of the pole as further degrees of the magnetogram are added. Would expect the pole to "converge"
-#     on a given position. Forget this; the pole walks all over the place
-#     :param zdi_magnetogram:
-#     :param geometry:
-#     :return:
-#     """
-#     if ax is None:
-#         ax = plt.gca()
-#     if geometry is None:
-#         geometry = magnetogram.geometry.ZdiGeometry(128)
-#
-#     polar_centers, azimuth_centers = geometry.centers()
-#
-#     # Dipole max
-#     b_radial_max_polar = []
-#     b_radial_max_azimuth = []
-#     b_radial_min_polar = []
-#     b_radial_min_azimuth = []
-#
-#     for max_degree in range(zdi_magnetogram.degree()):
-#         b_radial = zdi_magnetogram.as_restricted(degree_l_range=(0, max_degree)).get_radial_field(polar_centers, azimuth_centers)
-#         b_radial_max_indices = np.unravel_index(np.argmax(b_radial, axis=None), b_radial.shape)
-#         b_radial_max_polar.append(polar_centers[b_radial_max_indices])
-#         b_radial_max_azimuth.append(azimuth_centers[b_radial_max_indices])
-#         b_radial_max = b_radial[b_radial_max_indices]
-#
-#         b_radial_min_indices = np.unravel_index(np.argmin(b_radial, axis=None), b_radial.shape)
-#         b_radial_min_polar.append(polar_centers[b_radial_min_indices])
-#         b_radial_min_azimuth.append(azimuth_centers[b_radial_min_indices])
-#         b_radial_min = b_radial[b_radial_min_indices]
-#
-#     ax.plot(np.rad2deg(b_radial_max_azimuth, ), np.rad2deg(b_radial_max_polar), 'g:^', label='Max $B_r=%s$ G' % latex_float(b_radial_max))
-#     ax.plot(np.rad2deg(b_radial_min_azimuth, ), np.rad2deg(b_radial_min_polar), 'y:v', label='Min $B_r=%s$ G' % latex_float(b_radial_min))
-#
-#     for i in range(len(b_radial_min_azimuth)):
-#         ax.text(np.rad2deg(b_radial_max_azimuth[i]), np.rad2deg(b_radial_max_polar[i]), str(i))
-#         ax.text(np.rad2deg(b_radial_min_azimuth[i]), np.rad2deg(b_radial_min_polar[i]), str(i))
-#     ax.legend()
-#     return plt.gcf(), ax
+             label=f'Min ${legend_str}={stellarwinds.magnetogram.plots.latex_float(field_min)}$ G')

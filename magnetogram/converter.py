@@ -70,7 +70,7 @@ def map_to_positive_orders(magnetogram):
     return output
 
 
-def read_magnetogram_file(fname, types=("radial",)):
+def read_magnetogram_file(fname, types=("radial", "poloidal", "toroidal")):
     """
     Read zdipy magnetogram file.
     :return:
@@ -114,6 +114,7 @@ def read_magnetogram_file(fname, types=("radial",)):
     line_offset = 0
 
     # Note this is hacky: Only the length of types is really used.
+    # Also, the code should automatically determine whether there is one or three sets of coefficients.
     for coeffs_types in types:
         header_lines = []
 
@@ -163,6 +164,10 @@ def write_magnetogram_file(coeffs, fname, degree_max=None):
 
     if degree_max is None:
         degree_max = coeffs.degree_max
+
+    if coeffs.default_coefficients.shape != (1,):
+        log.error("Can only write radial components")
+        raise NotImplementedError("Can only write radial components")
 
     # TODO This should use .arrays() or .zdi() of the magnetogram.
     with open(fname, 'w') as f:

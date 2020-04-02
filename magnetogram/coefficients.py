@@ -73,10 +73,13 @@ class Coefficients(object):
         return len(self.coefficients.keys())
 
     def __str__(self):
-        str = "Spherical harmonics coefficients:\n"
+        if len(self.coefficients) == 0:
+            return "Empty spherical harmonics coefficients with element like %s." % str(self.default_coefficients)
+
+        str_ = "Spherical harmonics coefficients:\n"
         for degree, order in sorted(self.coefficients):
-            str += "%d, %d, %s\n" % (degree, order, self.get(degree, order))
-        return str
+            str_ += "%d, %d, %s\n" % (degree, order, self.get(degree, order))
+        return str_
 
     def apply_scaling(self, scale_function, power=1):
         """Scale by applying function to each element"""

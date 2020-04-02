@@ -24,7 +24,7 @@ def main():
 
     logging.getLogger("stellarwinds").setLevel(args.log_level)  # Set for entire stellarwinds package.
 
-    coefficients = converter.read_magnetogram_file(args.input_file)
+    coefficients = converter.read_magnetogram_file(args.input_file, )
 
     if args.type == "pfss":
         log.debug("Converting from PFSS scaling to ZDI format.")
@@ -36,11 +36,20 @@ def main():
 
     lz = zdi_magnetogram.from_coefficients(coefficients)
 
+    _star_name = guess_star_name_from_filename(args.input_file)
+
+    _getters = {'radial': (lz.get_radial_field, 'B_r'),
+                'polar': (lz.get_polar_field, r'B_\phi'),
+                'azimuthal': (lz.get_azimuthal_field, r'B_\theta'),
+                'strength': (lz.get_field_strength, '|B|')}
+    _getters['azimuth'] = _getters['azimuthal']
+
     if args.plot_type == 'map':
-        _func = lz.get_radial_field
-        _field_name = " ".join(_func.__name__.split("_")[1:])
-        _star_name = guess_star_name_from_filename(args.input_file)
-        fig, ax = plot_zdi.plot_zdi_field(_func)
+        plot_zdi.plot_zdi_components(lz)
+    elif args.plot_type in _getters:
+        getter, latex_name = _getters[args.plot_type]
+        _field_name = " ".join(getter.__name__.split("_")[1:])
+        fig, ax = plot_zdi.plot_zdi_field(getter, legend_str=latex_name)
         ax.set_title(f"{_star_name} {_field_name}")
     elif args.plot_type == 'spectrum':
         fig, _ = plot_zdi.plot_energy_by_degree(lz)

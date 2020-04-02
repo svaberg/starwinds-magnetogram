@@ -9,6 +9,7 @@ from stellarwinds.magnetogram import plots
 from stellarwinds.magnetogram.geometry import ZdiGeometry
 
 
+#TODO rename this to plot_vector_field or something.
 def plot_equirectangular(coefficients, geometry=None, radius_source_surface=None):
     r"""
     Plot a 2-by-3 arangement of PFSS field components at the stellar surface and

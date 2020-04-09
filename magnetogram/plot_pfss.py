@@ -10,7 +10,7 @@ from stellarwinds.magnetogram.geometry import ZdiGeometry
 
 
 #TODO rename this to plot_vector_field or something.
-def plot_equirectangular(coefficients, geometry=None, radius_source_surface=None):
+def plot_components(coefficients, geometry=None, radius_source_surface=None, axs=None):
     r"""
     Plot a 2-by-3 arangement of PFSS field components at the stellar surface and
     at the source surface.
@@ -26,6 +26,9 @@ def plot_equirectangular(coefficients, geometry=None, radius_source_surface=None
     if radius_source_surface is None:
         radius_source_surface = pfss_magnetogram.default_radius_source_surface
 
+    if axs is None:
+        _, axs = plt.subplots(1, 3, figsize=(12, 5))
+
     #
     # Evaluate magnetic field at coordinates.
     #
@@ -37,43 +40,9 @@ def plot_equirectangular(coefficients, geometry=None, radius_source_surface=None
         radius_star=1,
         radius_source_surface=radius_source_surface)
 
-    Bss = pfss_magnetogram.evaluate_spherical(
-        coefficients,
-        1.5, polar, azimuth,
-        radius_star=1,
-        radius_source_surface=radius_source_surface)
+    plots.plot_components(polar, azimuth, Bs, axs)
 
-    fig, axs_mat = plt.subplots(2, 3, figsize=(12, 5))
-    fig.subplots_adjust(right=0.8)  # Make space for colorbar.
-
-    for ax_row, B, radius in zip(axs_mat, (Bs, Bss), (1, radius_source_surface)):
-        abs_max = np.max(np.abs(B))
-        for component_id in range(len(B)):
-            img = plots.plot_equirectangular(geometry, B[component_id], ax_row[component_id],
-                                             vmin=-abs_max, vmax=abs_max)
-            ax_row[component_id].set_ylabel(None)
-
-        def place_colorbar_axis_right(ax, dx=.22):
-            p0 = ax.get_position().p0
-            p1 = ax.get_position().p1
-
-            cbar_ax = fig.add_axes((p0[0] + dx, p0[1], .01, p1[1]-p0[1]))
-            return cbar_ax
-
-        cax = place_colorbar_axis_right(ax_row[2])
-        fig.colorbar(img, cax=cax)
-
-        ax_row[0].set_title(r"Radial field $B_r$ at $r = %2.1f r_\star$" % radius)
-        ax_row[1].set_title(r"Polar field $B_\theta$ at $r = %2.1f r_\star$" % radius)
-        ax_row[2].set_title(r"Azimuthal field $B_\phi$ at $r = %2.1f r_\star$" % radius)
-
-        ax_row[0].set_ylabel(r"Polar angle $\theta$ [deg]")
-
-        ax_row[0].set_xlabel(r"Azimuth angle $\phi$ [deg]")
-        ax_row[1].set_xlabel(r"Azimuth angle $\phi$ [deg]")
-        ax_row[2].set_xlabel(r"Azimuth angle $\phi$ [deg]")
-
-    return fig, axs_mat
+    return axs[0].figure, axs
 
 
 def plot_slice(coefficients, normal="x", rmax=8,

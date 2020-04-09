@@ -7,10 +7,22 @@ log = logging.getLogger(__name__)
 
 
 class ZdiMagnetogram:
-    """
-    Reference implementation based on equation 5 in Lehmann et al. (2018).
-    Produces same plots as Folsom (2016, 2018) except that the sign of
-    the polar and azimuthal components is always (?) reversed.
+    r"""
+    Reference implementation based on Vidotto et al. (2016) and Lehmann et al. (2018). The coordinates are
+    radial (away from the center), polar (from the north pole towards the south pole) and azimuth (in the direction
+    of rotation).
+
+    The equations are based on equation 5 in Lehmann et al. (2018).
+
+    This produces same plots as Folsom (2018, 2016) and presumably Donati (2006) except that the sign of the polar and
+    azimuthal components is reversed. The reversal happens because Folsom uses phase in place of azimuth and latitude
+    values running from 90 (north pole) to -90 (south pole).
+
+    The terms toroidal and poloidal refer to the Mie representation (Backus et al. 1986). In ZDI, the toroidal field is
+    governed by the $\gamma_{\ell m}$ coefficients (only), while the poloidal field is governed by two sets of
+    coefficients $\alpha_{\ell m}$ and $\beta_{\ell m}$. The $\alpha$ coefficients are called radial and they are a part
+    of the poloidal field. Two sets of coefficients should be enough for the Mie representation, but it is customary in
+    the field to use 3 sets of coefficients as in Donati et al. (2006).
 
     In the ZDI world the B field is represented by radial, azimuthal, and meridional components in that
     order. Note: The  azimuthal B component is not last, but rather in the middle.

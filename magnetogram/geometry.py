@@ -17,8 +17,8 @@ class ZdiGeometry:
             polar_corners = np.linspace(0, np.pi, polar_corners)
             azimuthal_corners = np.linspace(0, 2 * np.pi, 2 * len(polar_corners))
         elif polar_corners is None and azimuthal_corners is None:
-            polar_corners = np.linspace(0, np.pi, 32 + 1)
-            azimuthal_corners = np.linspace(0, 2 * np.pi, 64 + 1)
+            polar_corners = np.linspace(0, np.pi, 64 + 1)
+            azimuthal_corners = np.linspace(0, 2 * np.pi, 2 * len(polar_corners))
 
         # Only go around once.
         assert(np.abs(np.max(polar_corners) - np.min(polar_corners)) <= np.pi)

@@ -7,10 +7,50 @@ from tests import context  # Test context
 
 import stellarwinds.magnetogram.converter as cm
 from stellarwinds.magnetogram import coefficients as shc
-import stellarwinds.magnetogram.zdi_magnetogram as zdi_magnetogram
-import stellarwinds.magnetogram.geometry as zdi_geometry
+from stellarwinds.magnetogram import zdi_magnetogram
+from stellarwinds.magnetogram import pfss_magnetogram
+from stellarwinds.magnetogram import geometry
 
-log = logging.getLogger(__name__)
+from stellarwinds.magnetogram import plots
+
+
+
+def test_conversion():
+    """Test that the radial field matches"""
+    zg = geometry.ZdiGeometry()
+    polar_centers, azimuth_centers = zg.centers()
+
+    coeffs_zdi = shc.Coefficients()
+    # coeffs_zdi.append(1, 0, 1.0+1j)
+    # coeffs_zdi.append(11, 9, 4)
+    # coeffs_zdi.append(1, 1, 1.0)
+    coeffs_zdi.append(1, 1, 4 - 2j)
+
+    Br_zdi = zdi_magnetogram.from_coefficients(coeffs_zdi).get_radial_field(polar_centers, azimuth_centers)
+    Br_zdi = np.flipud(Br_zdi)  # In the plot, this flips left and right. It might have to do with how solar longitude is defined.
+    coeffs_pfss = coeffs_zdi.copy()
+    coeffs_pfss.apply_scaling(cm.forward_conversion_factor)
+    Br_pfss, *_ = pfss_magnetogram.evaluate_spherical(coeffs_pfss, 1, polar_centers, azimuth_centers)
+
+
+    import matplotlib.pyplot as plt
+    _, axs = plt.subplots(3, 1, figsize=(8, 14))
+    for f, ax in zip([Br_zdi, Br_pfss, np.abs(Br_zdi-Br_pfss)], axs):
+        plots.plot_magnetic_field(ax, polar_centers, azimuth_centers, f, legend_str='B_r', )
+        plots.add_extrema(polar_centers, azimuth_centers, f, ax, legend_str='B_r', markers='12')
+        ax.legend()
+
+    axs[0].set_title("ZDI")
+    axs[1].set_title("PFSS")
+    axs[2].set_title("Error")
+    plt.show()
+
+    assert np.allclose(Br_zdi, Br_pfss)
+
+
+
+
+
 
 
 def test_forward_conversion_factor():
@@ -120,7 +160,7 @@ def test_map_to_positive_orders(request):
     with context.PlotNamer(__file__, request.node.name) as (pn, plt):
 
         fig, axs = plt.subplots(1, 2)
-        zg = zdi_geometry.ZdiGeometry()
+        zg = geometry.ZdiGeometry()
 
         for magnetogram, ax in zip((original, cm.map_to_positive_orders(original)), axs):
             degrees, orders, coefficients = magnetogram.as_arrays()
@@ -133,7 +173,7 @@ def test_map_to_positive_orders(request):
 
 
 def compare_values(request, m0, m1):
-    zg = zdi_geometry.ZdiGeometry()
+    zg = geometry.ZdiGeometry()
 
     field_values = get_field_values(zg, m0, m1)
 

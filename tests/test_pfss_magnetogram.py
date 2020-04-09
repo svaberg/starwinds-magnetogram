@@ -118,7 +118,7 @@ def test_plot_pfss_equirectangular(request,
     magnetogram = magnetograms.get_radial(magnetogram_name)
 
     with context.PlotNamer(__file__, request.node.name) as (pn, plt):
-        fig, axs = plot_pfss.plot_equirectangular(magnetogram)
+        fig, axs = plot_pfss.plot_components(magnetogram)
         plt.savefig(pn.get())
         plt.close(fig)
 

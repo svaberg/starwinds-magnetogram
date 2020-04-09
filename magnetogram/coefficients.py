@@ -162,6 +162,8 @@ class Coefficients(object):
 
         return np.asarray(returned_degrees), np.asarray(returned_orders), np.asarray(returned_coefficients)
 
+    def copy(self): return copy(self)
+
     def __add__(self, other): return add(self, other)
 
     def __sub__(self, other): return add(self, multiply(other, -1))
@@ -224,6 +226,18 @@ def empty_like(shc):
     Get empty set of spherical harmonics coefficients with same type of coefficients.
     """
     return Coefficients(shc.default_coefficients)
+
+
+def copy(shc):
+    """
+    Get a deep copy
+    :param shc:
+    :return:
+    """
+    output = empty_like(shc)
+    for (degree, order), coeffs in shc.contents():
+        output.append(degree, order, coeffs)
+    return output
 
 
 def truncated(shc, degree_max):

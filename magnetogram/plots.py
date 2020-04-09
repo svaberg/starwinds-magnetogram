@@ -34,9 +34,55 @@ def plot_equirectangular(geometry, value, ax, vmin=None, vmax=None, cmap='RdBu_r
 
     return img
 
+def place_colorbar_axis_right(ax, dx=.22):
+    p0 = ax.get_position().p0
+    p1 = ax.get_position().p1
+
+    cbar_ax = ax.figure.add_axes((p0[0] + dx, p0[1], .01, p1[1] - p0[1]))
+    return cbar_ax
+
+
+def plot_components(polar_centers, azimuth_centers, field_centers, axs, azimuth_corners=None, polar_corners=None, radius=1):
+    latex_names = ('B_r', r'B_\theta', r'B_\phi')
+    extremum_markers = ('ox', '^v', '<>')
+    # import pdb; pdb.set_trace()
+    abs_max = np.max(np.abs(field_centers))
+    axs[0].figure.subplots_adjust(right=0.8)  # Make space for colorbar.
+    for ax, Bi, latex_name, markers in zip(axs, field_centers, latex_names, extremum_markers):
+        log.debug("Axis " + str(ax))
+
+        img, zero_contour = plot_magnetic_field(ax,
+                                                   polar_centers, azimuth_centers, Bi,
+                                                   polar_corners=polar_corners, azimuth_corners=azimuth_corners,
+                                                   legend_str=latex_name,
+                                                   abs_max=abs_max)
+
+        add_extrema(polar_centers, azimuth_centers, Bi, ax, legend_str=latex_name, markers=markers)
+    cax = place_colorbar_axis_right(ax)
+    cb = ax.figure.colorbar(img, ax=ax, cax=cax)
+    if zero_contour:
+        cb.add_lines(zero_contour)
+    for Bi, markers in zip(field_centers, extremum_markers):
+        cb.ax.plot(np.mean(cb.ax.get_xlim()),
+                   np.max(Bi), color='k', marker=markers[0], linestyle="none", markersize=4, fillstyle='none')
+        cb.ax.plot(np.mean(cb.ax.get_xlim()),
+                   np.min(Bi), color='k', marker=markers[1], linestyle="none", markersize=4, fillstyle='none')
+    # cb=add_colorbar(img, polar_centers, azimuth_centers, field_centers[0], axs[0], zero_contour, legend_str=latex_name, cax=cax)
+    for ax, Bi, latex_name in zip(axs, field_centers, latex_names):
+        add_contours(polar_centers, azimuth_centers, Bi, ax, legend_str=latex_name, cb=cb)
+    for ax in axs:
+        ax.legend(ncol=2, loc='lower left')
+    axs[0].set_title(r"Radial field $B_r$ at $r = %2.1f r_\star$" % radius)
+    axs[1].set_title(r"Polar field $B_\theta$ at $r = %2.1f r_\star$" % radius)
+    axs[2].set_title(r"Azimuthal field $B_\phi$ at $r = %2.1f r_\star$" % radius)
+    axs[0].set_ylabel(r"Polar angle $\theta$ [deg]")
+    for ax in axs:
+        ax.set_xlabel(r"Azimuth angle $\phi$ [deg]")
+    return ax
+
 
 def plot_magnetic_field(ax,
-                        azimuth_centers, polar_centers, field_centers,
+                        polar_centers, azimuth_centers, field_centers,
                         polar_corners=None, azimuth_corners=None,
                         symmetric=None,
                         cmap=None,
@@ -104,8 +150,8 @@ def plot_magnetic_field(ax,
     else:
         zero_contour = None
 
-    # add_colorbar(img, azimuth_centers, polar_centers, field_centers, ax, zero_contour, legend_str)
-    # add_range(azimuth_centers, polar_centers, field_centers, ax, legend_str)
+    # add_colorbar(img, polar_centers, azimuth_centers, field_centers, ax, zero_contour, legend_str)
+    # add_range(polar_centers, azimuth_centers, field_centers, ax, legend_str)
 
     ax.xaxis.set_ticks(np.arange(0, 361, 45))
     ax.yaxis.set_ticks(np.arange(0, 181, 30))
@@ -118,20 +164,7 @@ def plot_magnetic_field(ax,
     return img, zero_contour
 
 
-# def add_colorbar(img1, azimuth_centers, polar_centers, field_centers, ax, zero_contour, legend_str, cax=None, markers='12'):
-#     cb = ax.figure.colorbar(img1, ax=ax, cax=cax)
-#
-#     if zero_contour:
-#         cb.add_lines(zero_contour)
-#     cb.ax.plot(np.mean(cb.ax.get_xlim()),
-#                np.min(field_centers), color='k', marker=markers[0], linestyle="none")
-#     cb.ax.plot(np.mean(cb.ax.get_xlim()),
-#                np.max(field_centers), color='k', marker=markers[0], linestyle="none")
-#
-#     return cb
-
-
-def add_contours(azimuth_centers, polar_centers, field_centers, ax, legend_str, cb):
+def add_contours(polar_centers, azimuth_centers, field_centers, ax, legend_str, cb):
     contours = ax.contour(np.rad2deg(azimuth_centers),
                           np.rad2deg(polar_centers),
                           field_centers,
@@ -144,7 +177,7 @@ def add_contours(azimuth_centers, polar_centers, field_centers, ax, legend_str, 
     cb.add_lines(contours)
 
 
-def add_extrema(azimuth_centers, polar_centers, field, ax, legend_str='x', markers='12'):
+def add_extrema(polar_centers, azimuth_centers, field, ax, legend_str='x', markers='12'):
     field_max_indices = np.unravel_index(np.argmax(field, axis=None), field.shape)
     field_max_polar = polar_centers[field_max_indices]
     field_max_azimuth = azimuth_centers[field_max_indices]

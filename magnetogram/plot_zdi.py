@@ -98,7 +98,7 @@ def plot_energy_by_degree(zc, ax=None):
 
     return ax.figure, ax
 
-def plot_zdi_components(mgm, radius=1, axs=None, zg=None, symmetric=None, cmap=None):
+def plot_zdi_components(mgm, radius=1, axs=None, zg=None, symmetric=None, cmap=None, term=None):
     """
     Plot the 3 components of the magnetic field.
     """
@@ -109,13 +109,20 @@ def plot_zdi_components(mgm, radius=1, axs=None, zg=None, symmetric=None, cmap=N
     if axs is None:
         fig, axs = plt.subplots(1, 3, figsize=(24, 6))
 
-    getter_fns = (mgm.get_radial_field, mgm.get_polar_field, mgm.get_azimuthal_field)
+    if term is None:
+        getter_fns = (mgm.get_radial_field, mgm.get_polar_field, mgm.get_azimuthal_field)
+    elif term is "poloidal":
+        getter_fns = (mgm.get_radial_poloidal_field, mgm.get_polar_poloidal_field, mgm.get_azimuthal_poloidal_field)
+    elif term is "toroidal":
+        getter_fns = (mgm.get_radial_toroidal_field, mgm.get_polar_toroidal_field, mgm.get_azimuthal_toroidal_field)
+    else:
+        raise NotImplementedError(f"Unrecognized term \"{term}\"")
 
     polar_centers, azimuth_centers = zg.centers()
     polar_corners, azimuth_corners = zg.corners()
     Brpa = np.array([g(polar_centers, azimuth_centers) for g in getter_fns])
 
-    ax = stellarwinds.magnetogram.plots. plot_components(polar_centers, azimuth_centers, Brpa, axs, azimuth_corners, polar_corners, radius)
+    ax = stellarwinds.magnetogram.plots.plot_components(polar_centers, azimuth_centers, Brpa, axs, azimuth_corners, polar_corners, radius)
 
     abs_field_mean = np.sum(np.abs(Brpa) * zg.areas()) / (4 * np.pi)  # Scaled by area
     log.debug(f"Mean fiend strength {abs_field_mean:.3G} G")

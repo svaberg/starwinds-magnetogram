@@ -81,12 +81,6 @@ class Coefficients(object):
             str_ += "%d, %d, %s\n" % (degree, order, self.get(degree, order))
         return str_
 
-    def apply_scaling(self, scale_function, power=1):
-        """Scale by applying function to each element"""
-        for (degree, order) in self.coefficients:
-            factor = scale_function(degree, order) ** power
-            self.coefficients[(degree, order)] *= factor
-
     def contents(self):
         def iterator():
             for key in sorted(self.coefficients):
@@ -164,6 +158,8 @@ class Coefficients(object):
 
     def copy(self): return copy(self)
 
+    def scale(self, scale_function, power=1): return scale(self, scale_function, power)
+
     def __add__(self, other): return add(self, other)
 
     def __sub__(self, other): return add(self, multiply(other, -1))
@@ -237,6 +233,18 @@ def copy(shc):
     output = empty_like(shc)
     for (degree, order), coeffs in shc.contents():
         output.append(degree, order, coeffs)
+    return output
+
+
+def scale(shc, scale_function, power=1):
+    """Make a scaled copy of the coefficients. Scale by applying function to each element."""
+
+    output = copy(shc)
+
+    for (degree, order) in shc.coefficients:
+        factor = scale_function(degree, order) ** power
+        output.coefficients[(degree, order)] *= factor
+
     return output
 
 

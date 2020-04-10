@@ -5,17 +5,15 @@ import pytest
 import cmath
 from tests import context  # Test context
 
-import stellarwinds.magnetogram.converter as cm
+from stellarwinds.magnetogram import converter
 from stellarwinds.magnetogram import coefficients as shc
 from stellarwinds.magnetogram import zdi_magnetogram
 from stellarwinds.magnetogram import pfss_magnetogram
 from stellarwinds.magnetogram import geometry
-
 from stellarwinds.magnetogram import plots
 
 
-
-def test_conversion():
+def test_conversion(request):
     """Test that the radial field matches"""
     zg = geometry.ZdiGeometry()
     polar_centers, azimuth_centers = zg.centers()
@@ -28,39 +26,31 @@ def test_conversion():
 
     Br_zdi = zdi_magnetogram.from_coefficients(coeffs_zdi).get_radial_field(polar_centers, azimuth_centers)
     Br_zdi = np.flipud(Br_zdi)  # In the plot, this flips left and right. It might have to do with how solar longitude is defined.
-    coeffs_pfss = coeffs_zdi.copy()
-    coeffs_pfss.apply_scaling(cm.forward_conversion_factor)
+    coeffs_pfss = coeffs_zdi.scale(converter.forward_conversion_factor)
     Br_pfss, *_ = pfss_magnetogram.evaluate_spherical(coeffs_pfss, 1, polar_centers, azimuth_centers)
 
-
-    import matplotlib.pyplot as plt
-    _, axs = plt.subplots(3, 1, figsize=(8, 14))
-    for f, ax in zip([Br_zdi, Br_pfss, np.abs(Br_zdi-Br_pfss)], axs):
-        plots.plot_magnetic_field(ax, polar_centers, azimuth_centers, f, legend_str='B_r', )
-        plots.add_extrema(polar_centers, azimuth_centers, f, ax, legend_str='B_r', markers='12')
-        ax.legend()
-
-    axs[0].set_title("ZDI")
-    axs[1].set_title("PFSS")
-    axs[2].set_title("Error")
-    plt.show()
+    with context.PlotNamer(__file__, request.node.name) as (pn, plt):
+        _, axs = plt.subplots(3, 1, figsize=(8, 14))
+        for f, ax in zip([Br_zdi, Br_pfss, np.abs(Br_zdi-Br_pfss)], axs):
+            plots.plot_magnetic_field(ax, polar_centers, azimuth_centers, f, legend_str='B_r', )
+            plots.add_extrema(polar_centers, azimuth_centers, f, ax, legend_str='B_r', markers='12')
+            ax.legend()
+        axs[0].set_title("ZDI")
+        axs[1].set_title("PFSS")
+        axs[2].set_title("Error")
+        plt.savefig(pn.get())
 
     assert np.allclose(Br_zdi, Br_pfss)
 
 
-
-
-
-
-
 def test_forward_conversion_factor():
-    assert(np.isclose(cm.forward_conversion_factor(0, 0),  (4.0 * np.pi)**(-0.5)))
-    assert(np.isclose(cm.forward_conversion_factor(0, 1), -(8.0 * np.pi)**(-0.5)))
-    assert(np.isclose(cm.forward_conversion_factor(0, 2),  (8.0 * np.pi)**(-0.5)))
-    assert(np.isclose(cm.forward_conversion_factor(0, 3), -(8.0 * np.pi)**(-0.5)))
+    assert(np.isclose(converter.forward_conversion_factor(0, 0),  (4.0 * np.pi)**(-0.5)))
+    assert(np.isclose(converter.forward_conversion_factor(0, 1), -(8.0 * np.pi)**(-0.5)))
+    assert(np.isclose(converter.forward_conversion_factor(0, 2),  (8.0 * np.pi)**(-0.5)))
+    assert(np.isclose(converter.forward_conversion_factor(0, 3), -(8.0 * np.pi)**(-0.5)))
 
-    assert(np.isclose(cm.forward_conversion_factor(0, 98),  (8.0 * np.pi)**(-0.5)))
-    assert(np.isclose(cm.forward_conversion_factor(0, 99), -(8.0 * np.pi)**(-0.5)))
+    assert(np.isclose(converter.forward_conversion_factor(0, 98),  (8.0 * np.pi)**(-0.5)))
+    assert(np.isclose(converter.forward_conversion_factor(0, 99), -(8.0 * np.pi)**(-0.5)))
 
     order_m = np.arange(0, 4)
     degree_l = np.zeros_like(order_m)
@@ -68,7 +58,7 @@ def test_forward_conversion_factor():
                         -(8.0 * np.pi)**(-0.5),
                         (8.0 * np.pi)**(-0.5),
                         -(8.0 * np.pi)**(-0.5)])
-    assert(np.allclose(cm.forward_conversion_factor(degree_l, order_m), expected))
+    assert(np.allclose(converter.forward_conversion_factor(degree_l, order_m), expected))
 
 
 @pytest.mark.parametrize("l", (0, 1, 2, 3, 10, 20))
@@ -77,7 +67,7 @@ def test_independent_implementation(l, m):
     """ Test if I still understand the implementation a few months later."""
     expected_result = ((2*l+1)**.5) * (1/np.sqrt(4*np.pi)) * ((-1)**m / np.sqrt(2-int(m==0)))
 
-    cm_result = cm.forward_conversion_factor(l, m)
+    cm_result = converter.forward_conversion_factor(l, m)
 
     assert(np.isclose(cm_result, expected_result))
 
@@ -109,12 +99,10 @@ def test_read():
     with open(path, 'w') as f:
         f.write(content)
 
-    coeffs = cm.read_magnetogram_file(path)
-
-    coeffs.apply_scaling(cm.forward_conversion_factor)
+    coeffs = converter.read_magnetogram_file(path).scale(converter.forward_conversion_factor)
     radial_coeffs, *_ = shc.hsplit(coeffs)
 
-    cm.write_magnetogram_file(radial_coeffs, fname=context.default_artifact_directory + '/test_field_wso.dat')
+    converter.write_magnetogram_file(radial_coeffs, fname=context.default_artifact_directory + '/test_field_wso.dat')
 
 
 def test_map_to_positive_orders(request):
@@ -128,25 +116,25 @@ def test_map_to_positive_orders(request):
         for order_m in range(-degree_l, degree_l+1):
             original = shc.Coefficients()
             original.append(degree_l, order_m, 1)
-            compare_values(request, original, cm.map_to_positive_orders(original))
+            compare_values(request, original, converter.map_to_positive_orders(original))
 
     for degree_l in range(degree_l_max+1):
         for order_m in range(-degree_l, degree_l+1):
             original = shc.Coefficients()
             original.append(degree_l, order_m, 1+1j)
-            compare_values(request, original, cm.map_to_positive_orders(original))
+            compare_values(request, original, converter.map_to_positive_orders(original))
 
     for degree_l in range(degree_l_max + 1):
         for order_m in range(-degree_l, degree_l + 1):
             original = shc.Coefficients()
             original.append(degree_l, order_m, 3-2j)
-            compare_values(request, original, cm.map_to_positive_orders(original))
+            compare_values(request, original, converter.map_to_positive_orders(original))
 
     original = shc.Coefficients()
     for degree_l in range(degree_l_max + 1):
         for order_m in range(-degree_l, degree_l + 1):
             original.append(degree_l, order_m, 3-2j)
-            compare_values(request, original, cm.map_to_positive_orders(original))
+            compare_values(request, original, converter.map_to_positive_orders(original))
 
     # If this passes it should be correct.
     original = shc.Coefficients()
@@ -155,14 +143,14 @@ def test_map_to_positive_orders(request):
             coeff = np.random.uniform(low=-10, high=10, size=2)
             coeff = coeff[0] + 1j * coeff[1]
             original.append(degree_l, order_m, coeff)
-            compare_values(request, original, cm.map_to_positive_orders(original))
+            compare_values(request, original, converter.map_to_positive_orders(original))
 
     with context.PlotNamer(__file__, request.node.name) as (pn, plt):
 
         fig, axs = plt.subplots(1, 2)
         zg = geometry.ZdiGeometry()
 
-        for magnetogram, ax in zip((original, cm.map_to_positive_orders(original)), axs):
+        for magnetogram, ax in zip((original, converter.map_to_positive_orders(original)), axs):
             degrees, orders, coefficients = magnetogram.as_arrays()
             lz = zdi_magnetogram.ZdiMagnetogram(degrees, orders, coefficients)
             fv = lz.get_radial_field(*zg.centers())
@@ -212,7 +200,7 @@ def get_field_values(zg, *magnetograms):
 def test_collect_cosines():
     r, alpha = np.sqrt(2.0),  np.pi/4
     s, beta =  np.sqrt(2.0), -np.pi/4
-    t, gamma = cm.collect_cosines(r, alpha, s, beta)
+    t, gamma = converter.collect_cosines(r, alpha, s, beta)
 
     m = 3
     theta = np.linspace(0, 2*np.pi, 100)
@@ -229,7 +217,7 @@ def test_collect_cosines():
 
 def test_read_full_magnetogram(input_file="/Users/u1092841/Documents/PHD/toupies-magnetograms-colin/coeff-TYC6349-0200-1.dat"):
     types = ("radial", "poloidal", "toroidal")
-    magnetogram_data = cm.read_magnetogram_file(input_file, types)
+    magnetogram_data = converter.read_magnetogram_file(input_file, types)
 
     coefficients = []
     for type_id, type_name in enumerate(types):

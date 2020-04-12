@@ -3,6 +3,7 @@ import numpy.random
 import logging
 import pytest
 import cmath
+import os.path
 from tests import context  # Test context
 
 from stellarwinds.magnetogram import converter
@@ -72,37 +73,12 @@ def test_independent_implementation(l, m):
     assert(np.isclose(cm_result, expected_result))
 
 
-def test_read():
-    content = r"""General poloidal plus toroidal field
-4 3 -3
- 1  0 1. 1.
- 1  1 1. 1.
- 2  0 1. 1.
- 2  1 1. 1.
- 2  2 1. 1.
+def test_read(zdi_file):
 
- 1  0 100. 101.
- 1  1 110. 111.
- 2  0 200. 201.
- 2  1 210. 211.
- 2  2 220. 221.
-
- 1  0 1000. 1010.
- 1  1 1100. 1110.
- 2  0 2000. 2010.
- 2  1 2100. 2110.
- 2  2 2200. 2210.
- """
-
-    path = context.default_artifact_directory + '/test_field_zdipy.dat'
-
-    with open(path, 'w') as f:
-        f.write(content)
-
-    coeffs = converter.read_magnetogram_file(path).scale(converter.forward_conversion_factor)
+    coeffs = converter.read_magnetogram_file(zdi_file).scale(converter.forward_conversion_factor)
     radial_coeffs, *_ = shc.hsplit(coeffs)
 
-    converter.write_magnetogram_file(radial_coeffs, fname=context.default_artifact_directory + '/test_field_wso.dat')
+    converter.write_magnetogram_file(radial_coeffs, fname=os.path.dirname(zdi_file) + '/test_field_wso.dat')
 
 
 def test_map_to_positive_orders(request):
@@ -215,9 +191,9 @@ def test_collect_cosines():
     assert np.allclose(fc, ft)
 
 
-def test_read_full_magnetogram(input_file="/Users/u1092841/Documents/PHD/toupies-magnetograms-colin/coeff-TYC6349-0200-1.dat"):
+def test_read_full_magnetogram(zdi_file):
     types = ("radial", "poloidal", "toroidal")
-    magnetogram_data = converter.read_magnetogram_file(input_file, types)
+    magnetogram_data = converter.read_magnetogram_file(zdi_file, types)
 
     coefficients = []
     for type_id, type_name in enumerate(types):

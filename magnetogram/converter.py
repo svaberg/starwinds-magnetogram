@@ -70,7 +70,7 @@ def map_to_positive_orders(magnetogram):
     return output
 
 
-def read_magnetogram_file(fname, types=("radial", "poloidal", "toroidal")):
+def read_magnetogram_file(fname, types=None):
     """
     Read zdipy magnetogram file.
     :return:
@@ -94,14 +94,17 @@ def read_magnetogram_file(fname, types=("radial", "poloidal", "toroidal")):
     (...)
     15 15 -2.021262e+01  6.270638e-01
     """
-    _valid_types = (("radial",), ("radial", "poloidal", "toroidal"))
-    _valid = False
-    for _vt in _valid_types:
-        if types == _vt:
-            _valid = True
+    valid_types = (("radial", "poloidal", "toroidal"), ("radial",))
+    if types is None:
+        types = valid_types[0]
 
-    if not _valid:
-        raise KeyError(f"Argument \"types\" was {types}; must be one of {_valid_types}.")
+    valid = False
+    for _vt in valid_types:
+        if types == _vt:
+            valid = True
+
+    if not valid:
+        raise KeyError(f"Argument \"types\" was {types}; must be one of {valid_types}.")
 
     log.debug("Begin reading magnetogram file \"%s\"..." % fname)
     with open(fname) as f:

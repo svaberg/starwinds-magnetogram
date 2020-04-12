@@ -28,7 +28,7 @@ def main():
 
     if args.type == "pfss":
         log.debug("Converting from PFSS scaling to ZDI format.")
-        coefficients.apply_scaling(converter.forward_conversion_factor, -1)
+        coefficients = coefficients.scale(converter.forward_conversion_factor, -1)
     elif args.type == "zdi":
         log.debug("Using ZDI format (native).")
     else:
@@ -45,7 +45,8 @@ def main():
     _getters['azimuth'] = _getters['azimuthal']
 
     if args.plot_type == 'map':
-        plot_zdi.plot_zdi_components(lz)
+        axs = plot_zdi.plot_zdi_components(lz)
+        fig = axs[0].figure
     elif args.plot_type in _getters:
         getter, latex_name = _getters[args.plot_type]
         _field_name = " ".join(getter.__name__.split("_")[1:])

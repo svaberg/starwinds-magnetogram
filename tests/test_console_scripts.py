@@ -19,12 +19,12 @@ def test_magnetogram_scripts(script_runner):
                           "-p matrix",
                           "-p energy",
                           "-y pfss",
-                          "-p polar -v",
-                          "-p strength -v",
-                          "-p polar -v",
-                          "-p azimuthal -v",
-                          "-p azimuth -v",
-                          "-p radial -v",))
+                          "-p polar",
+                          "-p strength",
+                          "-p polar",
+                          "-p azimuthal",
+                          "-p azimuth",
+                          "-p radial",))
 def test_sw_plot_magnetogram(script_runner, options, request, zdi_file):
     pn = context.PlotNamer(__file__, request.node.name)
     ret = script_runner.run('sw-plot-magnetogram', zdi_file, pn.get().replace(' ', ''), *options.split(" "))

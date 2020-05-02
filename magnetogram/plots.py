@@ -134,7 +134,7 @@ def plot_magnetic_field(ax,
                                   np.rad2deg(polar_centers),
                                   field_centers,
                                   0,
-                                  linewidths=1,
+                                  # linewidths=1,
                                   colors='k',
                                   )
 
@@ -164,17 +164,19 @@ def plot_magnetic_field(ax,
     return img, zero_contour
 
 
-def add_contours(polar_centers, azimuth_centers, field_centers, ax, legend_str, cb):
+def add_contours(polar_centers, azimuth_centers, field_centers, ax, legend_str, cb, linestyles='dashed'):
     contours = ax.contour(np.rad2deg(azimuth_centers),
                           np.rad2deg(polar_centers),
                           field_centers,
                           cb.get_ticks(),
                           linewidths=.5,
                           colors='k',
-                          linestyles='dashed'
+                          linestyles=linestyles
                           )
     contours.collections[0].set_label(fr'$\Delta {legend_str} = %g$ G' % (cb.get_ticks()[1] - cb.get_ticks()[0]))
     cb.add_lines(contours)
+    cb.lines[-1].set_linestyle(linestyles)
+
 
 
 def add_extrema(polar_centers, azimuth_centers, field, ax, legend_str='x', markers='12'):
@@ -189,10 +191,10 @@ def add_extrema(polar_centers, azimuth_centers, field, ax, legend_str='x', marke
 
     ax.plot(np.rad2deg(field_max_azimuth),
              np.rad2deg(field_max_polar), color='k', marker=markers[0], linestyle="none", fillstyle='none',
-             label=f'Max ${legend_str}={latex_float(field_max)}$ G')
+             label=f'Max ${legend_str}={latex_float(field_max)}$ G', markersize=2)
     ax.plot(np.rad2deg(field_min_azimuth),
              np.rad2deg(field_min_polar), color='k', marker=markers[1], linestyle="none", fillstyle='none',
-             label=f'Min ${legend_str}={latex_float(field_min)}$ G')
+             label=f'Min ${legend_str}={latex_float(field_min)}$ G', markersize=2)
 
 
 # TODO move to utils or similar.

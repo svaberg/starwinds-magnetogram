@@ -111,9 +111,9 @@ def plot_zdi_components(mgm, radius=1, axs=None, zg=None, symmetric=None, cmap=N
 
     if term is None:
         getter_fns = (mgm.get_radial_field, mgm.get_polar_field, mgm.get_azimuthal_field)
-    elif term is "poloidal":
+    elif term == "poloidal":
         getter_fns = (mgm.get_radial_poloidal_field, mgm.get_polar_poloidal_field, mgm.get_azimuthal_poloidal_field)
-    elif term is "toroidal":
+    elif term == "toroidal":
         getter_fns = (mgm.get_radial_toroidal_field, mgm.get_polar_toroidal_field, mgm.get_azimuthal_toroidal_field)
     else:
         raise NotImplementedError(f"Unrecognized term \"{term}\"")
@@ -144,7 +144,7 @@ def plot_zdi_field(getter_fn, ax=None, zg=None, symmetric=None, cmap=None, legen
         zg = magnetogram.geometry.ZdiGeometry()
 
     if ax is None:
-        fig, ax = plt.subplots(figsize=(10, 4))
+        _, ax = plt.subplots(figsize=(10, 4))
 
     polar_centers, azimuth_centers = zg.centers()
     polar_corners, azimuth_corners = zg.corners()
@@ -164,7 +164,15 @@ def plot_zdi_field(getter_fn, ax=None, zg=None, symmetric=None, cmap=None, legen
 
     # cax = _p.place_colorbar_axis_right(ax)
 
-    cb = ax.figure.colorbar(img, ax=ax)
+    from mpl_toolkits.axes_grid1 import make_axes_locatable
+    # create an axes on the right side of ax. The width of cax will be 5%
+    # of ax and the padding between cax and ax will be fixed at 0.05 inch.
+    divider = make_axes_locatable(ax)
+    cax = divider.append_axes("right", size="3%", pad=0.05)
+
+    cb = plt.colorbar(img, cax=cax)
+
+    # cb = ax.figure.colorbar(img, ax=ax)
     if zero_contour:
         cb.add_lines(zero_contour)
 
@@ -183,5 +191,5 @@ def plot_zdi_field(getter_fn, ax=None, zg=None, symmetric=None, cmap=None, legen
             horizontalalignment='right',
             verticalalignment='bottom')
 
-    return fig, ax
+    return ax.figure, ax
 

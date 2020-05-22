@@ -172,7 +172,7 @@ def test_longitudinal_field_curve(request, magnetogram_name="quadrupole"):
         longitudinal_fields[i] = np.sum(parallel_field * visible_areas) / np.sum(visible_areas)
 
     with context.PlotNamer(__file__, request.node.name) as (pn, plt):
-        polar, azimuth = zg.centers()
+        polar, azimuth = zg.corners()
         fig, axs = plt.subplots(2, 1, sharex=True)
         ax = axs[0]
         img1 = ax.pcolormesh(np.rad2deg(azimuth), np.rad2deg(polar), parallel_field * projected_visible_area_fraction,
@@ -209,12 +209,56 @@ def get_parallel_field(zdi_geometry, zdi_magnetogram, direction):
     fa = zdi_magnetogram.get_azimuthal_field(*zdi_geometry.centers())
 
     px, py, pz = [zdi_geometry.unit_normals()[..., i] for i in range(3)]
-    field_xyz = mmm(fa, fp, fr, px, py, pz)
+
+    field_xyz, *_ = mmm(fa, fp, fr, px, py, pz)
+
+    pr, pp, pa = coordinate_transforms.spherical_coordinates_from_rectangular(px, py, pz)
+    new_field_xyz, *_ = mmm2(fa, fp, fr, pr, pp, pa)
+    assert np.allclose(field_xyz, new_field_xyz)
 
     return np.sum(field_xyz * direction, axis=-1)
 
 
-def mmm(fa, fp, fr, px, py, pz):
+def test_mmm(request, magnetogram_name="mengel"):
+    direction = [0, 1, 1]
+    zdi_geometry = stellarwinds.magnetogram.geometry.ZdiGeometry(64)
+    zdi_magnetogram = stellarwinds.magnetogram.zdi_magnetogram.from_coefficients(magnetograms.get_all(magnetogram_name))
+
+    """
+    Calculate projected magnetic field on the surface facets of the zdi_geometry.
+    To calculate the longitudinal magnetic field this must be averaged over the projected visible surface of each
+    facet.
+    :param zdi_geometry:
+    :param zdi_magnetogram:
+    :param direction: direction vector of projection
+    :return:
+    """
+    # Field components in spherical coordinates
+    fr = zdi_magnetogram.get_radial_field(*zdi_geometry.centers())
+    fp = zdi_magnetogram.get_polar_field(*zdi_geometry.centers())
+    fa = zdi_magnetogram.get_azimuthal_field(*zdi_geometry.centers())
+
+    observer_polar = np.deg2rad(60)
+    observer_azimuths = np.deg2rad(np.linspace(0, 360, 20))
+    longitudinal_fields = np.empty_like(observer_azimuths)
+
+    for i, observer_azimuth in enumerate(observer_azimuths):
+        observer_direction = np.array(
+            coordinate_transforms.rectangular_coordinates_from_spherical(1, observer_polar, observer_azimuth))
+
+        px, py, pz = [zdi_geometry.unit_normals()[..., i] for i in range(3)]
+        fxyz, frpa, t = mmm(fr, fp, fa, px, py, pz)
+
+        pr, pp, pa = coordinate_transforms.spherical_coordinates_from_rectangular(px, py, pz)
+        fxyz2, frpa2, t2 = mmm2(fr, fp, fa, pr, pp, pa)
+
+        assert np.allclose(t, t2)
+        assert np.allclose(frpa, frpa2)
+        assert np.allclose(fxyz, fxyz2)
+
+
+
+def mmm(fr, fp, fa, px, py, pz):
     pr, pp, pa = coordinate_transforms.spherical_coordinates_from_rectangular(px, py, pz)
     assert pr.shape == px.shape, "Expected matching shapes"
     assert pp.shape == px.shape, "Expected matching shapes"
@@ -232,4 +276,21 @@ def mmm(fa, fp, fr, px, py, pz):
     assert field_xyz.shape[-1] == 1, "Expected last dimension size to be 1"
     assert field_xyz.shape[-2] == 3, "Expected second last dimension size to be 3"
     field_xyz = field_xyz[..., 0].reshape(px.shape + (3,))
-    return field_xyz
+    return field_xyz, field_rpa, transformation_matrix
+
+
+def mmm2(fr, fp, fa, pr, pp, pa):
+    assert fr.shape == pr.shape, "Expected matching shapes"
+    assert fp.shape == pr.shape, "Expected matching shapes"
+    assert fa.shape == pr.shape, "Expected matching shapes"
+    # To carry out the transformation, flatten the polar coordinate arrays and stack them
+    # calculate the transformation matrix, and apply it to the stack field_rpa.
+    field_rpa = np.stack([c.flatten() for c in (fr, fp, fa)], axis=-1)
+    transformation_matrix = coordinate_transforms.spherical_to_rectangular_transformation_matrix(pp.flatten(),
+                                                                                                 pa.flatten())
+    field_xyz = transformation_matrix @ field_rpa[:, :, np.newaxis]
+    # Get rid of last dimension which is has length 1
+    assert field_xyz.shape[-1] == 1, "Expected last dimension size to be 1"
+    assert field_xyz.shape[-2] == 3, "Expected second last dimension size to be 3"
+    field_xyz = field_xyz[..., 0].reshape(pr.shape + (3,))
+    return field_xyz, field_rpa, transformation_matrix

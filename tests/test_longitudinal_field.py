@@ -210,10 +210,10 @@ def get_parallel_field(zdi_geometry, zdi_magnetogram, direction):
 
     px, py, pz = [zdi_geometry.unit_normals()[..., i] for i in range(3)]
 
-    field_xyz, *_ = mmm(fa, fp, fr, px, py, pz)
+    field_xyz, *_ = mmm(fr, fp, fa, px, py, pz)
 
     pr, pp, pa = coordinate_transforms.spherical_coordinates_from_rectangular(px, py, pz)
-    new_field_xyz, *_ = mmm2(fa, fp, fr, pr, pp, pa)
+    new_field_xyz, *_ = mmm2(fr, fp, fa, pr, pp, pa)
     assert np.allclose(field_xyz, new_field_xyz)
 
     return np.sum(field_xyz * direction, axis=-1)

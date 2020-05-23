@@ -5,6 +5,8 @@ import scipy.special
 import logging
 log = logging.getLogger(__name__)
 
+from stellarwinds import coordinate_transforms
+
 
 class ZdiMagnetogram:
     r"""
@@ -398,6 +400,39 @@ class ZdiMagnetogram:
 
             return dp_du * du_dtheta
 
+    def get_cartesian_field(self, points_polar, points_azimuth):
+        """
+        Get full field in cartesian coordinates.
+        """
+        # Field components in spherical coordinates
+        frpa = [self.get_radial_field(points_polar, points_azimuth),
+                self.get_polar_field(points_polar, points_azimuth),
+                self.get_azimuthal_field(points_polar, points_azimuth)]
+
+        return _cartesian_from_spherical_helper(*frpa, points_polar, points_azimuth)
+
+    def get_cartesian_poloidal_field(self, points_polar, points_azimuth):
+        """
+        Get poloidal field in cartesian coordinates.
+        """
+        # Field components in spherical coordinates
+        frpa = [self.get_radial_poloidal_field(points_polar, points_azimuth),
+                self.get_polar_poloidal_field(points_polar, points_azimuth),
+                self.get_azimuthal_poloidal_field(points_polar, points_azimuth)]
+
+        return _cartesian_from_spherical_helper(*frpa, points_polar, points_azimuth)
+
+    def get_cartesian_toroidal_field(self, points_polar, points_azimuth):
+        """
+        Get toroidal field in cartesian coordinates.
+        """
+        # Field components in spherical coordinates
+        frpa = [self.get_radial_toroidal_field(points_polar, points_azimuth),
+                self.get_polar_toroidal_field(points_polar, points_azimuth),
+                self.get_azimuthal_toroidal_field(points_polar, points_azimuth)]
+
+        return _cartesian_from_spherical_helper(*frpa, points_polar, points_azimuth)
+
 
 def from_coefficients(shc,
                       dpml_method="gradient",  # For testing
@@ -413,4 +448,21 @@ def from_coefficients(shc,
     split_coeffs = [coeffs_lm[:, _id] for _id in range(coeffs_lm.shape[1])]
 
     return ZdiMagnetogram(degree_l, order_m, *split_coeffs, dpml_method=dpml_method)
+
+
+def _cartesian_from_spherical_helper(fr, fp, fa, pp, pa):
+    assert fr.shape == pp.shape, "Expected matching shapes"
+    assert fp.shape == pp.shape, "Expected matching shapes"
+    assert fa.shape == pp.shape, "Expected matching shapes"
+    # To carry out the transformation, flatten the polar coordinate arrays and stack them
+    # calculate the transformation matrix, and apply it to the stack field_rpa.
+    field_rpa = np.stack([c.flatten() for c in (fr, fp, fa)], axis=-1)
+    transformation_matrix = coordinate_transforms.spherical_to_rectangular_transformation_matrix(pp.flatten(),
+                                                                                                 pa.flatten())
+    field_xyz = transformation_matrix @ field_rpa[:, :, np.newaxis]
+    # Get rid of last dimension which is has length 1
+    assert field_xyz.shape[-1] == 1, "Expected last dimension size to be 1"
+    assert field_xyz.shape[-2] == 3, "Expected second last dimension size to be 3"
+    field_xyz = field_xyz[..., 0].reshape(pp.shape + (3,))
+    return field_xyz
 

@@ -15,6 +15,8 @@ import stellarwinds.magnetogram.zdi_magnetogram
 import stellarwinds.magnetogram.geometry
 from stellarwinds.magnetogram import plots
 from stellarwinds import coordinate_transforms
+from stellarwinds.magnetogram import longitudinal_field
+from stellarwinds.magnetogram import coefficients as shc
 import pytest
 
 
@@ -80,7 +82,9 @@ def test_parallel_field(request, magnetogram_name="mengel"):
 
     lz = stellarwinds.magnetogram.zdi_magnetogram.from_coefficients(magnetograms.get_all(magnetogram_name))
 
-    parallel_field = get_parallel_field(zg, lz, observer_direction)
+    field_xyz = lz.get_cartesian_field(*zg.centers())
+
+    parallel_field = np.sum(field_xyz * observer_direction, axis=-1)
 
     # Average field over entire surface (including backside). This does not average out to 0.
     average_proj_field = np.sum(zg.areas() * parallel_field) / np.sum(zg.areas())
@@ -111,7 +115,8 @@ def test_longitudinal_field(request, magnetogram_name="mengel"):
 
     lz = stellarwinds.magnetogram.zdi_magnetogram.from_coefficients(magnetograms.get_all(magnetogram_name))
 
-    parallel_field = get_parallel_field(zg, lz, observer_direction)
+    field_xyz = lz.get_cartesian_field(*zg.centers())
+    parallel_field = np.sum(field_xyz * observer_direction, axis=-1)
     projected_visible_area_fraction = zg.projected_visible_area_fraction(observer_direction)
     visible_areas = zg.areas() * projected_visible_area_fraction
 
@@ -149,30 +154,36 @@ def test_longitudinal_field(request, magnetogram_name="mengel"):
         plt.savefig(pn.get())
 
 
-def test_longitudinal_field_curve(request, magnetogram_name="quadrupole"):
-
-    zg = stellarwinds.magnetogram.geometry.ZdiGeometry(64)
-    lz = stellarwinds.magnetogram.zdi_magnetogram.from_coefficients(magnetograms.get_all(magnetogram_name))
+def test_longitudinal_field_curve(request, magnetogram_name="mengel"):
 
     observer_polar = np.deg2rad(50)
 
+    zdi_geometry = stellarwinds.magnetogram.geometry.ZdiGeometry(64)
+    zdi_magnetogram = stellarwinds.magnetogram.zdi_magnetogram.from_coefficients(magnetograms.get_all(magnetogram_name))
+
     observer_azimuths = np.deg2rad(np.linspace(0, 360, 20))
+
+
     longitudinal_fields = np.empty_like(observer_azimuths)
 
-    areas = zg.areas()
+    areas = zdi_geometry.areas()
+
+    field_xyz = zdi_magnetogram.get_cartesian_field(*zdi_geometry.centers())
 
     for i, observer_azimuth in enumerate(observer_azimuths):
         observer_direction = np.array(
             coordinate_transforms.rectangular_coordinates_from_spherical(1, observer_polar, observer_azimuth))
 
-        parallel_field = get_parallel_field(zg, lz, observer_direction)
-        projected_visible_area_fraction = zg.projected_visible_area_fraction(observer_direction)
+        parallel_field = np.sum(field_xyz * observer_direction, axis=-1)
+        projected_visible_area_fraction = zdi_geometry.projected_visible_area_fraction(observer_direction)
         visible_areas = areas * projected_visible_area_fraction
 
         longitudinal_fields[i] = np.sum(parallel_field * visible_areas) / np.sum(visible_areas)
 
+    assert np.allclose(longitudinal_field.get_longitudinal_field_curve(zdi_geometry, zdi_magnetogram, observer_polar,observer_azimuths), longitudinal_fields)
+
     with context.PlotNamer(__file__, request.node.name) as (pn, plt):
-        polar, azimuth = zg.corners()
+        polar, azimuth = zdi_geometry.corners()
         fig, axs = plt.subplots(2, 1, sharex=True)
         ax = axs[0]
         img1 = ax.pcolormesh(np.rad2deg(azimuth), np.rad2deg(polar), parallel_field * projected_visible_area_fraction,
@@ -189,108 +200,95 @@ def test_longitudinal_field_curve(request, magnetogram_name="quadrupole"):
         ax.grid()
         ax = axs[1]
         ax.plot(np.rad2deg(observer_azimuths), longitudinal_fields)
+        ax.axhline(np.mean(longitudinal_fields))
+        # ax.axhline(0, color='k')
+        max_ampl = np.max(np.abs(longitudinal_fields))
+        ax.set_ylim(np.array([-1, 1]) * max_ampl * 1.1)
         ax.grid(True)
         plt.savefig(pn.get())
 
 
-def get_parallel_field(zdi_geometry, zdi_magnetogram, direction):
-    """
-    Calculate projected magnetic field on the surface facets of the zdi_geometry.
-    To calculate the longitudinal magnetic field this must be averaged over the projected visible surface of each
-    facet.
-    :param zdi_geometry:
-    :param zdi_magnetogram:
-    :param direction: direction vector of projection
-    :return:
-    """
-    # Field components in spherical coordinates
-    fr = zdi_magnetogram.get_radial_field(*zdi_geometry.centers())
-    fp = zdi_magnetogram.get_polar_field(*zdi_geometry.centers())
-    fa = zdi_magnetogram.get_azimuthal_field(*zdi_geometry.centers())
+def test_polar_view(request, magnetogram_name="mengel"):
 
-    px, py, pz = [zdi_geometry.unit_normals()[..., i] for i in range(3)]
+    observer_polar = np.deg2rad(0)
 
-    field_xyz, *_ = mmm(fr, fp, fa, px, py, pz)
-
-    pr, pp, pa = coordinate_transforms.spherical_coordinates_from_rectangular(px, py, pz)
-    new_field_xyz, *_ = mmm2(fr, fp, fa, pr, pp, pa)
-    assert np.allclose(field_xyz, new_field_xyz)
-
-    return np.sum(field_xyz * direction, axis=-1)
-
-
-def test_mmm(request, magnetogram_name="mengel"):
-    direction = [0, 1, 1]
     zdi_geometry = stellarwinds.magnetogram.geometry.ZdiGeometry(64)
     zdi_magnetogram = stellarwinds.magnetogram.zdi_magnetogram.from_coefficients(magnetograms.get_all(magnetogram_name))
 
-    """
-    Calculate projected magnetic field on the surface facets of the zdi_geometry.
-    To calculate the longitudinal magnetic field this must be averaged over the projected visible surface of each
-    facet.
-    :param zdi_geometry:
-    :param zdi_magnetogram:
-    :param direction: direction vector of projection
-    :return:
-    """
-    # Field components in spherical coordinates
-    fr = zdi_magnetogram.get_radial_field(*zdi_geometry.centers())
-    fp = zdi_magnetogram.get_polar_field(*zdi_geometry.centers())
-    fa = zdi_magnetogram.get_azimuthal_field(*zdi_geometry.centers())
+    lf = longitudinal_field.get_longitudinal_field_curve(zdi_geometry, zdi_magnetogram, observer_polar)
 
-    observer_polar = np.deg2rad(60)
-    observer_azimuths = np.deg2rad(np.linspace(0, 360, 20))
-    longitudinal_fields = np.empty_like(observer_azimuths)
+    avg_lf = np.mean(lf)
 
-    for i, observer_azimuth in enumerate(observer_azimuths):
-        observer_direction = np.array(
-            coordinate_transforms.rectangular_coordinates_from_spherical(1, observer_polar, observer_azimuth))
-
-        px, py, pz = [zdi_geometry.unit_normals()[..., i] for i in range(3)]
-        fxyz, frpa, t = mmm(fr, fp, fa, px, py, pz)
-
-        pr, pp, pa = coordinate_transforms.spherical_coordinates_from_rectangular(px, py, pz)
-        fxyz2, frpa2, t2 = mmm2(fr, fp, fa, pr, pp, pa)
-
-        assert np.allclose(t, t2)
-        assert np.allclose(frpa, frpa2)
-        assert np.allclose(fxyz, fxyz2)
+    assert np.allclose(lf, avg_lf)
 
 
+def test_poloidal(request, magnetogram_name="mengel"):
 
-def mmm(fr, fp, fa, px, py, pz):
-    pr, pp, pa = coordinate_transforms.spherical_coordinates_from_rectangular(px, py, pz)
-    assert pr.shape == px.shape, "Expected matching shapes"
-    assert pp.shape == px.shape, "Expected matching shapes"
-    assert pa.shape == px.shape, "Expected matching shapes"
-    assert fr.shape == pr.shape, "Expected matching shapes"
-    assert fp.shape == pr.shape, "Expected matching shapes"
-    assert fa.shape == pr.shape, "Expected matching shapes"
-    # To carry out the transformation, flatten the polar coordinate arrays and stack them
-    # calculate the transformation matrix, and apply it to the stack field_rpa.
-    field_rpa = np.stack([c.flatten() for c in (fr, fp, fa)], axis=-1)
-    transformation_matrix = coordinate_transforms.spherical_to_rectangular_transformation_matrix(pp.flatten(),
-                                                                                                 pa.flatten())
-    field_xyz = transformation_matrix @ field_rpa[:, :, np.newaxis]
-    # Get rid of last dimension which is has length 1
-    assert field_xyz.shape[-1] == 1, "Expected last dimension size to be 1"
-    assert field_xyz.shape[-2] == 3, "Expected second last dimension size to be 3"
-    field_xyz = field_xyz[..., 0].reshape(px.shape + (3,))
-    return field_xyz, field_rpa, transformation_matrix
+    observer_polar = np.deg2rad(10)
+    zdi_geometry = stellarwinds.magnetogram.geometry.ZdiGeometry(256)
+
+    coefficients = shc.Coefficients(np.zeros(3, dtype=complex))
+    # coefficients.append(13, 7, np.array([1e6+0.0j, 0.0+0.0j, 1.0e6+0.0j]))
+    # coefficients.append(11, 8, np.array([0.0+0.0j, 0.0+0.0j, 1.0e6+0.0j]))
+    coefficients.append(3, 2, np.array([0.0+0.0j, 0.0+0.0j, 0.0+1.0j]))
+    zdi_magnetogram = stellarwinds.magnetogram.zdi_magnetogram.from_coefficients(coefficients)
+
+    # lf = longitudinal_field.get_longitudinal_field_curve(zdi_geometry, zdi_magnetogram, observer_polar)
+    #
+    # avg_lf = np.mean(lf)
+
+    with context.PlotNamer(__file__, request.node.name) as (pn, plt):
+        fig, ax = plt.subplots()
+
+        longitudinal_field.plot_longitudinal_field_curve(ax, zdi_geometry, zdi_magnetogram, observer_polar)
+
+        plt.savefig(pn.get())
+
+    # assert np.allclose(lf, 0)
 
 
-def mmm2(fr, fp, fa, pr, pp, pa):
-    assert fr.shape == pr.shape, "Expected matching shapes"
-    assert fp.shape == pr.shape, "Expected matching shapes"
-    assert fa.shape == pr.shape, "Expected matching shapes"
-    # To carry out the transformation, flatten the polar coordinate arrays and stack them
-    # calculate the transformation matrix, and apply it to the stack field_rpa.
-    field_rpa = np.stack([c.flatten() for c in (fr, fp, fa)], axis=-1)
-    transformation_matrix = coordinate_transforms.spherical_to_rectangular_transformation_matrix(pp.flatten(),
-                                                                                                 pa.flatten())
-    field_xyz = transformation_matrix @ field_rpa[:, :, np.newaxis]
-    # Get rid of last dimension which is has length 1
-    assert field_xyz.shape[-1] == 1, "Expected last dimension size to be 1"
-    assert field_xyz.shape[-2] == 3, "Expected second last dimension size to be 3"
-    field_xyz = field_xyz[..., 0].reshape(pr.shape + (3,))
-    return field_xyz, field_rpa, transformation_matrix
+def test_plot_longitudinal_field(request, magnetogram_name="mengel"):
+    """Why is the toroidal component of the mengel magnetogram so close to zero??"""
+    observer_polar = np.deg2rad(30)
+
+    zdi_geometry = stellarwinds.magnetogram.geometry.ZdiGeometry(64)
+    zdi_magnetogram = stellarwinds.magnetogram.zdi_magnetogram.from_coefficients(magnetograms.get_all(magnetogram_name))
+
+    with context.PlotNamer(__file__, request.node.name) as (pn, plt):
+        fig, ax = plt.subplots()
+
+        longitudinal_field.plot_longitudinal_field_curve(ax, zdi_geometry, zdi_magnetogram, observer_polar)
+
+        plt.savefig(pn.get())
+
+
+def test_plot_longitudinal_field2(request, magnetogram_name="mengel"):
+    """Why is the toroidal component of the mengel magnetogram so close to zero??"""
+    observer_polar = np.deg2rad(30)
+
+    zdi_geometry = stellarwinds.magnetogram.geometry.ZdiGeometry(64)
+    zdi_magnetogram = stellarwinds.magnetogram.zdi_magnetogram.from_coefficients(magnetograms.get_all(magnetogram_name))
+
+    with context.PlotNamer(__file__, request.node.name) as (pn, plt):
+        fig, axs = plt.subplots(1, 2)
+
+        observer_azimuths = np.deg2rad(np.linspace(0, 360, 8 * zdi_magnetogram.degree()))
+
+        lf_pol = longitudinal_field.get_longitudinal_field_curve(zdi_geometry, zdi_magnetogram, observer_polar, observer_azimuths,
+                                              field="poloidal")
+        lf_tor = longitudinal_field.get_longitudinal_field_curve(zdi_geometry, zdi_magnetogram, observer_polar, observer_azimuths,
+                                              field="toroidal")
+
+        axs[0].plot(np.rad2deg(observer_azimuths), lf_pol, '--', label="poloidal")
+        axs[1].plot(np.rad2deg(observer_azimuths), lf_tor, '--', label="toroidal")
+
+        for ax in axs:
+
+            plt.draw()
+            max_ampl = np.max(np.abs(ax.get_ylim()))
+            ax.set_ylim(np.array([-1, 1]) * max_ampl)
+            ax.grid(True)
+            ax.legend()
+
+        plt.savefig(pn.get())
+

@@ -236,7 +236,8 @@ def test_alfven_shape(request):
                 norm = mpl.colors.SymLogNorm(linthresh=100 * bmin,
                                              linscale=1,
                                              vmin=-bmax,
-                                             vmax=bmax)
+                                             vmax=bmax,
+                                             base=10)
                 im = ax.pcolormesh(p1, p2, fr,
                                    norm=norm,
                                    cmap='RdBu_r'
@@ -325,7 +326,8 @@ def test_alfven_shape_simple(request):
         norm = mpl.colors.SymLogNorm(linthresh=100 * bmin,
                                      linscale=1,
                                      vmin=-bmax,
-                                     vmax=bmax)
+                                     vmax=bmax,
+                                     base=10)
         # im = ax.pcolormesh(p1, p2, fr,
         #                    norm=norm,
         #                    cmap='RdBu_r'
@@ -481,7 +483,8 @@ def test_alfven_slice(request,
             norm = mpl.colors.SymLogNorm(linthresh=100 * bmin,
                                          linscale=1,
                                          vmin=-bmax,
-                                         vmax=bmax)
+                                         vmax=bmax,
+                                         base=10)
 
             im = ax.pcolormesh(p1, p2, fr,
                                norm=norm,

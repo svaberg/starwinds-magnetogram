@@ -26,6 +26,10 @@ class ZdiGeometry:
 
         self.polar_corners, self.azimuthal_corners = np.meshgrid(polar_corners, azimuthal_corners)
 
+    @property
+    def shape(self):
+        return self.polar_corners.shape
+
     def corners(self):
         """Facet corner polar coordinates (polar, azimuth)"""
         return self.polar_corners, self.azimuthal_corners
@@ -70,12 +74,16 @@ class ZdiGeometry:
     def projected_visible_area_fraction(self, projection_direction):
         """
         Calculate each facet's projected visible area divided by its total area.
-        Invisible facets have zero projected visible area.
+        Obscured facets have zero projected visible area.
         :param projection_direction: direction of the projection
         :return:
         """
-        proj_dir_length = np.sum(projection_direction ** 2) ** .5
+        proj_dir_length = np.sum(projection_direction ** 2) ** .5  # Length of projection_direction
+
+        # Calculate dot product of unit projection direction and unit surface normals.
         proj_area_frac = np.sum((projection_direction / proj_dir_length) * self.unit_normals(), axis=-1)
+
+        # Set obscured faces (faces with negative dot product) to zero.
         return np.where(proj_area_frac > 0, proj_area_frac, 0)
 
 

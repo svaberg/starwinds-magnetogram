@@ -135,9 +135,6 @@ def plot_zdi_components(mgm, radius=1, axs=None, zg=None, symmetric=None, cmap=N
     return axs
 
 
-
-# Expand to plot other than radial??
-# TODO This is a hack to get field strength quickly to match the plots in the kappa Ceti paper.
 def plot_zdi_field(getter_fn, ax=None, zg=None, symmetric=None, cmap=None, legend_str='X'):
 
     if zg is None:
@@ -193,3 +190,66 @@ def plot_zdi_field(getter_fn, ax=None, zg=None, symmetric=None, cmap=None, legen
 
     return ax.figure, ax
 
+
+def plot_streamtraces(mgm, geometry=None, ax=None):
+    """Plot streamtraces and field strength"""
+
+    if geometry is None:
+        geometry = magnetogram.geometry.ZdiGeometry()
+
+    polar, azimuth = geometry.centers()
+
+    polar_centers, azimuth_centers = geometry.centers()
+
+    B_radial = mgm.get_radial_field(polar_centers, azimuth_centers)
+    B_polar = mgm.get_polar_field(polar_centers, azimuth_centers)
+    B_azimuthal = mgm.get_azimuthal_field(polar_centers, azimuth_centers)
+    B_mag = mgm.get_field_strength(polar_centers, azimuth_centers)
+
+    B_tangential_mag = np.sqrt(B_polar ** 2 + B_azimuthal ** 2)
+
+    if ax is None:
+        _, ax = plt.subplots(figsize=(18, 6))
+
+    img = stellarwinds.magnetogram.plots.plot_equirectangular(geometry, B_mag, ax,
+                               vmin=0, cmap='viridis')
+
+    c = plt.colorbar(img, ax=ax)#, extend='both')
+    c.set_label("Field strength")
+    # c.set_clim(vmin=-180, vmax=180)
+    # c.set_ticks((-180, -120, -60, 0, 60, 120, 180), update_ticks=True)
+
+    _s = ax.streamplot(np.rad2deg(azimuth.T),
+                        np.rad2deg(polar.T),
+                        B_azimuthal.T, B_polar.T, density=[2, 1],
+                        # color=B_radial.T,
+                        color=(0, 0, 0, .5),
+                        linewidth=3 * B_tangential_mag.T / B_tangential_mag.max(),
+                        # norm=Normalize(-15, 15),
+                        )
+
+    # Draw zero contour
+    legend_items = []
+    legend_strs = []
+    if False:
+        _br = ax.contour(180 / np.pi * azimuth.T, 180 / np.pi * polar.T, B_radial.T, levels=[0], colors=('b',), linewidths=1)
+        _bp = ax.contour(180 / np.pi * azimuth.T, 180 / np.pi * polar.T, B_polar.T, levels=[0], colors=('g',), linewidths=1)
+        _ba = ax.contour(180 / np.pi * azimuth.T, 180 / np.pi * polar.T, B_azimuthal.T, levels=[0], colors=('r',), linewidths=1)
+
+        legend_items += [_br.collections[0], _bp.collections[0], _ba.collections[0]]
+        legend_strs += [r"Radial $B_r = 0$", r"Polar $B_\theta = 0$", r"Azimuth $B_\phi = 0$"]
+
+    if True:
+        from matplotlib.lines import Line2D
+        from matplotlib.ticker import MaxNLocator
+
+        locator = MaxNLocator(nbins=3, prune="lower")
+        line_values = locator.tick_values(np.min(B_tangential_mag), np.max(B_tangential_mag))
+        line_thicknesses = 3 * line_values / np.max(line_values)
+
+        legend_items += [Line2D([0], [0], color='k', lw=l) for l in line_thicknesses]
+        legend_strs += ["$B_\perp=%4.1f$" % x for x in line_values]
+
+    ax.legend(legend_items, legend_strs)
+
+    return ax

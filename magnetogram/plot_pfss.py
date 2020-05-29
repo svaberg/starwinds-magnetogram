@@ -76,7 +76,8 @@ def plot_slice(coefficients, normal="x", rmax=8,
     norm = colors.SymLogNorm(linthresh=100 * fmin,
                              linscale=1,
                              vmin=-fmax,
-                             vmax=fmax)
+                             vmax=fmax,
+                             base=10)
     im = ax.pcolormesh(p1, p2, np.squeeze(fr),
                        norm=norm,
                        cmap='RdBu_r')

@@ -308,37 +308,3 @@ def test_plot_longitudinal_field(request, magnetogram_name="mengel"):
         longitudinal_field.plot_longitudinal_field_curve(ax, zdi_geometry, zdi_magnetogram, observer_polar)
 
         plt.savefig(pn.get())
-
-
-@pytest.mark.parametrize("magnetogram_name", ("mengel",))
-@pytest.mark.parametrize("zg_size", (32, 64, 128))
-def test_plot_longitudinal_field2(request, magnetogram_name, zg_size):
-    """Why is the toroidal component of the mengel magnetogram so close to zero??"""
-    observer_polar = np.deg2rad(30)
-
-    zdi_geometry = stellarwinds.magnetogram.geometry.ZdiGeometry(zg_size)
-    zdi_magnetogram = stellarwinds.magnetogram.zdi_magnetogram.from_coefficients(magnetograms.get_all(magnetogram_name))
-
-    with context.PlotNamer(__file__, request.node.name) as (pn, plt):
-        fig, axs = plt.subplots(1, 2)
-
-        observer_azimuths = np.deg2rad(np.linspace(0, 360, 8 * zdi_magnetogram.degree()))
-
-        lf_pol = longitudinal_field.get_longitudinal_field_curve(zdi_geometry, zdi_magnetogram, observer_polar, observer_azimuths,
-                                              field="poloidal")
-        lf_tor = longitudinal_field.get_longitudinal_field_curve(zdi_geometry, zdi_magnetogram, observer_polar, observer_azimuths,
-                                              field="toroidal")
-
-        axs[0].plot(np.rad2deg(observer_azimuths), lf_pol, '--', label="poloidal")
-        axs[1].plot(np.rad2deg(observer_azimuths), lf_tor, '--', label="toroidal")
-
-        for ax in axs:
-
-            plt.draw()
-            max_ampl = np.max(np.abs(ax.get_ylim()))
-            ax.set_ylim(np.array([-1, 1]) * max_ampl)
-            ax.grid(True)
-            ax.legend()
-
-        plt.savefig(pn.get())
-

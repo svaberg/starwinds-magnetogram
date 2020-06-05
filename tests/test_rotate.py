@@ -44,7 +44,7 @@ def test_rotate_magnetogram_around_z(request, magnetogram_name, alpha_deg):
     zl1 = zdi_magnetogram.from_coefficients(folded)
 
     # Existing functionality to get points - yay!
-    px, py, pz = fibonacci_sphere.fibonacci_sphere(10)
+    px, py, pz = fibonacci_sphere.fibonacci_sphere(10).transpose()
     _, _pl, _az = coordinate_transforms.spherical_coordinates_from_rectangular(px, py, pz)
 
     az0 = np.mod(_az, 2*np.pi)  # Just to correct for -np.pi to np.pi
@@ -105,7 +105,7 @@ def test_rotate_magnetogram(request, magnetogram_name, euler_deg):
     zl1 = zdi_magnetogram.from_coefficients(rotated)
 
     # Existing functionality to get points - yay!
-    original_points = np.stack(fibonacci_sphere.fibonacci_sphere(100))
+    original_points = np.stack(fibonacci_sphere.fibonacci_sphere(100)).transpose()
 
     # Rotate points with rotation quaternion
     rotation_quaternion = quaternion.from_euler_angles(np.deg2rad(euler_deg))

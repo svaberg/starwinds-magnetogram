@@ -31,3 +31,5 @@ stellarwinds_test_log.txt
 myresults.xml
 Out.txt
 artifacts
+*.pickle
+run-Sun-CR2077

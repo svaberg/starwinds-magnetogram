@@ -307,11 +307,9 @@ class ZdiMagnetogram:
         Calculate energy as it is done in ZDIPy
         :return:
         """
-        # import pdb; pdb.set_trace()
-        # First calculate energy associated with each coefficient
         energy_alpha = self._energy_helper(self.alpha)
-        energy_beta = self._energy_helper(self.beta)
-        energy_gamma = self._energy_helper(self.gamma)
+        energy_beta = self._energy_helper(self.beta, require_l_term=True)
+        energy_gamma = self._energy_helper(self.gamma, require_l_term=True)
 
         total_energy = np.sum(energy_alpha) + np.sum(energy_beta) + np.sum(energy_gamma)
         total_energy_poloidal = np.sum(energy_alpha) + np.sum(energy_beta)
@@ -338,8 +336,8 @@ class ZdiMagnetogram:
 
     def energy_matrix(self):
         energy_alpha = self._energy_helper(self.alpha)
-        energy_beta = self._energy_helper(self.beta)
-        energy_gamma = self._energy_helper(self.gamma)
+        energy_beta = self._energy_helper(self.beta, require_l_term=True)
+        energy_gamma = self._energy_helper(self.gamma, require_l_term=True)
 
         energy_radial = energy_alpha
         energy_poloidal = energy_alpha + energy_beta
@@ -358,17 +356,21 @@ class ZdiMagnetogram:
                 np.roll(ep, self.degree(), axis=1),
                 np.roll(et, self.degree(), axis=1))
 
-    def _energy_helper(self, complex_coeff):
-        lTerm = self.degrees_l / (self.degrees_l + 1)  # TODO what is this for.
+    def _energy_helper(self, complex_coeff, require_l_term=False):
+        """The require_l_term must be true when calculating with beta and gamma."""
+
         m0mask = np.zeros_like(self.alpha)
-        for i in range(len(self.alpha)):
-            if self.orders_m[i] == 0:
-                m0mask[i] = 1
+        m0mask[self.orders_m == 0] = 1
 
         Es = 0.5 * complex_coeff * np.conj(complex_coeff)
         M0s = m0mask * 0.25 * (complex_coeff ** 2 + np.conj(complex_coeff) ** 2)
 
-        return np.real(Es + M0s)
+        result = Es + M0s
+
+        if require_l_term:
+            result *= self.degrees_l / (self.degrees_l + 1)
+
+        return np.real_if_close(result)
 
     def _dpml(self, p_lm, points_polar):
         """

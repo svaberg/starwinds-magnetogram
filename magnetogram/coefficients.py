@@ -224,6 +224,16 @@ def empty_like(shc):
     return Coefficients(shc.default_coefficients)
 
 
+def zeros_like(shc):
+    """
+    Get zero-filled set of spherical harmonics coefficients with same type of coefficients.
+    """
+    output = empty_like(shc)
+    for (degree, order), coeffs in shc.contents():
+        output.append(degree, order, shc.default_coefficients)
+    return output
+
+
 def copy(shc):
     """
     Get a deep copy

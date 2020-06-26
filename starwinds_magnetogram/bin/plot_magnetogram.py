@@ -5,6 +5,7 @@ log = logging.getLogger(__name__)
 import argparse
 import os.path
 
+from stellarwinds.magnetogram import reader_writer
 from stellarwinds.magnetogram import converter
 from stellarwinds.magnetogram import zdi_magnetogram
 from stellarwinds.magnetogram import plot_zdi
@@ -24,7 +25,7 @@ def main():
 
     logging.getLogger("stellarwinds").setLevel(args.log_level)  # Set for entire stellarwinds package.
 
-    coefficients = converter.read_magnetogram_file(args.input_file, )
+    coefficients = reader_writer.read_magnetogram_file(args.input_file, )
 
     if args.type == "pfss":
         log.debug("Converting from PFSS scaling to ZDI format.")

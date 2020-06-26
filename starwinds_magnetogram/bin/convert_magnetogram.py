@@ -2,7 +2,9 @@ import argparse
 import logging
 log = logging.getLogger(__name__)
 
+
 import stellarwinds.magnetogram.converter
+import stellarwinds.magnetogram.reader_writer
 
 
 #
@@ -39,11 +41,11 @@ def convert_magnetogram_file(input_file, output_name=None, power=1, degree_max=N
             file_tokens[0] += "_wso"
             output_name = ".".join(file_tokens)
 
-        coeffs = stellarwinds.magnetogram.converter.read_magnetogram_file(input_file, types)
+        coeffs = stellarwinds.magnetogram.reader_writer.read_magnetogram_file(input_file, types)
 
         coeffs = coeffs.scale(stellarwinds.magnetogram.converter.forward_conversion_factor, power)
 
-        stellarwinds.magnetogram.converter.write_magnetogram_file(coeffs,
+        stellarwinds.magnetogram.reader_writer.write_magnetogram_file(coeffs,
                                                                   fname=output_name,
                                                                   degree_max=degree_max)
 

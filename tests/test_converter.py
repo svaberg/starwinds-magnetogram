@@ -73,14 +73,6 @@ def test_independent_implementation(l, m):
     assert(np.isclose(cm_result, expected_result))
 
 
-def test_read(zdi_file):
-
-    coeffs = converter.read_magnetogram_file(zdi_file).scale(converter.forward_conversion_factor)
-    radial_coeffs, *_ = shc.hsplit(coeffs)
-
-    converter.write_magnetogram_file(radial_coeffs, fname=os.path.dirname(zdi_file) + '/test_field_wso.dat')
-
-
 def test_map_to_positive_orders(request):
     """
     Test that the mapping to positive orders for rotated ZDI magnetograms work
@@ -189,16 +181,4 @@ def test_collect_cosines():
 #     plt.plot(theta, ft, '--', linewidth=3)
     assert np.allclose(fc, frs)
     assert np.allclose(fc, ft)
-
-
-def test_read_full_magnetogram(zdi_file):
-    types = ("radial", "poloidal", "toroidal")
-    magnetogram_data = converter.read_magnetogram_file(zdi_file, types)
-
-    coefficients = []
-    for type_id, type_name in enumerate(types):
-        degrees, orders, coefficients = magnetogram_data.as_arrays()
-
-    zdi_magnetogram.ZdiMagnetogram(degrees, orders, *coefficients.transpose())
-
 

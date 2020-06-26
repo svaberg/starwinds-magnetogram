@@ -126,9 +126,8 @@ def convert_pfss_to_zdi(pfss_coeffs):
     # The alpha values are easy, just invert the forward conversion.
     alpha = pfss_coeffs.scale(forward_conversion_factor, -1)
 
-
-    beta = shc.copy(alpha)  # TODO make this better.
-    beta = beta.scale(_beta_inverse_conversion_factor, 1)
+    # This is very close or exact.
+    beta = shc.scale(alpha, _beta_inverse_conversion_factor, 1)
 
     # The potential PFSS field has no toroidal component.
     gamma = shc.zeros_like(alpha)

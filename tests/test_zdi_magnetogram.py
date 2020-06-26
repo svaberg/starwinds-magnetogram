@@ -72,6 +72,66 @@ def test_dmpl(request, magnetogram_name="mengel"):
             plt.savefig(pn.get())
 
 
+def test_lpmn(request):
+    zg = stellarwinds.magnetogram.geometry.ZdiGeometry(64)
+    polar_centers, azimuth_centers = zg.centers()
+
+    coeffs_zdi = shc.Coefficients()
+    coeffs_zdi.append(2, 0, 1.0 + 0.0j)
+    coeffs_zdi.append(3, 1, 1.0 + 0.0j)
+    coeffs_zdi.append(3, 2, 1.0 + 0.0j)
+
+    Bref = stellarwinds.magnetogram.zdi_magnetogram.from_coefficients(coeffs_zdi).get_polar_poloidal_field(polar_centers, azimuth_centers)
+
+    Bnew = -stellarwinds.magnetogram.zdi_magnetogram.from_coefficients(coeffs_zdi).get_polar_poloidal_field_new(polar_centers, azimuth_centers)
+
+    assert Bref.shape == Bnew.shape
+
+    b = np.min(polar_centers.shape) // 8  # Bad border pixels
+
+    with context.PlotNamer(__file__, request.node.name) as (pn, plt):
+        _, axs = plt.subplots(3, 1, figsize=(12, 12))
+        for f, ax in zip([Bref, Bnew, np.abs(Bref - Bnew)], axs):
+            plots.plot_magnetic_field(ax,
+                                      # polar_centers,
+                                      # azimuth_centers,
+                                      # f,
+                                      polar_centers[b:-b, b:-b],
+                                      azimuth_centers[b:-b, b:-b],
+                                      f[b:-b, b:-b],
+                                      legend_str=r'B_\theta', )
+            plots.add_extrema(polar_centers[b:-b, b:-b],
+                              azimuth_centers[b:-b, b:-b],
+                              f[b:-b, b:-b],
+                              ax, legend_str=r'B_\theta', markers='12')
+            ax.legend()
+        axs[0].set_title("Reference")
+        axs[1].set_title("New")
+        axs[2].set_title("Error")
+
+        plt.savefig(pn.get())
+
+        # Scatter curve of errors
+
+    assert np.allclose(Bref[b:-b, b:-b], Bnew[b:-b, b:-b], rtol=1e-2, atol=1e-2)
+
+
+def test_lpmn_lpmv(request):
+
+    zg = stellarwinds.magnetogram.geometry.ZdiGeometry(64)
+    polar_centers, azimuth_centers = zg.centers()
+
+    coeffs_zdi = shc.Coefficients()
+    coeffs_zdi.append(2, 0, 1.0 + 0.0j)
+    coeffs_zdi.append(3, 1, 1.0 + 0.0j)
+    coeffs_zdi.append(3, 2, 1.0 + 0.0j)
+
+    points_polar = np.linspace(0, np.pi)
+
+    zm = stellarwinds.magnetogram.zdi_magnetogram.from_coefficients(coeffs_zdi)
+    Pmn_z_result, Pmn_d_z_result = zm._calculate_lpmn(points_polar)
+
+
 def test_zdi_magnetogram_3d(request, magnetogram_name="mengel"):
     lz = stellarwinds.magnetogram.zdi_magnetogram.from_coefficients(magnetograms.get_all(magnetogram_name))
 

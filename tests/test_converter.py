@@ -44,6 +44,89 @@ def test_conversion(request):
     assert np.allclose(Br_zdi, Br_pfss)
 
 
+def test_beta_values(request):
+    """Test the $beta$ coefficients of the ZDI magnetogram."""
+    zg = geometry.ZdiGeometry(256)
+    polar_centers, azimuth_centers = zg.centers()
+
+    coeffs_pfss = shc.Coefficients()
+    coeffs_pfss.append(3, 2, 1.0 + 0.3j)
+
+    coeffs_zdi = converter.convert_pfss_to_zdi(coeffs_pfss)
+
+    Br_pfss, Bp_pfss, Ba_pfss = pfss_magnetogram.evaluate_spherical(coeffs_pfss, 1, polar_centers, azimuth_centers)
+
+    Br_zdi = zdi_magnetogram.from_coefficients(coeffs_zdi).get_radial_field(polar_centers, azimuth_centers)
+    Bp_zdi = zdi_magnetogram.from_coefficients(coeffs_zdi).get_polar_poloidal_field_new(polar_centers, azimuth_centers)
+    Ba_zdi = zdi_magnetogram.from_coefficients(coeffs_zdi).get_azimuthal_field(polar_centers, azimuth_centers)
+
+    # In the plot, this flips left and right. It might have to do with how solar longitude is defined.
+    Br_zdi = np.flipud(Br_zdi)
+    Bp_zdi = np.flipud(Bp_zdi)
+    Ba_zdi = np.flipud(Ba_zdi)
+    Ba_zdi *= -1  # This is also because of the left-right flip
+
+    b = 1  # Bad border pixels
+
+    with context.PlotNamer(__file__, request.node.name) as (pn, plt):
+        _, axs = plt.subplots(3, 2, figsize=(12, 12))
+        for f, ax in zip([Br_zdi, Br_pfss, np.abs(Br_zdi-Br_pfss)], axs[:, 0]):
+            plots.plot_magnetic_field(ax, polar_centers, azimuth_centers, f, legend_str='B_r', )
+            plots.add_extrema(polar_centers, azimuth_centers, f, ax, legend_str='B_r', markers='12')
+            ax.legend()
+        axs[0, 0].set_title("ZDI radial")
+        axs[1, 0].set_title("PFSS radial")
+        axs[2, 0].set_title("Error radial")
+
+        for f, ax in zip([Bp_zdi, Bp_pfss, np.abs(Bp_zdi-Bp_pfss)], axs[:, 1]):
+            plots.plot_magnetic_field(ax,
+                                      polar_centers[b:-b, b:-b],
+                                      azimuth_centers[b:-b, b:-b],
+                                      f[b:-b, b:-b],
+                                      legend_str='B_p', )
+            plots.add_extrema(polar_centers[b:-b, b:-b],
+                              azimuth_centers[b:-b, b:-b],
+                              f[b:-b, b:-b],
+                              ax, legend_str='B_p', markers='12')
+            ax.legend()
+        axs[0, 1].set_title("ZDI polar")
+        axs[1, 1].set_title("PFSS polar")
+        axs[2, 1].set_title("Error polar")
+        plt.savefig(pn.get())
+
+        # Scatter curve of errors
+        _, axs = plt.subplots(1, 3, figsize=(12, 4))
+
+        for (fz, fp), ax in zip([(Br_zdi, Br_pfss), (Bp_zdi, Bp_pfss), (Ba_zdi, Ba_pfss)], axs):
+            ax.plot([np.min(fz), np.max(fz)], [np.min(fz), np.max(fz)])
+            ax.plot(fz.ravel(), fp.ravel(), ',')
+
+        plt.savefig(pn.get())
+
+        # Residual curve of errors
+        _, axs = plt.subplots(1, 3, figsize=(12, 4))
+
+        for (fz, fp), ax in zip([(Br_zdi, Br_pfss), (Bp_zdi, Bp_pfss), (Ba_zdi, Ba_pfss)], axs):
+            # ax.plot([np.min(fz), np.max(fz)], [np.min(fz), np.max(fz)])
+            ax.plot(fz.ravel(), fz.ravel() - fp.ravel(), ',')
+
+        plt.savefig(pn.get())
+
+        # Residual curve of errors
+        _, axs = plt.subplots(1, 3, figsize=(12, 4))
+
+        for (fz, fp), ax in zip([(Br_zdi, Br_pfss), (Bp_zdi, Bp_pfss), (Ba_zdi, Ba_pfss)], axs):
+            # ax.plot([np.min(fz), np.max(fz)], [np.min(fz), np.max(fz)])
+            ax.plot(fz.ravel(), np.abs(1 - fz.ravel() / fp.ravel()), ',')
+            ax.set_yscale("log")
+
+        plt.savefig(pn.get())
+
+    assert np.allclose(Br_zdi, Br_pfss)
+
+    assert np.allclose(Bp_zdi[b:-b, b:-b], Bp_pfss[b:-b, b:-b])
+
+
 def test_forward_conversion_factor():
     assert(np.isclose(converter.forward_conversion_factor(0, 0),  (4.0 * np.pi)**(-0.5)))
     assert(np.isclose(converter.forward_conversion_factor(0, 1), -(8.0 * np.pi)**(-0.5)))
@@ -181,4 +264,3 @@ def test_collect_cosines():
 #     plt.plot(theta, ft, '--', linewidth=3)
     assert np.allclose(fc, frs)
     assert np.allclose(fc, ft)
-

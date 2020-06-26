@@ -216,6 +216,47 @@ class ZdiMagnetogram:
 
         return np.real(field_azimuthal_poloidal)
 
+    def get_polar_poloidal_field_new(self, points_polar, points_azimuth):
+        r"""
+        Get the azimuthal component of the poloidal field $B_{\theta, pol}$.
+        :param points_polar:
+        :param points_azimuth:
+        :return: azimuthal component of the poloidal field
+        """
+
+        _, Pmn_d_z_result = self._calculate_lpmn(points_polar)
+
+        field_polar_poloidal = np.empty((len(self.degrees_l),) + points_polar.shape, dtype=complex)
+        field_polar_poloidal[:, ...] = (self.beta * self.c_lm / (self.degrees_l + 1))[:, np.newaxis, np.newaxis]
+        field_polar_poloidal *= np.exp(1.0j * self.orders_m[:, np.newaxis, np.newaxis] * points_azimuth[np.newaxis, ...])
+        field_polar_poloidal *= -Pmn_d_z_result  #TODO why is this minus sign required?
+
+        field_polar_poloidal = np.sum(field_polar_poloidal, axis=0)
+
+        return np.real(field_polar_poloidal)
+
+    def _calculate_lpmn(self, points_polar):
+        """
+        Use scipy.lpmn to calculate the derivatives of the associated Legendre polynomial
+        in a non-hacky way.
+        :param points_polar:
+        :return:
+        """
+        Pmn_z_result = np.empty((self.degree() + 1,) * 2 + points_polar.shape, dtype=complex)
+        Pmn_d_z_result = np.empty_like(Pmn_z_result)
+
+        for (i, j) in np.ndindex(points_polar.shape):
+            a, b = scipy.special.lpmn(m=self.degree(),  # Go up to $\ell$ for $m$
+                                      n=self.degree(),
+                                      z=np.cos(points_polar[i, j]))
+            Pmn_z_result[:, :, i, j] = a
+            Pmn_d_z_result[:, :, i, j] = b * -np.sin(points_polar[i, j])
+
+        Pmn_z_result = Pmn_z_result[self.orders_m, self.degrees_l, :, :]
+        Pmn_d_z_result = Pmn_d_z_result[self.orders_m, self.degrees_l, :, :]
+
+        return Pmn_z_result, Pmn_d_z_result
+
     def get_polar_toroidal_field(self, points_polar, points_azimuth):
         r"""
         Get the azimuthal component of the toroidal field $B_{\theta, tor}$.
@@ -245,7 +286,7 @@ class ZdiMagnetogram:
         :return: azimuthal field component
         """
         return (
-                self.get_polar_poloidal_field(points_polar, points_azimuth)
+                self.get_polar_poloidal_field_new(points_polar, points_azimuth)
                 + self.get_polar_toroidal_field(points_polar, points_azimuth)
                 )
 

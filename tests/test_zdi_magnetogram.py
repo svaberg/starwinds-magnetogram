@@ -131,6 +131,8 @@ def test_lpmn_lpmv(request):
     zm = stellarwinds.magnetogram.zdi_magnetogram.from_coefficients(coeffs_zdi)
     Pmn_z_result, Pmn_d_z_result = zm._calculate_lpmn(points_polar)
 
+    assert Pmn_z_result.shape == points_polar.shape + (coeffs_zdi.size,)
+
 
 def test_zdi_magnetogram_3d(request, magnetogram_name="mengel"):
     lz = stellarwinds.magnetogram.zdi_magnetogram.from_coefficients(magnetograms.get_all(magnetogram_name))

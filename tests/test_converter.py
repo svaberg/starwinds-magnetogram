@@ -5,6 +5,7 @@ import pytest
 import cmath
 import os.path
 from tests import context  # Test context
+from tests.magnetogram import magnetograms
 
 from stellarwinds.magnetogram import converter
 from stellarwinds.magnetogram import coefficients as shc
@@ -125,6 +126,78 @@ def test_beta_values(request):
     assert np.allclose(Br_zdi, Br_pfss)
 
     assert np.allclose(Bp_zdi[b:-b, b:-b], Bp_pfss[b:-b, b:-b])
+
+
+def test_beta_loop(request, magnetogram_name="mengel"):
+
+    zg = geometry.ZdiGeometry(128)
+
+    centers = zg.centers()
+
+    coeffs_zdi0 = magnetograms.get_all(magnetogram_name)
+    zm0 = zdi_magnetogram.from_coefficients(coeffs_zdi0)
+    Br_zdi0 = zm0.get_radial_field(*centers)
+    Bp_zdi0 = zm0.get_polar_field(*centers)
+    Ba_zdi0 = zm0.get_azimuthal_field(*centers)
+
+    # In the plot, this flips left and right. It might have to do with how solar longitude is defined.
+    Br_zdi0= np.flipud(Br_zdi0)
+    Bp_zdi0 = np.flipud(Bp_zdi0)
+    Ba_zdi0 = np.flipud(Ba_zdi0)
+    Ba_zdi0 *= -1  # This is also because of the left-right flip
+
+
+    Br_zdi0p = zm0.get_radial_poloidal_field(*centers)
+    Bp_zdi0p = zm0.get_polar_poloidal_field(*centers)
+    Ba_zdi0p = zm0.get_azimuthal_poloidal_field(*centers)
+
+    # In the plot, this flips left and right. It might have to do with how solar longitude is defined.
+    Br_zdi0p= np.flipud(Br_zdi0p)
+    Bp_zdi0p = np.flipud(Bp_zdi0p)
+    Ba_zdi0p = np.flipud(Ba_zdi0p)
+    Ba_zdi0p *= -1  # This is also because of the left-right flip
+
+
+    alpha0, *_ = shc.hsplit(coeffs_zdi0)
+
+    coeffs_pfss = converter.convert_zdi_to_pfss(alpha0)
+    Br_pfss, Bp_pfss, Ba_pfss = pfss_magnetogram.evaluate_spherical(coeffs_pfss, 1, *centers)
+
+    coeffs_zdi = converter.convert_pfss_to_zdi(coeffs_pfss)
+    zm = zdi_magnetogram.from_coefficients(coeffs_zdi)
+    Br_zdi = zm.get_radial_field(*centers)
+    # Bp_zdi = zm.get_polar_poloidal_field_new(*centers)
+    Bp_zdi = zm.get_polar_field(*centers)
+    Ba_zdi = zm.get_azimuthal_field(*centers)
+
+    # In the plot, this flips left and right. It might have to do with how solar longitude is defined.
+    Br_zdi = np.flipud(Br_zdi)
+    Bp_zdi = np.flipud(Bp_zdi)
+    Ba_zdi = np.flipud(Ba_zdi)
+    Ba_zdi *= -1  # This is also because of the left-right flip
+
+    def plot_row(fields, axs, direction):
+
+        for f, ax in zip(fields, axs):
+            plots.plot_magnetic_field(ax, *centers, f, legend_str='B_r', )
+            plots.add_extrema(*centers, f, ax, legend_str='B_r', markers='12')
+            ax.legend()
+
+        axs[0].set_title(f"ZDI full {direction}")
+        axs[1].set_title(f"ZDI poloidal {direction}")
+        axs[2].set_title(f"PFSS {direction}")
+        axs[3].set_title(f"ZDI full (from PFSS) {direction}")
+        axs[4].set_title(f"Error {direction}")
+
+
+    with context.PlotNamer(__file__, request.node.name) as (pn, plt):
+        _, axs = plt.subplots(5, 3, figsize=(18, 18))
+        plot_row([Br_zdi0, Br_zdi0p, Br_pfss, Br_zdi, np.abs(Br_zdi-Br_pfss)], axs[:, 0], direction="radial")
+        plot_row([Bp_zdi0, Bp_zdi0p, Bp_pfss, Bp_zdi, np.abs(Bp_zdi-Bp_pfss)], axs[:, 1], direction="polar")
+        plot_row([Ba_zdi0, Ba_zdi0p, Ba_pfss, Ba_zdi, np.abs(Ba_zdi-Ba_pfss)], axs[:, 2], direction="azimuthal")
+
+        plt.savefig(pn.get())
+
 
 
 def test_forward_conversion_factor():

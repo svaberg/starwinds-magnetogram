@@ -291,7 +291,6 @@ class ZdiMagnetogram:
                 + self.get_polar_toroidal_field(points_polar, points_azimuth)
                 )
 
-    # When should the real values be taken?
     def get_field_strength(self, points_polar, points_azimuth):
         r"""
         Get field strength $B$.
@@ -303,7 +302,6 @@ class ZdiMagnetogram:
         field_polar = self.get_polar_field(points_polar, points_azimuth)
         field_azimuthal = self.get_azimuthal_field(points_polar, points_azimuth)
 
-        # Take real values?
         return (field_radial**2 + field_polar**2 + field_azimuthal**2)**.5
 
     def get_all(self):

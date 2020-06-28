@@ -247,7 +247,7 @@ class ZdiMagnetogram:
         Pmn_d_cos_theta_result = np.empty_like(Pmn_cos_theta_result)
 
         for ndindex in np.ndindex(points_polar.shape):
-            a, b = scipy.special.lpmn(m=self.degree(),  # Go up to the degre $\ell$ for $m$
+            a, b = scipy.special.lpmn(m=self.degree(),  # Go up to the degree $\ell$ for $m$
                                       n=self.degree(),
                                       z=np.cos(points_polar[ndindex]))
             Pmn_cos_theta_result[ndindex] = a
@@ -349,7 +349,7 @@ class ZdiMagnetogram:
 
         return ZdiMagnetogram(*new_args, self._dpml_method)
 
-    def energy(self, show_fractions=False, dest=None):
+    def energy(self, *, show_fractions=False, dest=None):
         """
         Calculate energy as it is done in ZDIPy
         If dest is a dictionary this writes the values into dest. If dest is None the values are
@@ -358,7 +358,6 @@ class ZdiMagnetogram:
         :param dest: optional dictionary in which to save the values
         :return: energy in the alpha, beta and gamma parameters.
         """
-
         if dest is None:
             dict_ = dict()
         else:
@@ -395,78 +394,43 @@ class ZdiMagnetogram:
             print('Toroidal energy  %g %%' % (100 * dict_['magnetogram.toroidal.energy.fraction']))
             print('* The radial energy is part of the poloidal energy.')
 
-        return energy_alpha, energy_beta, energy_gamma
-
-    def low_order_energy(self, dest=None):
-        """
-        If dest is a dictionary this writes the values into dest. If dest is None the values are
-        printed.
-        :param dest: optional dictionary in which to save the values
-        :return:
-        """
-
-        if dest is None:
-            dict_ = dict()
-        else:
-            dict_ = dest
-
-        energy_alpha, energy_beta, energy_gamma = self.energy(dest=dest)
-
         total_energy_poloidal = np.sum(energy_alpha) + np.sum(energy_beta)
         total_energy_toroidal = np.sum(energy_gamma)
 
-        Epol_l1 = 0.
-        Epol_l2 = 0.
-        Epol_l3 = 0.
-        Etor_l1 = 0.
-        Etor_l2 = 0.
-        Etor_l3 = 0.
-        for i in range(len(self.alpha)):
-            if self.degrees_l[i] == 1:
-                Epol_l1 += energy_alpha[i] + energy_beta[i]
-                Etor_l1 += energy_gamma[i]
-            elif self.degrees_l[i] == 2:
-                Epol_l2 += energy_alpha[i] + energy_beta[i]
-                Etor_l2 += energy_gamma[i]
-            elif self.degrees_l[i] == 3:
-                Epol_l3 += energy_alpha[i] + energy_beta[i]
-                Etor_l3 += energy_gamma[i]
+        Epol_l1 = np.sum((energy_alpha + energy_beta)[self.degrees_l == 1])
+        Epol_l2 = np.sum((energy_alpha + energy_beta)[self.degrees_l == 2])
+        Epol_l3 = np.sum((energy_alpha + energy_beta)[self.degrees_l == 3])
+        Etor_l1 = np.sum(energy_gamma[self.degrees_l == 1])
+        Etor_l2 = np.sum(energy_gamma[self.degrees_l == 2])
+        Etor_l3 = np.sum(energy_gamma[self.degrees_l == 3])
 
         dict_['magnetogram.total.energy.dipole.fraction'] = Epol_l1 / total_energy_poloidal
-        dict_['magnetogram.total.energy.dipole.quadrupole.fraction'] = Epol_l2 / total_energy_poloidal
+        dict_['magnetogram.total.energy.quadrupole.fraction'] = Epol_l2 / total_energy_poloidal
         # TODO Folsom calls this octopole but l3 is a hexapole.
-        dict_['magnetogram.total.energy.dipole.octopole.fraction'] = Epol_l3 / total_energy_poloidal
-        dict_['magnetogram.total.energy.dipole.toroidal.l1.fraction'] = Etor_l1 / total_energy_toroidal
-        dict_['magnetogram.total.energy.dipole.toroidal.l2.fraction'] = Etor_l2 / total_energy_toroidal
-        dict_['magnetogram.total.energy.dipole.toroidal.l3.fraction'] = Etor_l3 / total_energy_toroidal
+        dict_['magnetogram.total.energy.octopole.fraction'] = Epol_l3 / total_energy_poloidal
+        dict_['magnetogram.total.energy.toroidal.l1.fraction'] = Etor_l1 / total_energy_toroidal
+        dict_['magnetogram.total.energy.toroidal.l2.fraction'] = Etor_l2 / total_energy_toroidal
+        dict_['magnetogram.total.energy.toroidal.l3.fraction'] = Etor_l3 / total_energy_toroidal
 
         if dest is None:
             print('dipole: {:7.3%} (% pol)'.format(Epol_l1 / total_energy_poloidal))
             print('quadrupole: {:7.3%} (% pol)'.format(Epol_l2 / total_energy_poloidal))
-            print('octopole: {:7.3%} (% pol)'.format(Epol_l3 / total_energy_poloidal))
+            print('octopole: {:7.3%} (% pol)'.format(Epol_l3 / total_energy_poloidal))  # Should be hexapole
             print('toroidal l1: {:7.3%} (% tor)'.format(Etor_l1 / total_energy_toroidal))
             print('toroidal l2: {:7.3%} (% tor)'.format(Etor_l2 / total_energy_toroidal))
             print('toroidal l3: {:7.3%} (% tor)'.format(Etor_l3 / total_energy_toroidal))
 
-        totEaxi = 0.
-        polEaxi = 0.
-        torEaxi = 0.
-        for i in range(len(self.alpha)):
-            if self.orders_m[i] == 0:
-                totEaxi += energy_alpha[i] + energy_beta[i] + energy_gamma[i]
-                polEaxi += energy_alpha[i] + energy_beta[i]
-                torEaxi += energy_gamma[i]
+        polEaxi = np.sum((energy_alpha + energy_beta)[self.orders_m == 0])
+        torEaxi = np.sum(energy_gamma[self.orders_m == 0])
+        totEaxi = polEaxi + torEaxi
 
         dict_['magnetogram.total.energy.axisymmetric.fraction'] \
             = totEaxi / (total_energy_poloidal + total_energy_toroidal)
         dict_['magnetogram.total.energy.poloidal.axisymmetric.fraction'] = polEaxi / total_energy_poloidal
         dict_['magnetogram.total.energy.toroidal.axisymmetric.fraction'] = torEaxi / total_energy_toroidal
 
-        all_dipole_ids = np.where(self.degrees_l == 1)
-        sym_dipole_ids = np.where(np.logical_and(self.degrees_l == 1, self.orders_m == 0))
-        symdipfrac = float((energy_alpha[sym_dipole_ids] +
-                            energy_beta[sym_dipole_ids]) / np.sum(energy_alpha[all_dipole_ids] +
-                                                                  energy_beta[all_dipole_ids]))
+        symdipfrac = float((energy_alpha + energy_beta)[np.logical_and(self.degrees_l == 1, self.orders_m == 0)] /
+                           np.sum((energy_alpha + energy_beta)[self.degrees_l == 1]))
         dict_['magnetogram.total.energy.dipole.axisymmetric.fraction'] = symdipfrac
 
         if dest is None:
@@ -475,7 +439,14 @@ class ZdiMagnetogram:
             print('toroidal axisymmetric: {:7.3%} (% tor)'.format(torEaxi / total_energy_toroidal))
             print('dipole axisymmetric: {:7.3%} (% dip)'.format(symdipfrac))
 
+        return energy_alpha, energy_beta, energy_gamma
+
+
     def energy_matrix(self):
+        """
+        Calculate matrix of magnetogram energy indexed by degree and order.
+        :return:
+        """
         energy_alpha = self._energy_helper(self.alpha)
         energy_beta = self._energy_helper(self.beta, require_l_term=True)
         energy_gamma = self._energy_helper(self.gamma, require_l_term=True)
@@ -484,15 +455,17 @@ class ZdiMagnetogram:
         energy_poloidal = energy_alpha + energy_beta
         energy_toroidal = energy_gamma
 
+        # Note that order runs from -m to m here.
         er = np.zeros((self.degree() + 1, 2 * self.degree() + 1))
         ep = np.zeros_like(er)
         et = np.zeros_like(ep)
 
-        for i in range(len(energy_poloidal)):
-            er[self.degrees_l[i], self.orders_m[i]] = energy_radial[i]
-            ep[self.degrees_l[i], self.orders_m[i]] = energy_poloidal[i]
-            et[self.degrees_l[i], self.orders_m[i]] = energy_toroidal[i]
+        er[self.degrees_l, self.orders_m] = energy_radial
+        ep[self.degrees_l, self.orders_m] = energy_poloidal
+        et[self.degrees_l, self.orders_m] = energy_toroidal
 
+        # Roll on the degree axis so that the elements in the
+        # matrix are l = 0, 1, 2, ..., n, 0, ..., 0, -n, ..., -2, -1
         return (np.roll(er, self.degree(), axis=1),
                 np.roll(ep, self.degree(), axis=1),
                 np.roll(et, self.degree(), axis=1))

@@ -53,13 +53,12 @@ def main():
         _field_name = " ".join(getter.__name__.split("_")[1:])
         fig, ax = plot_zdi.plot_zdi_field(getter, legend_str=latex_name)
         ax.set_title(f"{_star_name} {_field_name}")
-    elif args.plot_type == 'spectrum':
+    elif args.plot_type == 'energy-by-degree':
         fig, _ = plot_zdi.plot_energy_by_degree(lz)
-    elif args.plot_type == 'matrix':
-        fig, _ = plot_zdi.plot_energy(lz)
-    elif args.plot_type == 'energy':
-        lz.energy()
-        quit(0)
+    elif args.plot_type == 'energy-matrix':
+        fig, _ = plot_zdi.plot_energy_matrix(lz)
+    elif args.plot_type == 'energy-summary':
+        fig, _ = plot_zdi.plot_energy_summary(lz)
     else:
         raise NotImplementedError(f"Unknown plot type \"{args.plot_type}\".")
 

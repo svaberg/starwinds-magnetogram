@@ -11,7 +11,127 @@ import stellarwinds.magnetogram.geometry
 import stellarwinds.magnetogram.plots
 
 
-def plot_energy(zc, types="total", negative_orders=False, axs=None):
+def plot_energy_summary(zc, axs=None):
+
+    if axs is None:
+        _, axs = plt.subplots(1, 3, figsize=(4 * 3, 4))
+        axs = np.atleast_1d(axs)
+
+    results = dict()
+    zc.energy()
+    zc.energy(dest=results)
+
+    ax = axs[0]
+    ax.set_title("Total energy")
+
+    w, *_ = ax.pie([results[f'magnetogram.radial.energy.fraction'] +
+                        results[f'magnetogram.poloidal.energy.fraction'],
+                        results[f'magnetogram.toroidal.energy.fraction'],],
+                       radius=2,
+                       autopct='%1.0f%%',
+                       pctdistance=.75,
+                       wedgeprops=dict(width=1  , edgecolor='w'),
+                       startangle=90,
+                       rotatelabels=True,
+                       )
+
+    wedges = list(w)
+    wlabels = ["poloidal", "toroidal"]
+
+    w, *_ = ax.pie([results[f'magnetogram.radial.energy.fraction'],],
+                   radius=2,
+                   autopct='%1.0f%%',
+                   pctdistance=1,
+                   colors=["C0"],
+                   wedgeprops=dict(width=.5, edgecolor='w'),
+                   startangle=90,
+                   rotatelabels=True,
+                   )
+
+    wedges.extend(w)
+    wlabels.append("radial")
+
+    w, *_ = ax.pie([results[f'magnetogram.total.energy.axisymmetric.fraction'],],
+                   radius=1,
+                   # labels=("axisymmetric",),
+                   autopct='%1.0f%%',
+                   colors=['red',],
+                   wedgeprops=dict(width=1, edgecolor='w'),
+                   rotatelabels=True,
+                   )
+
+    wedges.extend(w)
+    wlabels.append("axisymmetric")
+
+    ax.legend(wedges, wlabels)
+
+    ax = axs[1]
+    ax.set_title("Poloidal energy")
+    labels = ("dipole", "quadrupole", "octopole")
+    w, *_ = ax.pie([results[f'magnetogram.total.energy.{c}.fraction'] for c in labels],
+           # labels=labels,
+           radius=2,
+           autopct='%1.1f%%',
+           pctdistance=.8,
+           wedgeprops=dict(width=1  , edgecolor='w'),
+           startangle=0,
+           rotatelabels=True,
+           )
+
+    wedges = list(w)
+    wlabels = ["dipole", "quadrupole", "octopole"]
+
+    w, *_ = ax.pie([results[f'magnetogram.total.energy.poloidal.axisymmetric.fraction'],],
+           radius=1,
+           # labels=("axisymmetric",),
+           autopct='%1.0f%%',
+           colors=['red',],
+           wedgeprops=dict(width=1, edgecolor='w'),
+           rotatelabels=True,
+           )
+
+    wedges.extend(w)
+    wlabels.append("axisymmetric")
+
+    ax.legend(wedges, wlabels)
+
+    ax = axs[2]
+    ax.set_title("Toroidal energy")
+    labels = ("l1", "l2", "l3")
+    w, *_ = ax.pie([results[f'magnetogram.total.energy.toroidal.{c}.fraction'] for c in labels],
+           # labels=labels,
+           radius=2,
+           autopct='%1.1f%%',
+           pctdistance=.8,
+           wedgeprops=dict(width=1  , edgecolor='w'),
+           startangle=0,
+           rotatelabels=True,
+           )
+
+    wedges = list(w)
+    wlabels = ["$l1$", "$l2$", "$l3$"]
+
+    w, *_ = ax.pie([results[f'magnetogram.total.energy.toroidal.axisymmetric.fraction'],],
+           radius=1,
+           # labels=("axisymmetric",),
+           autopct='%1.0f%%',
+           colors=['red',],
+           wedgeprops=dict(width=1, edgecolor='w'),
+           rotatelabels=True,
+           )
+
+    wedges.extend(w)
+    wlabels.append("axisymmetric")
+
+    ax.legend(wedges, wlabels)
+
+    for ax in axs:
+        ax.axis('equal')
+
+    return axs[0].figure, axs
+
+
+def plot_energy_matrix(zc, types="total", negative_orders=False, axs=None):
 
     if type(types) == str:
         types = types,  # Turn into a tuple

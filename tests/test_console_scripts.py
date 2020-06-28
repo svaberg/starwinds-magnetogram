@@ -15,9 +15,9 @@ def test_magnetogram_scripts(script_runner):
 
 @pytest.mark.parametrize("options",
                          ("-p map",
-                          "-p spectrum",
-                          "-p matrix",
-                          "-p energy",
+                          "-p energy-summary",
+                          "-p energy-matrix",
+                          "-p energy-by-degree",
                           "-y pfss",
                           "-p polar",
                           "-p strength",

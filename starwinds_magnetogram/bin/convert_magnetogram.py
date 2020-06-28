@@ -2,10 +2,9 @@ import argparse
 import logging
 log = logging.getLogger(__name__)
 
-
-import stellarwinds.magnetogram.converter
-import stellarwinds.magnetogram.reader_writer
-
+from stellarwinds.magnetogram import reader_writer
+from stellarwinds.magnetogram import coefficients
+from stellarwinds.magnetogram import converter
 
 #
 # Main method. Use -h for usage and help.
@@ -14,40 +13,54 @@ def main():
     parser = argparse.ArgumentParser(description='Convert from zdipy magnetogram to wso magnetogram')
     parser.add_argument('input_file', type=str, help='input magnetogram file')
     parser.add_argument('output_file', type=str, nargs='?', help='output magnetogram file')
-    parser.add_argument('--inverse', dest='power', action='store_const',
-                        const=-1, default=1, help='Convert wso magnetogram back to zdipy magnetogram')
-    parser.add_argument('--format-only', dest='power', action='store_const',
-                        const=0, help='Convert file format but do not change coefficients')
-    parser.add_argument('--radial-only', dest='types', action='store_const',
-                        const=("radial",), default=("radial", "poloidal", "toroidal"),
-                        help='Only convert the radial coefficients')
+    parser.add_argument('--pfss-to-zdi', dest='pfss_to_zdi', action='store_const',
+                        const=True, default=False, help='Convert wso magnetogram back to zdipy magnetogram')
     parser.add_argument('--degree-max', type=int, default=None, help='Pad magnetogram with zeros up to given degree')
     parser.add_argument('-q', '--quiet', dest='log_level', action='store_const',
                         const=logging.WARNING, default=logging.INFO, help='only log warnings and errors')
     parser.add_argument('-v', '--verbose', dest='log_level', action='store_const',
                         const=logging.DEBUG, help='generate and log detailed debug output')
     args = parser.parse_args()
-    # import pdb;pdb.set_trace()
 
     logging.getLogger("stellarwinds").setLevel(args.log_level)  # Set for entire stellarwinds package.
 
-    convert_magnetogram_file(args.input_file, args.output_file, power=args.power, degree_max=args.degree_max,
-                             types=args.types)
+    if args.pfss_to_zdi:
+        convert_pfss_to_zdi(args.input_file, args.output_file, degree_max=args.degree_max,)
+    else:
+        convert_zdi_to_pfss(args.input_file, args.output_file, degree_max=args.degree_max,)
 
-def convert_magnetogram_file(input_file, output_name=None, power=1, degree_max=None, types=None):
-        # Make an output file name if none was given
-        if output_name is None:
-            file_tokens = input_file.split(".")
-            file_tokens[0] += "_wso"
-            output_name = ".".join(file_tokens)
 
-        coeffs = stellarwinds.magnetogram.reader_writer.read_magnetogram_file(input_file, types)
+def convert_zdi_to_pfss(input_file, output_name=None, degree_max=None):
 
-        coeffs = coeffs.scale(stellarwinds.magnetogram.converter.forward_conversion_factor, power)
+    zdi_coefficients = reader_writer.read_magnetogram_file(input_file)
+    zdi_radial_coefficients, *_ = coefficients.hsplit(zdi_coefficients)
+    pfss_coefficients = converter.convert_zdi_to_pfss(zdi_radial_coefficients)
 
-        stellarwinds.magnetogram.reader_writer.write_magnetogram_file(coeffs,
-                                                                  fname=output_name,
-                                                                  degree_max=degree_max)
+    output_name = _make_output_file(input_file, output_name, postfix="wso")
+    reader_writer.write_magnetogram_file(pfss_coefficients, file_name=output_name, degree_max=degree_max)
+
+
+def convert_pfss_to_zdi(input_file, output_name=None, degree_max=None):
+
+    pfss_coefficients = reader_writer.read_magnetogram_file(input_file)
+    if pfss_coefficients.default_coefficients.shape != (1,):
+        raise IndexError(f"Incorrect shape for PFSS formatted file {input_file}.")
+
+    zdi_coefficients = converter.convert_pfss_to_zdi(pfss_coefficients)
+
+    output_name = _make_output_file(input_file, output_name, postfix="zdi")
+    reader_writer.write_magnetogram_file(zdi_coefficients, file_name=output_name,
+                                         order_min=0,
+                                         degree_max=degree_max)
+
+
+def _make_output_file(input_file, output_name, postfix):
+    # Make an output file name if none was given
+    if output_name is None:
+        file_tokens = input_file.split(".")
+        file_tokens[0] += "_" + postfix
+        output_name = ".".join(file_tokens)
+    return output_name
 
 
 if __name__ == "__main__":

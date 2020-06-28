@@ -184,6 +184,23 @@ class ZdiMagnetogram:
 
         return np.real(field_azimuthal_toroidal)
 
+    def get_azimuthal_toroidal_field_new(self, points_polar, points_azimuth):
+        r"""
+        Get the polar component of the toroidal field $B_{\phi, tor}$.
+        :param points_polar:
+        :param points_azimuth:
+        :return: polar component of the toroidal field
+        """
+        _, Pmn_d_cos_theta_result = self._calculate_lpmn(points_polar)
+
+        fat_1_1_n = (self.gamma * self.c_lm / (self.degrees_l + 1))  # Shape is now (N,)
+        fat_1_1_n = fat_1_1_n * np.exp(1.0j * self.orders_m * points_azimuth[..., np.newaxis])
+        fat_1_1_n *= -Pmn_d_cos_theta_result  # TODO why is this minus sign required?
+
+        fpp_i_j = np.sum(fat_1_1_n, axis=-1)
+
+        return np.real(fpp_i_j)
+
     def get_azimuthal_field(self, points_polar, points_azimuth):
         r"""
         Get the total polar component of the field $B_{\phi}$.
@@ -193,7 +210,7 @@ class ZdiMagnetogram:
         """
         return (
                 self.get_azimuthal_poloidal_field(points_polar, points_azimuth)
-                + self.get_azimuthal_toroidal_field(points_polar, points_azimuth)
+                + self.get_azimuthal_toroidal_field_new(points_polar, points_azimuth)
                 )
 
     def get_polar_poloidal_field(self, points_polar, points_azimuth):

@@ -7,7 +7,7 @@ log = logging.getLogger(__name__)
 import stellarwinds.magnetogram.coefficients as shc
 
 
-def read_magnetogram_file(fname, types=None):
+def read_magnetogram_file(file_name):
     """
     Read zdipy magnetogram file.
     :return:
@@ -31,94 +31,83 @@ def read_magnetogram_file(fname, types=None):
     (...)
     15 15 -2.021262e+01  6.270638e-01
     """
-    valid_types = (("radial", "poloidal", "toroidal"), ("radial",))
-    if types is None:
-        types = valid_types[0]
+    # valid_types = (("radial", "poloidal", "toroidal"), ("radial",))
+    # if types is None:
+    #     types = valid_types[0]
+    #
+    # valid = False
+    # for _vt in valid_types:
+    #     if types == _vt:
+    #         valid = True
+    #
+    # if not valid:
+    #     raise KeyError(f"Argument \"types\" was {types}; must be one of {valid_types}.")
+    #
+    log.debug("Begin reading magnetogram file \"%s\"..." % file_name)
 
-    valid = False
-    for _vt in valid_types:
-        if types == _vt:
-            valid = True
+    with open(file_name) as f:
+        magnetogram_file_lines = [x.strip() for x in f.readlines()]  # Remove whitespace from line ends.
 
-    if not valid:
-        raise KeyError(f"Argument \"types\" was {types}; must be one of {valid_types}.")
+    coefficient_sets = [shc.Coefficients()]
 
-    log.debug("Begin reading magnetogram file \"%s\"..." % fname)
-    with open(fname) as f:
-        magnetogram_file_lines = f.readlines()
-        # Remove whitespace characters like `\n` at the end of each line
-        magnetogram_file_lines = [x.strip() for x in magnetogram_file_lines]
+    for line_no, line in enumerate(magnetogram_file_lines):
 
+        try:
+            line_tokens = line.split()
+            degree_l = int(line_tokens[0])
+            order_m = int(line_tokens[1])
+            real_coeff = float(line_tokens[2])
+            imag_coeff = float(line_tokens[3])
+        except IndexError:
+            log.debug(f"Line {line_no}: \"{line}\" ignored; has too few tokens.")
+            continue
+        except ValueError:
+            log.debug(f"Line {line_no}: \"{line}\" ignored; tokens do not convert to ints and floats.")
+            continue
 
-    full_coeffs = []
-    line_offset = 0
+        if coefficient_sets[-1].has(degree_l, order_m):
+            log.debug(f"New coefficient set starting on line {line_no}: \"{line}\".")
+            coefficient_sets.append(shc.empty_like(coefficient_sets[-1]))
 
-    # Note this is hacky: Only the length of types is really used.
-    # Also, the code should automatically determine whether there is one or three sets of coefficients.
-    for coeffs_types in types:
-        header_lines = []
+        coefficient_sets[-1].append(degree_l, order_m, real_coeff + 1j * imag_coeff)
 
-        coeffs = shc.Coefficients()
+    log.info(f"Read {len(coefficient_sets)} coefficent sets in {len(magnetogram_file_lines)} lines.")
 
-        for __line_id, line in enumerate(magnetogram_file_lines[line_offset:]):
-            line_no = __line_id + line_offset
-            try:
-                line_tokens = line.split()
+    sizes = np.array([c.size for c in coefficient_sets])
+    if np.all(sizes == sizes[0]):
+        log.info(f"Each coefficient set has {sizes[0]} elements.")
+    else:
+        log.warning(f"Number of elements vary; file may not read correctly.")
 
-                degree_l = int(line_tokens[0])
-                order_m  = int(line_tokens[1])
-                real_coeff = float(line_tokens[2])
-                imag_coeff = float(line_tokens[3])
-
-                coeffs.append(degree_l, order_m, real_coeff + 1j * imag_coeff)
-                # log.debug("Read coefficient line %d: \"%s\"" % (line_no, line))
-            except (ValueError, IndexError):
-                if coeffs.size == 0:
-                    # log.debug("Read header line: %d: \"%s\"" % (len(header_lines), line))
-                    header_lines.append(line)
-                else:
-                    # log.debug("Read non-coefficient line \"%s\", finished reading %s." % (line, coeffs_types))
-                    line_offset = line_no
-                    break
-
-        log.info("Read %d header lines and %d %s coefficient lines." % (len(header_lines), coeffs.size, coeffs_types))
-        # log.debug("l\tm\tg_lm\th_lm")
-        # for coeff in coeffs.contents():
-        #     log.debug("%d\t%d\t%e\t%e" % (coeff[0][0],coeff[0][1],coeff[1][0],coeff[1][1]))
-
-        full_coeffs.append(coeffs)
-
-    log.debug("Finished reading magnetogram file \"%s\"." % fname)
-    return shc.hstack(full_coeffs)
+    log.debug("Finished reading magnetogram file \"%s\"." % file_name)
+    return shc.hstack(coefficient_sets)
 
 
-def write_magnetogram_file(coeffs, fname, degree_max=None):
+def write_magnetogram_file(coefficient_sets, file_name, degree_max=None, order_min=0):
     """
 
-    :param coeffs:
-    :param fname:
+    :param coefficient_sets:
+    :param file_name:
     :param degree_max:
+    :param order_min:
     :return:
     """
-    log.debug("Begin writing magnetogram file \"%s\"..." % fname)
-
     if degree_max is None:
-        degree_max = coeffs.degree_max
+        degree_max = coefficient_sets.degree_max
 
-    if coeffs.default_coefficients.shape != (1,):
-        log.error("Can only write radial components")
-        raise NotImplementedError("Can only write radial components")
+    log.debug("Begin writing magnetogram file \"%s\"..." % file_name)
 
-    # TODO This should use .arrays() or .zdi() of the magnetogram.
-    with open(fname, 'w') as f:
+    lines = []
+    for coefficients in shc.hsplit(coefficient_sets):
+        lines.append("".join(["%3d  %3d  %13e  %13e\n" % (d, m, np.real(data), np.imag(data)) for
+                              (d, m, data) in zip(*coefficients.as_arrays(degree_l_max=degree_max,
+                                                                          order_m_min=order_min))]))
+
+    with open(file_name, 'w') as f:
         f.write("Output of %s\n" % __file__)
         f.write("Order:%d\n" % degree_max)
+        f.write("\n".join(lines))
 
-        for degree in range(0, degree_max + 1):
-            for order in range(0, degree + 1):
-                coeff = coeffs.get(degree, order)
-                f.write("%3d  %3d  %13e  %13e\n" % (degree, order, np.real(coeff), np.imag(coeff)))
-
-    log.info("Finished writing magnetogram file \"%s\"." % fname)
+    log.info("Finished writing magnetogram file \"%s\"." % file_name)
 
 

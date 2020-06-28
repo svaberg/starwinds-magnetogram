@@ -19,15 +19,13 @@ class Coefficients(object):
 
     @property
     def default_coefficients(self):
-        """
-        Return a copy of the default coefficients of this magnetogram.
-        :return:
-        """
+        """Return a copy of the default coefficients of this magnetogram. """
         return self._default_coefficients.copy()  # A copy is needed as the default coefficients are mutable.
 
     def append(self, degree, order, data):
         """Append coefficients for a given degree and order (cannot already exist)."""
-        assert (degree, order) not in self.coefficients
+        if (degree, order) in self.coefficients:
+            raise IndexError(f"Already added coefficient with l={degree}, m={order}.")
         self.set(degree, order, data)
 
     def set(self, degree, order, data):
@@ -86,28 +84,6 @@ class Coefficients(object):
             for key in sorted(self.coefficients):
                 yield key, self.coefficients[key]
         return iterator()
-    #
-    # def as_zdi(self, accept_negative_orders=False):
-    #     """ Feel free to improve"""
-    #     if not accept_negative_orders and self.order_min < 0:
-    #         raise ValueError("Will not convert negative orders to ZDI format. Use map_to_positive_orders first.")
-    #
-    #     degrees = []
-    #     orders = []
-    #
-    #     for degree in range(0, self.degree_max + 1):
-    #         for order in range(-degree, degree + 1):
-    #             degrees.append(degree)
-    #             orders.append(order)
-    #
-    #     # Create one coefficient row and use it to determine length of coefficient rows
-    #     _c0 = self.default_coefficients
-    #     coeffs = np.zeros((len(degrees), len(self.default_coefficients)))
-    #     for row_id in range(len(degrees)):
-    #         coeffs[row_id] = self.get(degrees[row_id], orders[row_id])
-    #         assert np.imag(coeffs[row_id]) == 0
-    #
-    #     return np.asarray(degrees), np.asarray(orders), coeffs
 
     def as_arrays(self, include_unset=True,
                   degree_l_min=None, degree_l_max=None,

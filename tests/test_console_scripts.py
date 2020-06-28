@@ -31,20 +31,24 @@ def test_sw_plot_magnetogram(script_runner, options, request, zdi_file):
     assert ret.returncode == 0, "Expected return code 0 (success)."
 
 
-@pytest.mark.parametrize("inverse", (None, "--inverse"))
-@pytest.mark.parametrize("format_only", (None, "--format-only"))
+@pytest.mark.parametrize("pfss_to_zdi", (None, "--pfss-to-zdi"))
 @pytest.mark.parametrize("degree_max", (None, "--degree-max=3", "--degree-max=60"))
-def test_sw_convert_magnetogram(script_runner, request, inverse, format_only, degree_max, zdi_file):
+def test_sw_convert_magnetogram(script_runner, request, pfss_to_zdi, degree_max, zdi_file, pfss_file):
+
+    if pfss_to_zdi:
+        file = pfss_file
+    else:
+        file = zdi_file
+
     pn = context.PlotNamer(__file__, request.node.name)
 
-    args = [inverse, format_only, degree_max]
-    args = [a for a in args if a is not None]
+    args = ['sw-convert-magnetogram',
+            file,
+            pn.get(".dat").replace(' ', ''),
+            pfss_to_zdi,
+            degree_max]
 
-    ret = script_runner.run('sw-convert-magnetogram',
-                            zdi_file,
-                            pn.get(".dat").replace(' ', ''),
-                            "--radial-only",
-                            *args)
+    ret = script_runner.run(*[a for a in args if a is not None])
     assert ret.returncode == 0, "Expected return code 0 (success)."
 
 

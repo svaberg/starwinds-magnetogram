@@ -29,11 +29,11 @@ def main():
 
     if args.type == "pfss":
         log.debug("Converting from PFSS scaling to ZDI format.")
-        coefficients = coefficients.scale(converter.forward_conversion_factor, -1)
+        coefficients = converter.convert_pfss_to_zdi(coefficients)
     elif args.type == "zdi":
         log.debug("Using ZDI format (native).")
     else:
-        raise NotImplementedError(f"Unknown magnetogram type \"{args.type}\".")
+        raise ValueError(f"Unknown magnetogram type \"{args.type}\".")
 
     lz = zdi_magnetogram.from_coefficients(coefficients)
 
@@ -60,7 +60,7 @@ def main():
     elif args.plot_type == 'energy-summary':
         fig, _ = plot_zdi.plot_energy_summary(lz)
     else:
-        raise NotImplementedError(f"Unknown plot type \"{args.plot_type}\".")
+        raise ValueError(f"Unknown plot type \"{args.plot_type}\".")
 
     #
     # Show or save plot

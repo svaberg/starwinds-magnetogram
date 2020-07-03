@@ -36,8 +36,8 @@ class Coefficients(object):
         assert np.abs(order) <= degree, "Order must be between -l and l for degree l."
         assert data.shape == self._default_coefficients.shape, "Incompatible coefficient shapes."
 
-        assert type(degree) == int, "Degree index must be integer"
-        assert type(order) == int, "Order index must be integer"
+        degree = int(degree)  # Integer please
+        order = int(order)
 
         self.coefficients[(degree, order)] = data
         self._degree_max = max(self._degree_max, degree)
@@ -149,6 +149,17 @@ class Coefficients(object):
     def truncated(self, degree_max): return truncated(self, degree_max)
 
 
+def from_arrays(degrees_l,
+                      orders_m,
+                      coeffs_lm):
+
+    coeffs = Coefficients(0 * coeffs_lm[0])
+    for deg_l, ord_m, coeff in zip(degrees_l, orders_m, coeffs_lm):
+        coeffs.append(deg_l, ord_m, coeff)
+
+    return coeffs
+
+
 def noise(degree_max=15, noisinator=numpy.random.normal, beta=0):
     coeffs = Coefficients()
 
@@ -172,6 +183,8 @@ def isclose(shc0,
     :param shc1: Second set
 
     :return: True if the sets are close, otherwise False.
+
+    # TODO should be named allclose
     """
     if shc0.default_coefficients.shape != shc1.default_coefficients.shape:
         return False

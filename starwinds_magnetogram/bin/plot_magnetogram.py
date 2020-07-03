@@ -4,6 +4,7 @@ log = logging.getLogger(__name__)
 
 import argparse
 import os.path
+import matplotlib.pyplot as plt
 
 from stellarwinds.magnetogram import reader_writer
 from stellarwinds.magnetogram import converter
@@ -66,10 +67,10 @@ def main():
     # Show or save plot
     #
     if args.output_file is None:
-        import matplotlib.pyplot as plt
         plt.show()
     else:
         fig.savefig(args.output_file, bbox_inches="tight")
+        plt.close()
 
 
 def guess_star_name_from_filename(input_file):

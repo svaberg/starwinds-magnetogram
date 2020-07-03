@@ -58,6 +58,7 @@ def read_magnetogram_file(file_name):
             order_m = int(line_tokens[1])
             real_coeff = float(line_tokens[2])
             imag_coeff = float(line_tokens[3])
+            log.debug(f"Line {line_no}: \"{line}\" accepted.")
         except IndexError:
             log.debug(f"Line {line_no}: \"{line}\" ignored; has too few tokens.")
             continue

@@ -95,35 +95,36 @@ def plot_energy_summary(zc, axs=None):
 
     ax.legend(wedges, wlabels)
 
-    ax = axs[2]
-    ax.set_title("Toroidal energy")
-    labels = ("l1", "l2", "l3")
-    w, *_ = ax.pie([results[f'magnetogram.total.energy.toroidal.{c}.fraction'] for c in labels],
-           # labels=labels,
-           radius=2,
-           autopct='%1.1f%%',
-           pctdistance=.8,
-           wedgeprops=dict(width=1  , edgecolor='w'),
-           startangle=0,
-           rotatelabels=True,
-           )
+    if results[f'magnetogram.toroidal.energy.fraction'] != 0:
+        ax = axs[2]
+        ax.set_title("Toroidal energy")
+        labels = ("l1", "l2", "l3")
+        w, *_ = ax.pie([results[f'magnetogram.total.energy.toroidal.{c}.fraction'] for c in labels],
+               # labels=labels,
+               radius=2,
+               autopct='%1.1f%%',
+               pctdistance=.8,
+               wedgeprops=dict(width=1  , edgecolor='w'),
+               startangle=0,
+               rotatelabels=True,
+               )
 
-    wedges = list(w)
-    wlabels = ["$l1$", "$l2$", "$l3$"]
+        wedges = list(w)
+        wlabels = ["$l1$", "$l2$", "$l3$"]
 
-    w, *_ = ax.pie([results[f'magnetogram.total.energy.toroidal.axisymmetric.fraction'],],
-           radius=1,
-           # labels=("axisymmetric",),
-           autopct='%1.0f%%',
-           colors=['red',],
-           wedgeprops=dict(width=1, edgecolor='w'),
-           rotatelabels=True,
-           )
+        w, *_ = ax.pie([results[f'magnetogram.total.energy.toroidal.axisymmetric.fraction'],],
+               radius=1,
+               # labels=("axisymmetric",),
+               autopct='%1.0f%%',
+               colors=['red',],
+               wedgeprops=dict(width=1, edgecolor='w'),
+               rotatelabels=True,
+               )
 
-    wedges.extend(w)
-    wlabels.append("axisymmetric")
+        wedges.extend(w)
+        wlabels.append("axisymmetric")
 
-    ax.legend(wedges, wlabels)
+        ax.legend(wedges, wlabels)
 
     for ax in axs:
         ax.axis('equal')
@@ -242,15 +243,8 @@ def plot_zdi_components(mgm, radius=1, axs=None, zg=None, symmetric=None, cmap=N
     polar_corners, azimuth_corners = zg.corners()
     Brpa = np.array([g(polar_centers, azimuth_centers) for g in getter_fns])
 
-    ax = stellarwinds.magnetogram.plots.plot_components(polar_centers, azimuth_centers, Brpa, axs, azimuth_corners, polar_corners, radius)
-
-    abs_field_mean = np.sum(np.abs(Brpa) * zg.areas()) / (4 * np.pi)  # Scaled by area
-    log.debug(f"Mean fiend strength {abs_field_mean:.3G} G")
-    axs[1].text(.5, .5, #1, 0,
-                f"abs mean: {abs_field_mean:.3G} G ",
-            transform=ax.transAxes,
-            horizontalalignment='right',
-            verticalalignment='bottom')
+    axs = stellarwinds.magnetogram.plots.plot_components(polar_centers, azimuth_centers,
+                                                        Brpa, axs, azimuth_corners, polar_corners, radius)
 
     return axs
 

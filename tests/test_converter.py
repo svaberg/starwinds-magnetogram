@@ -337,3 +337,69 @@ def test_collect_cosines():
 #     plt.plot(theta, ft, '--', linewidth=3)
     assert np.allclose(fc, frs)
     assert np.allclose(fc, ft)
+
+
+def test_latlon_conversion(request):
+    """Test that the discretized field can be reconstructed as zdi components."""
+    zg = geometry.ZdiGeometry()
+    polar_centers, azimuth_centers = zg.centers()
+
+    field_r = np.ones_like(polar_centers)
+    field_polar = np.zeros_like(field_r)
+    field_azimuthal = np.zeros_like(field_r)
+
+    zm = converter.convert_latlon_to_zdi(polar_centers, azimuth_centers,
+                                          field_r, field_polar, field_azimuthal)
+
+    assert np.allclose(zm.alpha[1:], 0)
+    assert np.allclose(zm.beta, 0)
+    assert np.allclose(zm.gamma, 0)
+
+
+def test_latlon_conversion2(request):
+    """Test that the discretized field can be reconstructed as zdi components."""
+    zg = geometry.ZdiGeometry(64)
+    polar_centers, azimuth_centers = zg.centers()
+
+    coeffs0_alpha = shc.Coefficients()
+    # coeffs0_alpha.append(0, 0, 1.1)  # Does not work with 0, 0 yet.
+    coeffs0_alpha.append(1, 1, 0.1)
+    coeffs0_alpha.append(2, 2, 0.5)
+    coeffs0_alpha.append(3, 3, 0.5)
+
+    coeffs0_alpha = shc.Coefficients()
+    coeffs0_alpha.append(0, 0, 0.1)
+    coeffs0_alpha.append(1, 1, 0.1)
+    coeffs0_alpha.append(3, 2, 0.1)
+    # coeffs0_alpha.append(2, 2, 0.1)
+
+    zm0 = zdi_magnetogram.from_coefficients(coeffs0_alpha)
+    field_r = zm0.get_radial_field(polar_centers, azimuth_centers)
+    field_polar = zm0.get_polar_field(polar_centers, azimuth_centers)
+    field_azimuthal = zm0.get_azimuthal_field(polar_centers, azimuth_centers)
+
+    zm1 = converter.convert_latlon_to_zdi(polar_centers, azimuth_centers,
+                                          field_r, field_polar, field_azimuthal)
+
+    coeffs1_alpha = shc.from_arrays(zm1.degrees_l, zm1.orders_m, zm1.alpha)
+
+
+    with context.PlotNamer(__file__, request.node.name) as (pn, plt):
+        from stellarwinds.magnetogram import plot_zdi
+
+        fig, axs = plt.subplots(1, 2)
+        ax = axs[0]
+        plot_zdi.plot_energy_by_degree(zm0, ax)
+
+        ax = axs[1]
+        plot_zdi.plot_energy_by_degree(zm1, ax)
+        plt.savefig(pn.get())
+        plt.close()
+
+        fig, axs = plt.subplots(2, 3, figsize=(18, 12))
+        plot_zdi.plot_zdi_components(zm0, zg=zg, axs=axs[0])
+        plot_zdi.plot_zdi_components(zm1, zg=zg, axs=axs[1])
+        plt.savefig(pn.get())
+
+    print(coeffs1_alpha - coeffs0_alpha)
+    assert shc.isclose(coeffs1_alpha, coeffs0_alpha, rtol=1e-3, atol=1e-3)

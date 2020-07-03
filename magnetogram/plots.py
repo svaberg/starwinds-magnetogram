@@ -52,33 +52,43 @@ def plot_components(polar_centers, azimuth_centers, field_centers, axs, azimuth_
         log.debug("Axis " + str(ax))
 
         img, zero_contour = plot_magnetic_field(ax,
-                                                   polar_centers, azimuth_centers, Bi,
-                                                   polar_corners=polar_corners, azimuth_corners=azimuth_corners,
-                                                   legend_str=latex_name,
-                                                   abs_max=abs_max)
+                                                polar_centers, azimuth_centers, Bi,
+                                                polar_corners=polar_corners, azimuth_corners=azimuth_corners,
+                                                legend_str=latex_name,
+                                                abs_max=abs_max,
+                                                symmetric=True)
 
         add_extrema(polar_centers, azimuth_centers, Bi, ax, legend_str=latex_name, markers=markers)
+
     cax = place_colorbar_axis_right(ax)
     cb = ax.figure.colorbar(img, ax=ax, cax=cax)
+
     if zero_contour:
         cb.add_lines(zero_contour)
+
     for Bi, markers in zip(field_centers, extremum_markers):
         cb.ax.plot(np.mean(cb.ax.get_xlim()),
                    np.max(Bi), color='k', marker=markers[0], linestyle="none", markersize=4, fillstyle='none')
         cb.ax.plot(np.mean(cb.ax.get_xlim()),
                    np.min(Bi), color='k', marker=markers[1], linestyle="none", markersize=4, fillstyle='none')
+
     # cb=add_colorbar(img, polar_centers, azimuth_centers, field_centers[0], axs[0], zero_contour, legend_str=latex_name, cax=cax)
+
     for ax, Bi, latex_name in zip(axs, field_centers, latex_names):
         add_contours(polar_centers, azimuth_centers, Bi, ax, legend_str=latex_name, cb=cb)
+
     for ax in axs:
         ax.legend(ncol=2, loc='lower left')
+
     axs[0].set_title(r"Radial field $B_r$ at $r = %2.1f r_\star$" % radius)
     axs[1].set_title(r"Polar field $B_\theta$ at $r = %2.1f r_\star$" % radius)
     axs[2].set_title(r"Azimuthal field $B_\phi$ at $r = %2.1f r_\star$" % radius)
     axs[0].set_ylabel(r"Polar angle $\theta$ [deg]")
+
     for ax in axs:
         ax.set_xlabel(r"Azimuth angle $\phi$ [deg]")
-    return ax
+
+    return axs
 
 
 def plot_magnetic_field(ax,

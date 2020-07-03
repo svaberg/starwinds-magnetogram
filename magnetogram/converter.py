@@ -6,6 +6,8 @@ log = logging.getLogger(__name__)
 
 import stellarwinds.magnetogram.coefficients as shc
 from stellarwinds.magnetogram import pfss_magnetogram
+from stellarwinds.magnetogram import zdi_magnetogram
+
 
 def collect_cosines(r, alpha, s, beta):
     """
@@ -47,7 +49,8 @@ def map_to_positive_orders(magnetogram):
     """
     After rotation, a set of coefficients may have nonzero negative orders; this is normally
     not part of the ZDI magnetogram definition. Use this to "fold" the negative orders onto the
-    positive orders without changing the magnetogram.
+    positive orders without changing the magnetogram. This folding is possible because only the
+    real components of the complex magnetograms are used.
     :param magnetogram:
     :return:
     """
@@ -125,6 +128,7 @@ def convert_pfss_to_zdi(pfss_coeffs):
     """
     # The alpha values are easy, just invert the forward conversion.
     alpha = pfss_coeffs.scale(forward_conversion_factor, -1)
+    # alpha = shc.scale(pfss_coeffs, forward_conversion_factor, -1)
 
     # This is very close or exact.
     beta = shc.scale(alpha, _beta_inverse_conversion_factor, 1)
@@ -133,3 +137,77 @@ def convert_pfss_to_zdi(pfss_coeffs):
     gamma = shc.zeros_like(alpha)
 
     return shc.hstack((alpha, beta, gamma))
+
+
+def convert_latlon_to_zdi(pl, az, field_r, field_polar, field_azimuthal, area=None):
+
+    if area is None:
+        dpl = np.mean(np.diff(pl, axis=1))
+        daz = np.mean(np.diff(az, axis=0))
+        area = dpl * daz * np.sin(pl)
+
+    degrees_l, orders_m = list(zip(*positive_lm(3)))
+
+    alpha, beta, gamma = _conv(pl, az,
+                               degrees_l, orders_m,
+                               field_r, field_polar, field_azimuthal,
+                               area)
+
+    return zdi_magnetogram.ZdiMagnetogram(degrees_l=degrees_l, orders_m=orders_m,
+                                          alpha_lm=alpha, beta_lm=beta, gamma_lm=gamma)
+
+
+def _conv(pl, az, degrees_l, orders_m, field_r, field_polar, field_azimuthal, area):
+
+    degrees_l = np.asarray(degrees_l)
+    orders_m = np.asarray(orders_m)
+
+    plmct, dplmct = zdi_magnetogram.calculate_lpmn(degrees_l, orders_m, pl)  # Uses n for degree
+    c_lm = zdi_magnetogram.get_c_lm(degrees_l, orders_m)
+    W = ((2.0 - (orders_m == 0)) * c_lm)**-1
+
+    #
+    # Set dimensions of all the arrays to [az, pl, number of lm pairs]
+    #
+    orders_m = np.asarray(orders_m)[np.newaxis, np.newaxis, ...]
+    degrees_l = np.asarray(degrees_l)[np.newaxis, np.newaxis, ...]
+    W = W[np.newaxis, np.newaxis, ...]
+
+    az = az[..., np.newaxis]
+    field_r = field_r[..., np.newaxis]
+    field_polar = field_polar[..., np.newaxis]
+    field_azimuthal = field_azimuthal[..., np.newaxis]
+    area = area[..., np.newaxis]
+
+    #
+    # Calculate alpha
+    #
+    alpha_re = +np.sum(field_r * area * plmct * np.cos(orders_m * az) / W, axis=(0, 1))
+    alpha_im = -np.sum(field_r * area * plmct * np.sin(orders_m * az) / W, axis=(0, 1))
+    alpha = alpha_re + 1.0j * alpha_im
+
+    #
+    # Calculate beta
+    #
+    beta_re = +np.sum(field_polar * area * np.cos(orders_m * az) * dplmct
+                      + field_azimuthal * area * orders_m * np.sin(orders_m * az) * plmct, axis=(0, 1))
+    beta_im = +np.sum(field_polar * area * np.sin(orders_m * az) * dplmct
+                      - field_azimuthal * area * orders_m * np.cos(orders_m * az) * plmct, axis=(0, 1))
+    beta = beta_re + 1.0j * beta_im
+
+    #
+    # Calculate gamma
+    #
+    gamma_re = -np.sum(field_polar * area * orders_m * np.sin(orders_m * az) * plmct -
+                       field_azimuthal * area * np.cos(orders_m * az) * dplmct, axis=(0, 1))
+    gamma_im = -np.sum(field_polar * area * orders_m * np.cos(orders_m * az) * plmct +
+                       field_azimuthal * area * np.sin(orders_m * az) * dplmct, axis=(0, 1))
+    gamma = gamma_re + 1.0j * gamma_im
+
+    return alpha, beta, gamma
+
+
+def positive_lm(max_degree):
+    for l in range(0, max_degree + 1):
+        for m in range(0, l + 1):
+            yield l, m

@@ -58,24 +58,7 @@ class ZdiMagnetogram:
         self.beta = np.atleast_1d(beta_lm)
         self.gamma = np.atleast_1d(gamma_lm)
 
-        # Calculate c_lm as described in article.
-        c_lm2 = (
-                (2 * self.degrees_l + 1)
-                / (4 * np.pi)
-                * sp.special.factorial(self.degrees_l - self.orders_m)
-                / sp.special.factorial(self.degrees_l + self.orders_m)
-        )
-
-        if False:
-        # This takes better care of the cancellations in (l-m)!/(l+m)!
-            @np.vectorize
-            def factorial_expression(l, m):
-                return np.exp(-np.sum(np.log(np.arange(l - m + 1, l + m + 1))))
-
-            # Calculate c_lm as described in article.
-            c_lm2 = (2 * self.degrees_l + 1) / (4 * np.pi) * factorial_expression(self.degrees_l, self.orders_m)
-
-        self.c_lm = np.sqrt(c_lm2)
+        self.c_lm = get_c_lm(self.degrees_l, self.orders_m)
 
         self._dpml_method = dpml_method
 
@@ -254,26 +237,7 @@ class ZdiMagnetogram:
         return np.real(fpp_i_j)
 
     def _calculate_lpmn(self, points_polar):
-        r"""
-        Use scipy.lpmn to calculate the derivatives of the associated Legendre polynomial. The values returned
-        are $P(\cos\theta)$ and $\partial \theta P(\cos \theta)$.
-        :param points_polar: point polar angle values
-        :return: tuple of values and derivative values. The last index corresponds to the order and degree.
-        """
-        Pmn_cos_theta_result = np.empty(points_polar.shape + (self.degree() + 1,) * 2, dtype=complex)
-        Pmn_d_cos_theta_result = np.empty_like(Pmn_cos_theta_result)
-
-        for ndindex in np.ndindex(points_polar.shape):
-            a, b = scipy.special.lpmn(m=self.degree(),  # Go up to the degree $\ell$ for $m$
-                                      n=self.degree(),
-                                      z=np.cos(points_polar[ndindex]))
-            Pmn_cos_theta_result[ndindex] = a
-            Pmn_d_cos_theta_result[ndindex] = b * -np.sin(points_polar[ndindex])
-
-        Pmn_cos_theta_result = Pmn_cos_theta_result[..., self.orders_m, self.degrees_l]
-        Pmn_d_cos_theta_result = Pmn_d_cos_theta_result[..., self.orders_m, self.degrees_l]
-
-        return Pmn_cos_theta_result, Pmn_d_cos_theta_result
+        return calculate_lpmn(self.degrees_l, self.orders_m, points_polar)
 
     def get_polar_toroidal_field(self, points_polar, points_azimuth):
         r"""
@@ -389,72 +353,77 @@ class ZdiMagnetogram:
         total_energy_toroidal = np.sum(energy_gamma)
 
         dict_['magnetogram.total.energy.B2'] = total_energy
-        dict_['magnetogram.radial.energy.fraction'] = np.sum(energy_alpha) / total_energy
-        dict_['magnetogram.poloidal.energy.fraction'] = total_energy_poloidal / total_energy
-        dict_['magnetogram.toroidal.energy.fraction'] = total_energy_toroidal / total_energy
 
-        if dest is None and show_fractions:
-            print('Fraction of magnetic energy in each component. Should sum to 1.')
-            print('l   m    E(alpha)   E(beta)    E(gamma)')
-            for i in range(len(self.alpha)):
-                print('%2i %2i %10.5g %10.5g %10.5g' % (self.degrees_l[i],
-                                                        self.orders_m[i],
-                                                        energy_alpha[i] / total_energy,
-                                                        energy_beta[i] / total_energy,
-                                                        energy_gamma[i] / total_energy))
+        # Ignore warnings when total energy or total poloidal energy is zero.
+        with np.errstate(divide='ignore', invalid='ignore'):
 
-        if dest is None:
-            print('Total energy: %g (B^2)' % dict_['magnetogram.total.energy.B2'])
+            dict_['magnetogram.radial.energy.fraction'] = np.sum(energy_alpha) / total_energy
+            dict_['magnetogram.poloidal.energy.fraction'] = total_energy_poloidal / total_energy
+            dict_['magnetogram.toroidal.energy.fraction'] = total_energy_toroidal / total_energy
 
-            print('Radial   energy* %g %%' % (100 * dict_['magnetogram.radial.energy.fraction']))
-            print('Poloidal energy  %g %%' % (100 * dict_['magnetogram.poloidal.energy.fraction']))
-            print('Toroidal energy  %g %%' % (100 * dict_['magnetogram.toroidal.energy.fraction']))
-            print('* The radial energy is part of the poloidal energy.')
+            if dest is None and show_fractions:
+                print('Fraction of magnetic energy in each component. Should sum to 1.')
+                print('l   m    E(alpha)   E(beta)    E(gamma)')
+                for i in range(len(self.alpha)):
+                    print('%2i %2i %10.5g %10.5g %10.5g' % (self.degrees_l[i],
+                                                            self.orders_m[i],
+                                                            energy_alpha[i] / total_energy,
+                                                            energy_beta[i] / total_energy,
+                                                            energy_gamma[i] / total_energy))
 
-        total_energy_poloidal = np.sum(energy_alpha) + np.sum(energy_beta)
-        total_energy_toroidal = np.sum(energy_gamma)
+            if dest is None:
+                print('Total energy: %g (B^2)' % dict_['magnetogram.total.energy.B2'])
 
-        Epol_l1 = np.sum((energy_alpha + energy_beta)[self.degrees_l == 1])
-        Epol_l2 = np.sum((energy_alpha + energy_beta)[self.degrees_l == 2])
-        Epol_l3 = np.sum((energy_alpha + energy_beta)[self.degrees_l == 3])
-        Etor_l1 = np.sum(energy_gamma[self.degrees_l == 1])
-        Etor_l2 = np.sum(energy_gamma[self.degrees_l == 2])
-        Etor_l3 = np.sum(energy_gamma[self.degrees_l == 3])
+                print('Radial   energy* %g %%' % (100 * dict_['magnetogram.radial.energy.fraction']))
+                print('Poloidal energy  %g %%' % (100 * dict_['magnetogram.poloidal.energy.fraction']))
+                print('Toroidal energy  %g %%' % (100 * dict_['magnetogram.toroidal.energy.fraction']))
+                print('* The radial energy is part of the poloidal energy.')
 
-        dict_['magnetogram.total.energy.dipole.fraction'] = Epol_l1 / total_energy_poloidal
-        dict_['magnetogram.total.energy.quadrupole.fraction'] = Epol_l2 / total_energy_poloidal
-        # TODO Folsom calls this octopole but l3 is a hexapole.
-        dict_['magnetogram.total.energy.octopole.fraction'] = Epol_l3 / total_energy_poloidal
-        dict_['magnetogram.total.energy.toroidal.l1.fraction'] = Etor_l1 / total_energy_toroidal
-        dict_['magnetogram.total.energy.toroidal.l2.fraction'] = Etor_l2 / total_energy_toroidal
-        dict_['magnetogram.total.energy.toroidal.l3.fraction'] = Etor_l3 / total_energy_toroidal
+            total_energy_poloidal = np.sum(energy_alpha) + np.sum(energy_beta)
+            total_energy_toroidal = np.sum(energy_gamma)
 
-        if dest is None:
-            print('dipole: {:7.3%} (% pol)'.format(Epol_l1 / total_energy_poloidal))
-            print('quadrupole: {:7.3%} (% pol)'.format(Epol_l2 / total_energy_poloidal))
-            print('octopole: {:7.3%} (% pol)'.format(Epol_l3 / total_energy_poloidal))  # Should be hexapole
-            print('toroidal l1: {:7.3%} (% tor)'.format(Etor_l1 / total_energy_toroidal))
-            print('toroidal l2: {:7.3%} (% tor)'.format(Etor_l2 / total_energy_toroidal))
-            print('toroidal l3: {:7.3%} (% tor)'.format(Etor_l3 / total_energy_toroidal))
+            Epol_l1 = np.sum((energy_alpha + energy_beta)[self.degrees_l == 1])
+            Epol_l2 = np.sum((energy_alpha + energy_beta)[self.degrees_l == 2])
+            Epol_l3 = np.sum((energy_alpha + energy_beta)[self.degrees_l == 3])
+            Etor_l1 = np.sum(energy_gamma[self.degrees_l == 1])
+            Etor_l2 = np.sum(energy_gamma[self.degrees_l == 2])
+            Etor_l3 = np.sum(energy_gamma[self.degrees_l == 3])
 
-        polEaxi = np.sum((energy_alpha + energy_beta)[self.orders_m == 0])
-        torEaxi = np.sum(energy_gamma[self.orders_m == 0])
-        totEaxi = polEaxi + torEaxi
+            dict_['magnetogram.total.energy.dipole.fraction'] = Epol_l1 / total_energy_poloidal
+            dict_['magnetogram.total.energy.quadrupole.fraction'] = Epol_l2 / total_energy_poloidal
+            # TODO Folsom calls this octopole but l3 is a hexapole.
+            dict_['magnetogram.total.energy.octopole.fraction'] = Epol_l3 / total_energy_poloidal
+            dict_['magnetogram.total.energy.toroidal.l1.fraction'] = Etor_l1 / total_energy_toroidal
+            dict_['magnetogram.total.energy.toroidal.l2.fraction'] = Etor_l2 / total_energy_toroidal
+            dict_['magnetogram.total.energy.toroidal.l3.fraction'] = Etor_l3 / total_energy_toroidal
 
-        dict_['magnetogram.total.energy.axisymmetric.fraction'] \
-            = totEaxi / (total_energy_poloidal + total_energy_toroidal)
-        dict_['magnetogram.total.energy.poloidal.axisymmetric.fraction'] = polEaxi / total_energy_poloidal
-        dict_['magnetogram.total.energy.toroidal.axisymmetric.fraction'] = torEaxi / total_energy_toroidal
 
-        symdipfrac = float((energy_alpha + energy_beta)[np.logical_and(self.degrees_l == 1, self.orders_m == 0)] /
-                           np.sum((energy_alpha + energy_beta)[self.degrees_l == 1]))
-        dict_['magnetogram.total.energy.dipole.axisymmetric.fraction'] = symdipfrac
+            if dest is None:
+                print('dipole: {:7.3%} (% pol)'.format(Epol_l1 / total_energy_poloidal))
+                print('quadrupole: {:7.3%} (% pol)'.format(Epol_l2 / total_energy_poloidal))
+                print('octopole: {:7.3%} (% pol)'.format(Epol_l3 / total_energy_poloidal))  # Should be hexapole
+                print('toroidal l1: {:7.3%} (% tor)'.format(Etor_l1 / total_energy_toroidal))
+                print('toroidal l2: {:7.3%} (% tor)'.format(Etor_l2 / total_energy_toroidal))
+                print('toroidal l3: {:7.3%} (% tor)'.format(Etor_l3 / total_energy_toroidal))
 
-        if dest is None:
-            print('axisymmetric: {:7.3%} (% tot)'.format(totEaxi / (total_energy_poloidal + total_energy_toroidal)))
-            print('poloidal axisymmetric: {:7.3%} (% pol)'.format(polEaxi / total_energy_poloidal))
-            print('toroidal axisymmetric: {:7.3%} (% tor)'.format(torEaxi / total_energy_toroidal))
-            print('dipole axisymmetric: {:7.3%} (% dip)'.format(symdipfrac))
+            polEaxi = np.sum((energy_alpha + energy_beta)[self.orders_m == 0])
+            torEaxi = np.sum(energy_gamma[self.orders_m == 0])
+            totEaxi = polEaxi + torEaxi
+
+            dict_['magnetogram.total.energy.axisymmetric.fraction'] \
+                = totEaxi / (total_energy_poloidal + total_energy_toroidal)
+            dict_['magnetogram.total.energy.poloidal.axisymmetric.fraction'] = polEaxi / total_energy_poloidal
+            dict_['magnetogram.total.energy.toroidal.axisymmetric.fraction'] = torEaxi / total_energy_toroidal
+
+            symdipfrac = float((energy_alpha + energy_beta)[np.logical_and(self.degrees_l == 1, self.orders_m == 0)] /
+                               np.sum((energy_alpha + energy_beta)[self.degrees_l == 1]))
+            dict_['magnetogram.total.energy.dipole.axisymmetric.fraction'] = symdipfrac
+
+            if dest is None:
+                print('axisymmetric: {:7.3%} (% tot)'.format(totEaxi / (total_energy_poloidal + total_energy_toroidal)))
+                print('poloidal axisymmetric: {:7.3%} (% pol)'.format(polEaxi / total_energy_poloidal))
+                print('toroidal axisymmetric: {:7.3%} (% tor)'.format(torEaxi / total_energy_toroidal))
+                print('dipole axisymmetric: {:7.3%} (% dip)'.format(symdipfrac))
 
         return energy_alpha, energy_beta, energy_gamma
 
@@ -598,4 +567,53 @@ def _cartesian_from_spherical_helper(fr, fp, fa, pp, pa):
     assert field_xyz.shape[-2] == 3, "Expected second last dimension size to be 3"
     field_xyz = field_xyz[..., 0].reshape(pp.shape + (3,))
     return field_xyz
+
+
+def get_c_lm(degrees_l, orders_m, method='low_order'):
+    # Calculate c_lm as described in article.
+    degrees_l = np.asarray(degrees_l)
+    orders_m = np.asarray(orders_m)
+    
+    if method == "low_order":
+        c_lm2 = (
+                (2 * degrees_l + 1)
+                / (4 * np.pi)
+                * sp.special.factorial(degrees_l - orders_m)
+                / sp.special.factorial(degrees_l + orders_m)
+        )
+    else:
+        # This takes better care of the cancellations in (l-m)!/(l+m)!
+        @np.vectorize
+        def factorial_expression(l, m):
+            return np.exp(-np.sum(np.log(np.arange(l - m + 1, l + m + 1))))
+
+        c_lm2 = (2 * degrees_l + 1) / (4 * np.pi) * factorial_expression(degrees_l, orders_m)
+
+    return np.sqrt(c_lm2)
+
+
+def calculate_lpmn(degrees_l, orders_m, points_polar):
+    r"""
+    Use scipy.lpmn to calculate the derivatives of the associated Legendre polynomial. The values returned
+    are $P(\cos\theta)$ and $\partial \theta P(\cos \theta)$.
+    :param points_polar: point polar angle values
+    :return: tuple of values and derivative values. The last index corresponds to the order and degree.
+    """
+    max_degree = np.max(degrees_l)
+    max_order = np.max(orders_m)
+    Pmn_cos_theta_result = np.empty(points_polar.shape + (max_degree + 1,) * 2)
+    Pmn_cos_theta_result = np.empty(points_polar.shape + (max_order + 1, max_degree + 1))
+    Pmn_d_cos_theta_result = np.empty_like(Pmn_cos_theta_result)
+
+    for ndindex in np.ndindex(points_polar.shape):
+        a, b = scipy.special.lpmn(m=max_order,  # Go up to the degree $\ell$ for $m$
+                                  n=max_degree,
+                                  z=np.cos(points_polar[ndindex]))
+        Pmn_cos_theta_result[ndindex] = a
+        Pmn_d_cos_theta_result[ndindex] = b * -np.sin(points_polar[ndindex])
+
+    Pmn_cos_theta_result = Pmn_cos_theta_result[..., orders_m, degrees_l]
+    Pmn_d_cos_theta_result = Pmn_d_cos_theta_result[..., orders_m, degrees_l]
+
+    return Pmn_cos_theta_result, Pmn_d_cos_theta_result
 

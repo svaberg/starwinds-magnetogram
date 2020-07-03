@@ -13,21 +13,30 @@ def test_magnetogram_scripts(script_runner):
     assert ret.returncode != 0
 
 
-@pytest.mark.parametrize("options",
-                         ("-p map",
+@pytest.mark.parametrize("y_opts", ("", "-y pfss"))
+@pytest.mark.parametrize("p_opts",
+                         ("",
+                          "-p map",
                           "-p energy-summary",
                           "-p energy-matrix",
                           "-p energy-by-degree",
-                          "-y pfss",
                           "-p polar",
                           "-p strength",
                           "-p polar",
                           "-p azimuthal",
                           "-p azimuth",
                           "-p radial",))
-def test_sw_plot_magnetogram(script_runner, options, request, zdi_file):
+def test_sw_plot_magnetogram(script_runner, y_opts, p_opts, request, zdi_file, pfss_file):
+    if y_opts:
+        file = pfss_file
+    else:
+        file = zdi_file
+
     pn = context.PlotNamer(__file__, request.node.name)
-    ret = script_runner.run('sw-plot-magnetogram', zdi_file, pn.get().replace(' ', ''), *options.split(" "))
+
+    cmd = f"sw-plot-magnetogram {file} {pn.get().replace(' ', '')} {y_opts} {p_opts}"
+
+    ret = script_runner.run(*cmd.split())
     assert ret.returncode == 0, "Expected return code 0 (success)."
 
 

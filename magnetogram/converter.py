@@ -157,14 +157,19 @@ def convert_latlon_to_zdi(pl, az, field_r, field_polar, field_azimuthal, area=No
                                           alpha_lm=alpha, beta_lm=beta, gamma_lm=gamma)
 
 
-def _conv(pl, az, degrees_l, orders_m, field_r, field_polar, field_azimuthal, area):
+def _conv(pl, az, degrees_l, orders_m, field_r, field_pl, field_az, area):
 
-    degrees_l = np.asarray(degrees_l)
-    orders_m = np.asarray(orders_m)
+    # degrees_l = np.asarray(degrees_l)
+    # orders_m = np.asarray(orders_m)
 
     plmct, dplmct = zdi_magnetogram.calculate_lpmn(degrees_l, orders_m, pl)  # Uses n for degree
     c_lm = zdi_magnetogram.get_c_lm(degrees_l, orders_m)
-    W = ((2.0 - (orders_m == 0)) * c_lm)**-1
+
+    Winv = 2.0 - (np.array(orders_m) == 0)
+    assert Winv.shape == c_lm.shape
+    Winv *= c_lm
+    W = Winv**-1
+    del Winv
 
     #
     # Set dimensions of all the arrays to [az, pl, number of lm pairs]
@@ -175,33 +180,49 @@ def _conv(pl, az, degrees_l, orders_m, field_r, field_polar, field_azimuthal, ar
 
     az = az[..., np.newaxis]
     field_r = field_r[..., np.newaxis]
-    field_polar = field_polar[..., np.newaxis]
-    field_azimuthal = field_azimuthal[..., np.newaxis]
+    field_pl = field_pl[..., np.newaxis]
+    field_az = field_az[..., np.newaxis]
     area = area[..., np.newaxis]
 
     #
     # Calculate alpha
     #
+    for v in (orders_m, degrees_l, W, az, field_r, field_pl, field_az, area):
+        assert len(v.shape) == 3
+
     alpha_re = +np.sum(field_r * area * plmct * np.cos(orders_m * az) / W, axis=(0, 1))
+    # alpha_re2 = +np.sum(field_r * area * plmct * np.cos(orders_m * az) / W2, axis=(0, 1))
+    # import pdb; pdb.set_trace()
     alpha_im = -np.sum(field_r * area * plmct * np.sin(orders_m * az) / W, axis=(0, 1))
     alpha = alpha_re + 1.0j * alpha_im
 
     #
     # Calculate beta
     #
-    beta_re = +np.sum(field_polar * area * np.cos(orders_m * az) * dplmct
-                      + field_azimuthal * area * orders_m * np.sin(orders_m * az) * plmct, axis=(0, 1))
-    beta_im = +np.sum(field_polar * area * np.sin(orders_m * az) * dplmct
-                      - field_azimuthal * area * orders_m * np.cos(orders_m * az) * plmct, axis=(0, 1))
+    degrees_l[degrees_l == 0] = 1e12
+    mplmct = orders_m * plmct
+    # W = (c_lm)**-1
+
+    # Vidotto et al. (2016) has different sign convention from Folsom et al. (2018).
+    # B_polar sign is opposite, while B_azimuth sign is the same.
+    beta_re = +np.sum((field_pl * np.cos(orders_m * az) * dplmct +
+                       field_az * np.sin(orders_m * az) * mplmct) *
+                      area / W / degrees_l, axis=(0, 1))
+    beta_im = -np.sum((field_pl * np.sin(orders_m * az) * dplmct -
+                       field_az * np.cos(orders_m * az) * mplmct) *
+                      area / W / degrees_l, axis=(0, 1))
     beta = beta_re + 1.0j * beta_im
+
 
     #
     # Calculate gamma
     #
-    gamma_re = -np.sum(field_polar * area * orders_m * np.sin(orders_m * az) * plmct -
-                       field_azimuthal * area * np.cos(orders_m * az) * dplmct, axis=(0, 1))
-    gamma_im = -np.sum(field_polar * area * orders_m * np.cos(orders_m * az) * plmct +
-                       field_azimuthal * area * np.sin(orders_m * az) * dplmct, axis=(0, 1))
+    gamma_re = -np.sum((field_pl * np.sin(orders_m * az) * mplmct -
+                        field_az * np.cos(orders_m * az) * dplmct) *
+                       area / W / degrees_l, axis=(0, 1))
+    gamma_im = -np.sum((field_pl * np.cos(orders_m * az) * mplmct +
+                        field_az * np.sin(orders_m * az) * dplmct) *
+                       area / W / degrees_l, axis=(0, 1))
     gamma = gamma_re + 1.0j * gamma_im
 
     return alpha, beta, gamma

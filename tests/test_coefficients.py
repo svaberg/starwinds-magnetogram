@@ -125,4 +125,4 @@ def test_isclose(default):
     c1.append(1, 0, default-1)
     c1.append(1, 1, default-1)
 
-    assert coefficients.isclose(c1, c1)
+    assert coefficients.allclose(c1, c1)

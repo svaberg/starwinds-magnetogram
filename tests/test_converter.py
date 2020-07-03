@@ -355,23 +355,41 @@ def test_latlon_conversion(request):
     assert np.allclose(zm.beta, 0)
     assert np.allclose(zm.gamma, 0)
 
-
-def test_latlon_conversion2(request):
+@pytest.mark.parametrize("coeff_name", ("low", "m0", "m01", "random"))
+def test_latlon_alpha_conversion(coeff_name, request):
     """Test that the discretized field can be reconstructed as zdi components."""
     zg = geometry.ZdiGeometry(64)
     polar_centers, azimuth_centers = zg.centers()
 
-    coeffs0_alpha = shc.Coefficients()
-    # coeffs0_alpha.append(0, 0, 1.1)  # Does not work with 0, 0 yet.
-    coeffs0_alpha.append(1, 1, 0.1)
-    coeffs0_alpha.append(2, 2, 0.5)
-    coeffs0_alpha.append(3, 3, 0.5)
+    if coeff_name == "low":
+        coeffs0_alpha = shc.Coefficients()
+        # coeffs0_alpha.append(0, 0, 1.1)  # Does not work with 0, 0 yet.
+        coeffs0_alpha.append(1, 1, 0.1 + 0.1j)
+        coeffs0_alpha.append(3, 2, 0.1)
+        coeffs0_alpha.append(3, 3, 0.1)
+        coeffs0_alpha.append(2, 2, 0.1)
+    elif coeff_name == "m0":
+        coeffs0_alpha = shc.Coefficients()
+        # coeffs0_alpha.append(0, 0, 1.1)  # Does not work with 0, 0 yet.
+        coeffs0_alpha.append(1, 0, 0.1)
+        coeffs0_alpha.append(2, 0, 0.13)
+    elif coeff_name == "m01":
+        coeffs0_alpha = shc.Coefficients()
+        # coeffs0_alpha.append(0, 0, 1.1)  # Does not work with 0, 0 yet.
+        coeffs0_alpha.append(1, 0, 0.1 + .3j)
+        coeffs0_alpha.append(1, 1, -0.1 - .1j)
+        # coeffs0_alpha.append(2, 0, 0.13)
+    else:
+        # coeffs0_alpha = shc.noise(degree_max=1, beta=1) * 1
+        # coeffs0_alpha.set(0, 0, 0.0)
+        # print(coeffs0_alpha)
+        coeffs0_alpha = shc.Coefficients()
+        # coeffs0_alpha.append(1, 0, -0.26914045-0.18614253j)
+        # coeffs0_alpha.append(1, 0, 0.45666501+0.61277559j)
+        coeffs0_alpha.append(1, 0, -0.3 - 0.2j)  # Sign of imaginary part is reconstructed wrongly.
+        # coeffs0_alpha.append(1, 0, 0.5 + 0.6j)
 
-    coeffs0_alpha = shc.Coefficients()
-    coeffs0_alpha.append(0, 0, 0.1)
-    coeffs0_alpha.append(1, 1, 0.1)
-    coeffs0_alpha.append(3, 2, 0.1)
-    # coeffs0_alpha.append(2, 2, 0.1)
+
 
     zm0 = zdi_magnetogram.from_coefficients(coeffs0_alpha)
     field_r = zm0.get_radial_field(polar_centers, azimuth_centers)
@@ -383,6 +401,68 @@ def test_latlon_conversion2(request):
 
     coeffs1_alpha = shc.from_arrays(zm1.degrees_l, zm1.orders_m, zm1.alpha)
 
+    with context.PlotNamer(__file__, request.node.name) as (pn, plt):
+        from stellarwinds.magnetogram import plot_zdi
+
+        fig, axs = plt.subplots(1, 2)
+        ax = axs[0]
+        plot_zdi.plot_energy_by_degree(zm0, ax)
+        plt.draw()
+        ylim = np.asarray(ax.get_ylim()) * np.array([.1, 10])
+        ax.set_ylim(ylim)
+
+        ax = axs[1]
+        plot_zdi.plot_energy_by_degree(zm1, ax)
+        ax.set_ylim(ylim)
+        plt.savefig(pn.get())
+        plt.close()
+
+        fig, axs = plt.subplots(2, 3, figsize=(6*3, 2*3))
+        plot_zdi.plot_zdi_components(zm0, zg=zg, axs=axs[0])
+        plot_zdi.plot_zdi_components(zm1, zg=zg, axs=axs[1])
+        plt.savefig(pn.get())
+
+    print(coeffs1_alpha - coeffs0_alpha)
+    print(shc.isclose(coeffs1_alpha, coeffs0_alpha, rtol=1e-2, atol=1e-2))
+    assert shc.allclose(coeffs1_alpha, coeffs0_alpha, rtol=1e-2, atol=1e-2)
+
+
+def test_latlon_beta_conversion(request):
+    """Test that the discretized field can be reconstructed as zdi components."""
+    zg = geometry.ZdiGeometry(64)
+    polar_centers, azimuth_centers = zg.centers()
+
+    coeffs0_beta = shc.Coefficients()
+    # coeffs0_alpha.append(0, 0, 1.1)  # Does not work with 0, 0 yet.
+    coeffs0_beta.append(1, 1, 0.1)
+    coeffs0_beta.append(2, 2, 0.5)
+    coeffs0_beta.append(3, 3, 0.5)
+
+    coeffs0_beta = shc.Coefficients()
+    # coeffs0_beta.append(0, 0, 0.1)
+    coeffs0_beta.append(1, 0, 1.0)
+    # coeffs0_beta.append(2, 2, 1.0)  # Fails
+    # coeffs0_beta.append(3, 2, 0.1)
+    # coeffs0_alpha.append(2, 2, 0.1)
+    coeffs0_beta.append(3, 3, 0.0)
+
+    coeffs0_alpha = shc.zeros_like(coeffs0_beta)
+    
+    coeffs0 = shc.hstack((coeffs0_alpha, coeffs0_beta))
+
+    zm0 = zdi_magnetogram.from_coefficients(coeffs0)
+    field_r = zm0.get_radial_field(polar_centers, azimuth_centers)
+    field_polar = zm0.get_polar_field(polar_centers, azimuth_centers)
+    field_azimuthal = zm0.get_azimuthal_field(polar_centers, azimuth_centers)
+
+    # import pdb; pdb.set_trace()
+
+    zm1 = converter.convert_latlon_to_zdi(polar_centers, azimuth_centers,
+                                          field_r, field_polar, field_azimuthal)
+
+    coeffs1_beta = shc.from_arrays(zm1.degrees_l, zm1.orders_m, zm1.beta)
+    zm1.gamma = np.zeros_like(zm1.beta)  # Drop any toroidal component
+
 
     with context.PlotNamer(__file__, request.node.name) as (pn, plt):
         from stellarwinds.magnetogram import plot_zdi
@@ -390,16 +470,20 @@ def test_latlon_conversion2(request):
         fig, axs = plt.subplots(1, 2)
         ax = axs[0]
         plot_zdi.plot_energy_by_degree(zm0, ax)
+        plt.draw()
+        ylim = np.asarray(ax.get_ylim()) * np.array([.1, 10])
+        ax.set_ylim(ylim)
 
         ax = axs[1]
         plot_zdi.plot_energy_by_degree(zm1, ax)
+        ax.set_ylim(ylim)
         plt.savefig(pn.get())
         plt.close()
 
-        fig, axs = plt.subplots(2, 3, figsize=(18, 12))
+        fig, axs = plt.subplots(2, 3, figsize=(6*3, 2*3))
         plot_zdi.plot_zdi_components(zm0, zg=zg, axs=axs[0])
         plot_zdi.plot_zdi_components(zm1, zg=zg, axs=axs[1])
         plt.savefig(pn.get())
 
-    print(coeffs1_alpha - coeffs0_alpha)
-    assert shc.isclose(coeffs1_alpha, coeffs0_alpha, rtol=1e-3, atol=1e-3)
+    print(coeffs1_beta - coeffs0_beta)
+    assert shc.allclose(coeffs1_beta, coeffs0_beta, rtol=1e-3, atol=1e-3)

@@ -41,7 +41,7 @@ def test_properties(request):
     assert np.isclose(avg_field_squared, 0.0795934601435181)
 
 
-def test_dmpl(request, magnetogram_name="mengel"):
+def test_dplm(request, magnetogram_name="mengel"):
 
     lz = stellarwinds.magnetogram.zdi_magnetogram.from_coefficients(magnetograms.get_all(magnetogram_name))
     zg = stellarwinds.magnetogram.geometry.ZdiGeometry(64)
@@ -50,10 +50,11 @@ def test_dmpl(request, magnetogram_name="mengel"):
 
     B = {}
     Bmax = 0
-    for method in ("roll", "roll2", "gradient"):
-        lz = stellarwinds.magnetogram.zdi_magnetogram.from_coefficients(magnetograms.get_all(magnetogram_name), method)
-        B[method] = lz.get_field_strength(*zg.centers())
-        Bmax = np.maximum(Bmax, np.max(B[method]))
+    for dplm_method in ("roll", "roll2", "gradient"):
+        lz = stellarwinds.magnetogram.zdi_magnetogram.from_coefficients(magnetograms.get_all(magnetogram_name),
+                                                                        dplm_method=dplm_method)
+        B[dplm_method] = lz.get_field_strength(*zg.centers())
+        Bmax = np.maximum(Bmax, np.max(B[dplm_method]))
 
     assert np.allclose(B["roll"], B["roll2"])
     # assert np.allclose(B["roll"], B["gradient"])  # This fails but they look really close...

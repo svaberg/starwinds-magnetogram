@@ -36,7 +36,7 @@ class ZdiMagnetogram:
                  alpha_lm,
                  beta_lm=None,
                  gamma_lm=None,
-                 dpml_method="gradient",  # For testing
+                 dplm_method="gradient",  # For testing
                  ):
         r"""
         Construct from coefficients.
@@ -60,7 +60,7 @@ class ZdiMagnetogram:
 
         self.c_lm = get_c_lm(self.degrees_l, self.orders_m)
 
-        self._dpml_method = dpml_method
+        self._dplm_method = dplm_method
 
     def __str__(self):
         s = "ZDI magnetogram\n"
@@ -156,12 +156,12 @@ class ZdiMagnetogram:
 
         for deg_l, ord_m, g_lm, c_lm in zip(self.degrees_l, self.orders_m, self.gamma, self.c_lm):
             p_lm = sp.special.lpmv(ord_m, deg_l, np.cos(points_polar))
-            DPml = self._dpml(p_lm, points_polar)
+            DPlm = self._dplm(p_lm, points_polar)
 
             field_azimuthal_toroidal += (g_lm
                                      * c_lm
                                      / (deg_l + 1)
-                                     * DPml
+                                     * DPlm
                                      * np.exp(1.0j * ord_m * points_azimuth)
                                      )
 
@@ -207,12 +207,12 @@ class ZdiMagnetogram:
 
         for deg_l, ord_m, b_lm, c_lm in zip(self.degrees_l, self.orders_m, self.beta, self.c_lm):
             p_lm = sp.special.lpmv(ord_m, deg_l, np.cos(points_polar))
-            DPml = self._dpml(p_lm, points_polar)
+            DPlm = self._dplm(p_lm, points_polar)
 
             field_polar_poloidal += (b_lm
                                          * c_lm
                                          / (deg_l + 1)
-                                         * DPml
+                                         * DPlm
                                          * np.exp(1.0j * ord_m * points_azimuth)
                                          )
 
@@ -328,7 +328,7 @@ class ZdiMagnetogram:
 
         log.info("Retaining %d coefficients" % len(good_indices))
 
-        return ZdiMagnetogram(*new_args, self._dpml_method)
+        return ZdiMagnetogram(*new_args, self._dplm_method)
 
     def energy(self, *, show_fractions=False, dest=None):
         """
@@ -472,23 +472,23 @@ class ZdiMagnetogram:
 
         return np.real_if_close(result)
 
-    def _dpml(self, p_lm, points_polar):
+    def _dplm(self, p_lm, points_polar):
         """
         Derivative delta p_lm / delta points_polar
         :param p_lm:
         :param points_polar:
         :return:
         """
-        if self._dpml_method == "roll":
+        if self._dplm_method == "roll":
             # Dumb implementation
             # Use chain rule
             # d P(cos(theta)) / d theta = d P / du * du / d theta
-            DPml = (p_lm - np.roll(p_lm, 1)) / (np.cos(points_polar) - np.roll(np.cos(points_polar), 1)) * np.sin(
+            DPlm = (p_lm - np.roll(p_lm, 1)) / (np.cos(points_polar) - np.roll(np.cos(points_polar), 1)) * np.sin(
                 points_polar)
 
-            return DPml
+            return DPlm
 
-        elif self._dpml_method == "roll2":
+        elif self._dplm_method == "roll2":
             # More descriptive implementation
             dp = p_lm - np.roll(p_lm, 1)
             du = np.cos(points_polar) - np.roll(np.cos(points_polar), 1)
@@ -536,8 +536,8 @@ class ZdiMagnetogram:
         return _cartesian_from_spherical_helper(*frpa, points_polar, points_azimuth)
 
 
-def from_coefficients(shc,
-                      dpml_method="gradient",  # For testing
+def from_coefficients(shc, *,
+                      dplm_method="gradient",  # For testing
                       ):
     degree_l, order_m, coeffs_lm = shc.as_arrays(include_unset=False)
 
@@ -549,7 +549,7 @@ def from_coefficients(shc,
 
     split_coeffs = [coeffs_lm[:, _id] for _id in range(coeffs_lm.shape[1])]
 
-    return ZdiMagnetogram(degree_l, order_m, *split_coeffs, dpml_method=dpml_method)
+    return ZdiMagnetogram(degree_l, order_m, *split_coeffs, dplm_method=dplm_method)
 
 
 def _cartesian_from_spherical_helper(fr, fp, fa, pp, pa):

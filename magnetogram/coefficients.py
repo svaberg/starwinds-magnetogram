@@ -160,12 +160,12 @@ def from_arrays(degrees_l,
     return coeffs
 
 
-def noise(degree_max=15, noisinator=numpy.random.normal, beta=0):
+def noise(degree_max=15, noise_fn=numpy.random.normal, beta=0):
     coeffs = Coefficients()
 
     for deg_l in range(1, degree_max + 1):
         for order_m in range(0, deg_l + 1):
-            _noise = noisinator(size=2)
+            _noise = noise_fn(size=2)
             _c = _noise[0] + 1j * _noise[1]
             _c /= (2 * deg_l + 1)  # Wikipeida
             _c /= deg_l**beta
@@ -174,9 +174,9 @@ def noise(degree_max=15, noisinator=numpy.random.normal, beta=0):
     return coeffs
 
 
-def isclose(shc0,
-            shc1,
-            **kwargs):
+def allclose(shc0,
+             shc1,
+             **kwargs):
     """
     Numerical comparison of two sets of spherical harmonics coefficients.
     :param shc0: First set
@@ -184,26 +184,27 @@ def isclose(shc0,
 
     :return: True if the sets are close, otherwise False.
 
-    # TODO should be named allclose
     """
     if shc0.default_coefficients.shape != shc1.default_coefficients.shape:
         return False
 
-    # Get all degree, order pairs from the objects
+    bool_coeffs = isclose(shc0, shc1, **kwargs)
+    bool_values = np.stack(v for k, v in bool_coeffs.contents())
+
+    return np.all(bool_values)
+
+
+def isclose(shc0, shc1, **kwargs):
+
     keys = set.union(*[set(a.coefficients) for a in (shc0, shc1)])
 
-    c0 = []
-    c1 = []
+    c0 = np.vstack([shc0.get(degree, order) for degree, order in keys])
+    c1 = np.vstack([shc1.get(degree, order) for degree, order in keys])
 
-    for degree, order in keys:
-
-        c0.append(shc0.get(degree, order))
-        c1.append(shc1.get(degree, order))
-
-    c0 = np.vstack(c0)
-    c1 = np.vstack(c1)
-
-    return np.allclose(c0, c1, **kwargs)
+    coeffs = Coefficients(default_coefficients=False)  # The default coefficient is a boolean
+    for (degree, order), bool_ in zip(keys, np.isclose(c0, c1, **kwargs)):
+        coeffs.append(degree, order, bool_)
+    return coeffs
 
 
 def empty_like(shc):

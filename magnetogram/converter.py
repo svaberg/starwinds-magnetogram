@@ -159,9 +159,6 @@ def convert_latlon_to_zdi(pl, az, field_r, field_polar, field_azimuthal, area=No
 
 def _conv(pl, az, degrees_l, orders_m, field_r, field_pl, field_az, area):
 
-    # degrees_l = np.asarray(degrees_l)
-    # orders_m = np.asarray(orders_m)
-
     plmct, dplmct = zdi_magnetogram.calculate_lpmn(degrees_l, orders_m, pl)  # Uses n for degree
     c_lm = zdi_magnetogram.get_c_lm(degrees_l, orders_m)
 
@@ -205,10 +202,11 @@ def _conv(pl, az, degrees_l, orders_m, field_r, field_pl, field_az, area):
 
     # Vidotto et al. (2016) has different sign convention from Folsom et al. (2018).
     # B_polar sign is opposite, while B_azimuth sign is the same.
-    beta_re = +np.sum((field_pl * np.cos(orders_m * az) * dplmct +
+    # Therefore the sign of field_pl is switched here compared to Vidotto et al. (2016).
+    beta_re = +np.sum((-field_pl * np.cos(orders_m * az) * dplmct +
                        field_az * np.sin(orders_m * az) * mplmct) *
                       area / W / degrees_l, axis=(0, 1))
-    beta_im = -np.sum((field_pl * np.sin(orders_m * az) * dplmct -
+    beta_im = -np.sum((-field_pl * np.sin(orders_m * az) * dplmct -
                        field_az * np.cos(orders_m * az) * mplmct) *
                       area / W / degrees_l, axis=(0, 1))
     beta = beta_re + 1.0j * beta_im

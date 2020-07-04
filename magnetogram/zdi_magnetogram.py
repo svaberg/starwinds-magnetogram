@@ -601,12 +601,11 @@ def calculate_lpmn(degrees_l, orders_m, points_polar):
     """
     max_degree = np.max(degrees_l)
     max_order = np.max(orders_m)
-    Pmn_cos_theta_result = np.empty(points_polar.shape + (max_degree + 1,) * 2)
     Pmn_cos_theta_result = np.empty(points_polar.shape + (max_order + 1, max_degree + 1))
     Pmn_d_cos_theta_result = np.empty_like(Pmn_cos_theta_result)
 
     for ndindex in np.ndindex(points_polar.shape):
-        a, b = scipy.special.lpmn(m=max_order,  # Go up to the degree $\ell$ for $m$
+        a, b = scipy.special.lpmn(m=max_order,
                                   n=max_degree,
                                   z=np.cos(points_polar[ndindex]))
         Pmn_cos_theta_result[ndindex] = a

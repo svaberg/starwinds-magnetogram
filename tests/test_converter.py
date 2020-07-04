@@ -355,7 +355,7 @@ def test_latlon_conversion(request):
     assert np.allclose(zm.beta, 0)
     assert np.allclose(zm.gamma, 0)
 
-@pytest.mark.parametrize("coeff_name", ("low", "m0", "m01", "random"))
+@pytest.mark.parametrize("coeff_name", ("low", "m0", "m01", "m10", "random"))
 def test_latlon_alpha_conversion(coeff_name, request):
     """Test that the discretized field can be reconstructed as zdi components."""
     zg = geometry.ZdiGeometry(64)
@@ -373,23 +373,35 @@ def test_latlon_alpha_conversion(coeff_name, request):
         # coeffs0_alpha.append(0, 0, 1.1)  # Does not work with 0, 0 yet.
         coeffs0_alpha.append(1, 0, 0.1)
         coeffs0_alpha.append(2, 0, 0.13)
+        coeffs0_alpha.append(3, 3, 0.0)
+
     elif coeff_name == "m01":
         coeffs0_alpha = shc.Coefficients()
         # coeffs0_alpha.append(0, 0, 1.1)  # Does not work with 0, 0 yet.
         coeffs0_alpha.append(1, 0, 0.1 + .3j)
         coeffs0_alpha.append(1, 1, -0.1 - .1j)
         # coeffs0_alpha.append(2, 0, 0.13)
-    else:
-        # coeffs0_alpha = shc.noise(degree_max=1, beta=1) * 1
-        # coeffs0_alpha.set(0, 0, 0.0)
-        # print(coeffs0_alpha)
+        coeffs0_alpha.append(3, 3, 0.0)
+    elif coeff_name == "m10":
         coeffs0_alpha = shc.Coefficients()
+        coeffs0_alpha.append(1, 0, -0.3 - 0.2j)
+        coeffs0_alpha.append(3, 3, 0.0)
+    else:
+        coeffs0_alpha = shc.noise(degree_max=5, beta=1) * 1
+        coeffs0_alpha.set(0, 0, 0.0)
+        # print(coeffs0_alpha)
+        # coeffs0_alpha = shc.Coefficients()
         # coeffs0_alpha.append(1, 0, -0.26914045-0.18614253j)
-        # coeffs0_alpha.append(1, 0, 0.45666501+0.61277559j)
-        coeffs0_alpha.append(1, 0, -0.3 - 0.2j)  # Sign of imaginary part is reconstructed wrongly.
+        # coeffs0_alpha.append(1, 1, 0.45666501+0.61277559j)
+        # coeffs0_alpha.append(1, 0, -0.3 - 0.2j)  # Sign of imaginary part is reconstructed wrongly.
         # coeffs0_alpha.append(1, 0, 0.5 + 0.6j)
 
-
+    # The imaginary component is undetermined when order_m is zero. This means that it is impossible to fully
+    # recover the input coefficients, even when the magnetogram is fully reconstructed. Work around this here
+    # by setting it to zero
+    for (degree, order), val in coeffs0_alpha.contents():
+        if order == 0:
+            coeffs0_alpha.set(degree, order, np.real(val))
 
     zm0 = zdi_magnetogram.from_coefficients(coeffs0_alpha)
     field_r = zm0.get_radial_field(polar_centers, azimuth_centers)
@@ -397,7 +409,8 @@ def test_latlon_alpha_conversion(coeff_name, request):
     field_azimuthal = zm0.get_azimuthal_field(polar_centers, azimuth_centers)
 
     zm1 = converter.convert_latlon_to_zdi(polar_centers, azimuth_centers,
-                                          field_r, field_polar, field_azimuthal)
+                                          field_r, field_polar, field_azimuthal,
+                                          max_degree=5)
 
     coeffs1_alpha = shc.from_arrays(zm1.degrees_l, zm1.orders_m, zm1.alpha)
 
@@ -422,6 +435,8 @@ def test_latlon_alpha_conversion(coeff_name, request):
         plot_zdi.plot_zdi_components(zm1, zg=zg, axs=axs[1])
         plt.savefig(pn.get())
 
+    print(coeffs0_alpha)
+    print(coeffs1_alpha)
     print(coeffs1_alpha - coeffs0_alpha)
     print(shc.isclose(coeffs1_alpha, coeffs0_alpha, rtol=1e-2, atol=1e-2))
     assert shc.allclose(coeffs1_alpha, coeffs0_alpha, rtol=1e-2, atol=1e-2)

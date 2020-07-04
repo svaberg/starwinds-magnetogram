@@ -139,14 +139,14 @@ def convert_pfss_to_zdi(pfss_coeffs):
     return shc.hstack((alpha, beta, gamma))
 
 
-def convert_latlon_to_zdi(pl, az, field_r, field_polar, field_azimuthal, area=None):
+def convert_latlon_to_zdi(pl, az, field_r, field_polar, field_azimuthal, area=None, max_degree=5):
 
     if area is None:
         dpl = np.mean(np.diff(pl, axis=1))
         daz = np.mean(np.diff(az, axis=0))
         area = dpl * daz * np.sin(pl)
 
-    degrees_l, orders_m = list(zip(*positive_lm(3)))
+    degrees_l, orders_m = list(zip(*positive_lm(max_degree)))
 
     alpha, beta, gamma = _conv(pl, az,
                                degrees_l, orders_m,

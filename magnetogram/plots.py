@@ -42,10 +42,11 @@ def place_colorbar_axis_right(ax, dx=.22):
     return cbar_ax
 
 
-def plot_components(polar_centers, azimuth_centers, field_centers, axs, azimuth_corners=None, polar_corners=None, radius=1):
+def plot_components(polar_centers, azimuth_centers, field_centers, axs, azimuth_corners=None, polar_corners=None,
+                    radius=1, symmetric=None):
     latex_names = ('B_r', r'B_\theta', r'B_\phi')
     extremum_markers = ('ox', '^v', '<>')
-    # import pdb; pdb.set_trace()
+
     abs_max = np.max(np.abs(field_centers))
     axs[0].figure.subplots_adjust(right=0.8)  # Make space for colorbar.
     for ax, Bi, latex_name, markers in zip(axs, field_centers, latex_names, extremum_markers):
@@ -56,7 +57,7 @@ def plot_components(polar_centers, azimuth_centers, field_centers, axs, azimuth_
                                                 polar_corners=polar_corners, azimuth_corners=azimuth_corners,
                                                 legend_str=latex_name,
                                                 abs_max=abs_max,
-                                                symmetric=True)
+                                                symmetric=symmetric)
 
         add_extrema(polar_centers, azimuth_centers, Bi, ax, legend_str=latex_name, markers=markers)
 

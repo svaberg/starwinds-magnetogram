@@ -141,23 +141,28 @@ def convert_pfss_to_zdi(pfss_coeffs):
 
 def convert_latlon_to_zdi(pl, az, field_r, field_polar, field_azimuthal, area=None, max_degree=5):
 
+    degrees_l, orders_m = list(zip(*positive_lm(max_degree)))
+
+    coeffs = get_zdi_coeffs(pl, az,
+                            degrees_l, orders_m,
+                            field_r, field_polar, field_azimuthal,
+                            area)
+
+    return zdi_magnetogram.from_coefficients(coeffs)
+    # return zdi_magnetogram.ZdiMagnetogram(degrees_l=degrees_l, orders_m=orders_m,
+    #                                       alpha_lm=alpha, beta_lm=beta, gamma_lm=gamma)
+
+
+def get_zdi_coeffs(pl, az, degrees_l, orders_m, field_r, field_pl, field_az, area=None):
+
+    degrees_l = np.atleast_1d(degrees_l)
+    orders_m = np.atleast_1d(orders_m)
+    orders_m_shape = orders_m.shape
+
     if area is None:
         dpl = np.mean(np.diff(pl, axis=1))
         daz = np.mean(np.diff(az, axis=0))
         area = dpl * daz * np.sin(pl)
-
-    degrees_l, orders_m = list(zip(*positive_lm(max_degree)))
-
-    alpha, beta, gamma = _conv(pl, az,
-                               degrees_l, orders_m,
-                               field_r, field_polar, field_azimuthal,
-                               area)
-
-    return zdi_magnetogram.ZdiMagnetogram(degrees_l=degrees_l, orders_m=orders_m,
-                                          alpha_lm=alpha, beta_lm=beta, gamma_lm=gamma)
-
-
-def _conv(pl, az, degrees_l, orders_m, field_r, field_pl, field_az, area):
 
     plmct, dplmct = zdi_magnetogram.calculate_lpmn(degrees_l, orders_m, pl)  # Uses n for degree
     c_lm = zdi_magnetogram.get_c_lm(degrees_l, orders_m)
@@ -188,27 +193,25 @@ def _conv(pl, az, degrees_l, orders_m, field_r, field_pl, field_az, area):
         assert len(v.shape) == 3
 
     alpha_re = +np.sum(field_r * area * plmct * np.cos(orders_m * az) / W, axis=(0, 1))
-    # alpha_re2 = +np.sum(field_r * area * plmct * np.cos(orders_m * az) / W2, axis=(0, 1))
-    # import pdb; pdb.set_trace()
     alpha_im = -np.sum(field_r * area * plmct * np.sin(orders_m * az) / W, axis=(0, 1))
     alpha = alpha_re + 1.0j * alpha_im
 
     #
     # Calculate beta
     #
-    degrees_l[degrees_l == 0] = 1e12
+    degrees_l0 = degrees_l.copy()
+    degrees_l0[degrees_l0 == 0] = 1e12
     mplmct = orders_m * plmct
-    # W = (c_lm)**-1
 
     # Vidotto et al. (2016) has different sign convention from Folsom et al. (2018).
     # B_polar sign is opposite, while B_azimuth sign is the same.
     # Therefore the sign of field_pl is switched here compared to Vidotto et al. (2016).
     beta_re = +np.sum((-field_pl * np.cos(orders_m * az) * dplmct +
                        field_az * np.sin(orders_m * az) * mplmct) *
-                      area / W / degrees_l, axis=(0, 1))
+                      area / W / degrees_l0, axis=(0, 1))
     beta_im = -np.sum((-field_pl * np.sin(orders_m * az) * dplmct -
                        field_az * np.cos(orders_m * az) * mplmct) *
-                      area / W / degrees_l, axis=(0, 1))
+                      area / W / degrees_l0, axis=(0, 1))
     beta = beta_re + 1.0j * beta_im
 
 
@@ -217,13 +220,18 @@ def _conv(pl, az, degrees_l, orders_m, field_r, field_pl, field_az, area):
     #
     gamma_re = -np.sum((field_pl * np.sin(orders_m * az) * mplmct -
                         field_az * np.cos(orders_m * az) * dplmct) *
-                       area / W / degrees_l, axis=(0, 1))
+                       area / W / degrees_l0, axis=(0, 1))
     gamma_im = -np.sum((field_pl * np.cos(orders_m * az) * mplmct +
                         field_az * np.sin(orders_m * az) * dplmct) *
-                       area / W / degrees_l, axis=(0, 1))
+                       area / W / degrees_l0, axis=(0, 1))
     gamma = gamma_re + 1.0j * gamma_im
 
-    return alpha, beta, gamma
+    # Return as coefficients object.
+    degrees_l = degrees_l.reshape(orders_m_shape)
+    orders_m = orders_m.reshape(orders_m_shape)
+
+    return shc.from_arrays(degrees_l, orders_m,
+                           np.stack((alpha, beta, gamma), axis=-1))
 
 
 def positive_lm(max_degree):

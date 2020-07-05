@@ -8,7 +8,8 @@ from stellarwinds.magnetogram import coefficients
 
 log = logging.getLogger(__name__)
 
-_defaults = (np.zeros(2), np.zeros(3, dtype=np.complex), np.zeros(6), 0j,)
+_defaults = (np.zeros(2), np.zeros(3, dtype=np.complex), np.zeros(6), 0j,
+             np.ones(2), np.ones(3, dtype=np.complex), np.ones(6), 1j)
 @pytest.mark.parametrize("default", _defaults)
 def test_methods_not_failing(default):
     data = default + 1
@@ -63,36 +64,64 @@ def test_subtract(default):
 
 @pytest.mark.parametrize("default", _defaults)
 def test_multiply(default):
-    c = coefficients.Coefficients(default)
-    c.append(1, 1, default+1)
-    log.info(c)
+    c1 = coefficients.Coefficients(default)
+    c1.append(1, 1, default+1)
 
-    c = c * 2
-    log.info(c)
+    c2 = c1 * 2
+    assert np.allclose(c2.get(1, 1), c1.get(1, 1) * 2)
 
-    c = c * (default+1)
-    log.info(c)
+    c2 = c1 * (default+1)
+    log.info(c1)
+    assert np.allclose(c2.get(1, 1), c1.get(1, 1) * (default + 1))
 
-    c = 2 * c
-    log.info(c)
+    c2 = 2 * c1
+    assert np.allclose(c2.get(1, 1), c1.get(1, 1) * 2)
 
-    c *= 2
-    log.info(c)
+    c2 = c1 ** 3
+    assert np.allclose(c2.get(1, 1), c1.get(1, 1) ** 3)
 
-    c /= 2
-    log.info(c)
+    # In-place
+    c2 = c1.copy()
+    c2 *= 2
+    assert np.allclose(c2.get(1, 1), c1.get(1, 1) * 2)
+
+    c2 = c1.copy()
+    c2 /= 2
+    assert np.allclose(c2.get(1, 1), c1.get(1, 1) / 2)
+
+    # Multiply by other coefficients
+    c3 = c1 * c2
+    assert np.allclose(c3.get(1, 1), c1.get(1, 1) * c2.get(1, 1))
+
+    c3 = c2 * c1
+    assert np.allclose(c3.get(1, 1), c2.get(1, 1) * c1.get(1, 1))
+
+    c3 = c1 / c2
+    assert np.allclose(c3.get(1, 1), c1.get(1, 1) / c2.get(1, 1))
+
+
+@pytest.mark.parametrize("default", _defaults)
+def test_power(default):
+    c1 = coefficients.Coefficients(default)
+    c1.append(1, 1, (default + 1) * 2 + 1)
+
+    c2 = c1**2
+    assert np.allclose(c2.get(1, 1), c1.get(1, 1) ** 2)
+
+    c2 = c1**-2
+    assert np.allclose(c2.get(1, 1), c1.get(1, 1) ** -2)
 
 
 @pytest.mark.parametrize("default", _defaults)
 def test_hstack(default):
     c1 = coefficients.Coefficients(default)
-    c1.append(1, 0, default-1)
+    c1.append(1, 0, default + 1)
 
     c2 = coefficients.Coefficients(default)
-    c2.append(1, 1, default-1)
+    c2.append(1, 1, default + 1)
 
     c3 = coefficients.Coefficients(default)
-    c3.append(2, 0, default-1)
+    c3.append(2, 0, default + 1)
 
     c = coefficients.hstack((c1, c2, c3))
     log.info(c)
@@ -101,13 +130,13 @@ def test_hstack(default):
 @pytest.mark.parametrize("default", (0j,))
 def test_hsplit(default):
     c1 = coefficients.Coefficients(default)
-    c1.append(1, 0, default-1)
+    c1.append(1, 0, default + 1)
 
     c2 = coefficients.Coefficients(default)
-    c2.append(1, 1, default-1)
+    c2.append(1, 1, default + 1)
 
     c3 = coefficients.Coefficients(default)
-    c3.append(2, 0, default-1)
+    c3.append(2, 0, default + 1)
 
     c = coefficients.hstack((c1, c2, c3))
     log.info(c)
@@ -120,9 +149,35 @@ def test_hsplit(default):
 
 
 @pytest.mark.parametrize("default", _defaults)
-def test_isclose(default):
+def test_allclose(default):
     c1 = coefficients.Coefficients(default)
-    c1.append(1, 0, default-1)
-    c1.append(1, 1, default-1)
+    c1.append(1, 0, default + 1)
+    c1.append(1, 1, default + 1)
 
     assert coefficients.allclose(c1, c1)
+
+
+@pytest.mark.parametrize("default", _defaults)
+def test_allclose_rtol(default):
+    c1 = coefficients.Coefficients(default)
+    c1.append(1, 0, default + 1)
+    c1.append(1, 1, default + 1)
+
+    c2 = c1.copy()
+    c2.set(1, 1, 1.005 * (default + 1))
+
+    assert coefficients.allclose(c1, c2, rtol=1e-2)
+    assert not coefficients.allclose(c1, c2, rtol=1e-3)
+
+
+@pytest.mark.parametrize("default", _defaults)
+def test_allclose_atol(default):
+    c1 = coefficients.Coefficients(default)
+    c1.append(1, 0, default + 1)
+    c1.append(1, 1, 0 * default)
+
+    c2 = c1.copy()
+    c2.set(1, 1, 5e-3 + 0 * default)
+
+    assert coefficients.allclose(c1, c2, atol=1e-2)
+    assert not coefficients.allclose(c1, c2, atol=1e-3)

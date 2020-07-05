@@ -76,8 +76,11 @@ class Coefficients(object):
 
         str_ = "Spherical harmonics coefficients:\n"
         for degree, order in sorted(self.coefficients):
-            str_ += "%d, %d, %s\n" % (degree, order, self.get(degree, order))
+            str_ += "%d, %d, %s\n" % (degree, order, np.array_str(self.get(degree, order)))
         return str_
+
+    def __repr__(self):
+        return str(self.coefficients)
 
     def contents(self):
         def iterator():
@@ -144,20 +147,46 @@ class Coefficients(object):
 
     def __rmul__(self, value): return multiply(self, value)
 
+    def __pow__(self, power, modulo=None):
+        assert modulo is None, "Modulo is not supported."
+        output = empty_like(self)
+        for (degree, order), coeffs in self.contents():
+            output.append(degree, order, coeffs**power)
+        return output
+
     def __truediv__(self, value): return multiply(self, value**-1)
 
     def truncated(self, degree_max): return truncated(self, degree_max)
 
 
 def from_arrays(degrees_l,
-                      orders_m,
-                      coeffs_lm):
+                orders_m,
+                coeffs_lm):
+    """
+    Create coeffcient object from arrays
+    :param degrees_l: 1D array of degrees
+    :param orders_m: 1D array of orders
+    :param coeffs_lm: array of values. This can either be an 1D array, or a 2D array
+    where the first index is the element (l, m) index and the second index is the values for a single coefficient,
+    e.g. [alpha, beta, gamma].
+    :return:
+    """
 
-    coeffs = Coefficients(0 * coeffs_lm[0])
+    # This is to handle single values of l an m
+    degrees_l, orders_m, coeffs_lm = np.atleast_1d(degrees_l, orders_m, coeffs_lm)
+
+    #  Reshape so that the elements of
+    if len(coeffs_lm.shape) == 1:
+        coeffs_lm = coeffs_lm[:, np.newaxis]
+
+    if degrees_l.shape[0] != coeffs_lm.shape[0]:
+        raise IndexError("First index must match.")
+
+    coeffs_obj = Coefficients(0 * coeffs_lm[0])
     for deg_l, ord_m, coeff in zip(degrees_l, orders_m, coeffs_lm):
-        coeffs.append(deg_l, ord_m, coeff)
+        coeffs_obj.append(deg_l, ord_m, coeff)
 
-    return coeffs
+    return coeffs_obj
 
 
 def noise(degree_max=15, noise_fn=numpy.random.normal, beta=0):
@@ -201,8 +230,11 @@ def isclose(shc0, shc1, **kwargs):
     c0 = np.vstack([shc0.get(degree, order) for degree, order in keys])
     c1 = np.vstack([shc1.get(degree, order) for degree, order in keys])
 
-    coeffs = Coefficients(default_coefficients=False)  # The default coefficient is a boolean
-    for (degree, order), bool_ in zip(keys, np.isclose(c0, c1, **kwargs)):
+    bools = np.isclose(c0, c1, **kwargs)
+
+    # Use a boolean array as the default coefficient
+    coeffs = Coefficients(default_coefficients=np.empty_like(shc0.default_coefficients, dtype=bool))
+    for (degree, order), bool_ in zip(keys, bools):
         coeffs.append(degree, order, bool_)
     return coeffs
 
@@ -287,17 +319,30 @@ def add(shc0, shc1):
 
 def multiply(shc, value):
     """
-    Multiply coefficients by constant.
+    Multiply coefficients by constant, or a compatible coefficient object
     :param shc: Spherical harmonics coefficients
     :param value: Constant (must be addable to each
     :return:
     """
+    if type(value) != Coefficients:
+        # Assume scalar
+        output = empty_like(shc)
+        for (degree, order), coeffs in shc.contents():
+            output.append(degree, order, coeffs * value)
 
-    output = empty_like(shc)
-    for (degree, order), coeffs in shc.contents():
-        output.append(degree, order, coeffs * value)
+        return output
 
-    return output
+    # Multiply coefficients of two objects.
+    assert shc.default_coefficients.shape == value.default_coefficients.shape, "Incompatible coefficients."
+
+    result = empty_like(shc)
+    keys = set.union(*[set(a.coefficients) for a in (shc, value)])  # Get all degree, order pairs from the object
+    for degree, order in keys:
+        v = shc.get(degree, order) * value.get(degree, order)
+        result.append(degree, order, v)
+
+    return result
+
 
 
 def hstack(shcs):

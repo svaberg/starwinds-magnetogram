@@ -219,13 +219,14 @@ def get_zdi_coeffs(pl, az, degrees_l, orders_m, field_r, field_pl, field_az, are
     #
     # Calculate gamma
     #
-    gamma_re = -np.sum((field_pl * np.sin(orders_m * az) * mplmct -
+    gamma_re = -np.sum((-field_pl * np.sin(orders_m * az) * mplmct -
                         field_az * np.cos(orders_m * az) * dplmct * np.sin(pl)) /
                        W / degrees_l0, axis=(0, 1))
-    gamma_im = -np.sum((field_pl * np.cos(orders_m * az) * mplmct +
+    gamma_im = -np.sum((-field_pl * np.cos(orders_m * az) * mplmct +
                         field_az * np.sin(orders_m * az) * dplmct * np.sin(pl)) /
                        W / degrees_l0, axis=(0, 1))
     gamma = (gamma_re + 1.0j * gamma_im) * area
+    gamma *= -1  # TODO why is this required?
 
     # Return as coefficients object.
     degrees_l = degrees_l.reshape(orders_m_shape)

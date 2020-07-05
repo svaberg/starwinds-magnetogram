@@ -126,7 +126,6 @@ def remove_m0_imaginary(coeffs):
 
 
 @pytest.mark.parametrize("coeff_name", ("low", "m0", "m01", "m10", "random"))
-# @pytest.mark.parametrize("coeff_name", (None,))
 def test_beta_conversion(coeff_name, request):
     """Test that the discretized field can be reconstructed as zdi components."""
     zg = geometry.ZdiGeometry(64)
@@ -360,3 +359,64 @@ def test_gamma_00(request):
     field = zm.get_radial_field(polar_centers, azimuth_centers)
 
     assert np.allclose(field, 0)
+    
+    
+@pytest.mark.parametrize("coeff_name", ("low", "m0", "m01", "m10", "random"))
+def test_gamma_conversion(coeff_name, request):
+    """Test that the discretized field can be reconstructed as zdi components."""
+    zg = geometry.ZdiGeometry(64)
+    polar_centers, azimuth_centers = zg.centers()
+
+    coeffs0_gamma = make_coeffs(coeff_name)
+
+    remove_m0_imaginary(coeffs0_gamma)
+    coeffs0_gamma.set(0, 0, 0.0)  # This does not affect the field, so it cannot be reconstructed.
+
+    coeffs0 = shc.hstack((shc.zeros_like(coeffs0_gamma),
+                          shc.zeros_like(coeffs0_gamma),
+                          coeffs0_gamma))
+
+    zm0 = zdi_magnetogram.from_coefficients(coeffs0)
+    field_r = zm0.get_radial_field(polar_centers, azimuth_centers)
+    field_polar = zm0.get_polar_field(polar_centers, azimuth_centers)
+    field_azimuthal = zm0.get_azimuthal_field(polar_centers, azimuth_centers)
+
+    # import pdb; pdb.set_trace()
+
+    zm1 = converter.convert_latlon_to_zdi(polar_centers, azimuth_centers,
+                                          field_r, field_polar, field_azimuthal,
+                                          max_degree=coeffs0.degree_max)
+
+    coeffs1_gamma = shc.from_arrays(zm1.degrees_l, zm1.orders_m, zm1.gamma)
+    zm1.beta = np.zeros_like(zm1.beta)  # Drop any toroidal component
+
+
+    with context.PlotNamer(__file__, request.node.name) as (pn, plt):
+        from stellarwinds.magnetogram import plot_zdi
+
+        fig, axs = plt.subplots(1, 2)
+        ax = axs[0]
+        plot_zdi.plot_energy_by_degree(zm0, ax)
+        plt.draw()
+        ylim = np.asarray(ax.get_ylim()) * np.array([.1, 10])
+        ax.set_ylim(ylim)
+
+        ax = axs[1]
+        plot_zdi.plot_energy_by_degree(zm1, ax)
+        ax.set_ylim(ylim)
+        plt.savefig(pn.get())
+        plt.close()
+
+        fig, axs = plt.subplots(2, 3, figsize=(6*3, 2*3))
+        plot_zdi.plot_zdi_components(zm0, zg=zg, axs=axs[0])
+        plot_zdi.plot_zdi_components(zm1, zg=zg, axs=axs[1])
+        plt.savefig(pn.get())
+
+    with np.printoptions(precision=3, suppress=True):
+        print(coeffs0_gamma)
+        print(coeffs1_gamma)
+        print(coeffs1_gamma - coeffs0_gamma)
+
+    print(shc.isclose(coeffs1_gamma, coeffs0_gamma, rtol=1e-2, atol=1e-2))
+    assert shc.allclose(coeffs1_gamma, coeffs0_gamma, rtol=1e-2, atol=1e-2)
+

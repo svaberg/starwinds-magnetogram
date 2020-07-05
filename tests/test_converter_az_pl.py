@@ -126,7 +126,6 @@ def remove_m0_imaginary(coeffs):
 
 
 # @pytest.mark.parametrize("coeff_name", ("low", "m0", "m01", "m10", "random"))
-@pytest.mark.skip(reason="Never worked...")
 @pytest.mark.parametrize("coeff_name", (None,))
 def test_beta_conversion(coeff_name, request):
     """Test that the discretized field can be reconstructed as zdi components."""
@@ -205,20 +204,7 @@ def l_and_m(max_l):
         for m in range(0, l+1):
             yield l, m
 
-# @pytest.mark.parametrize("ff", l_and_m(2))
-# def test_ff(ff):
-#
-#     print(ff)
-#     assert False
-#
-# @pytest.mark.parametrize("l, m", l_and_m(2))
-# def test_l_and_m(l, m):
-#
-#     print(l, m)
-#     assert False
-#
-#
-# @pytest.mark.skip()
+
 @pytest.mark.parametrize("degree_l, order_m", l_and_m(5))
 def test_beta_single_coeff(degree_l, order_m, request):
     """Test conversion of single coefficient"""
@@ -277,28 +263,28 @@ def test_beta_single_coeff(degree_l, order_m, request):
     else:
         field_quotient_azimuthal = np.zeros_like(field_azimuthal1)
 
-    # with context.PlotNamer(__file__, request.node.name) as (pn, plt):
-    #     from stellarwinds.magnetogram import plot_zdi
-    #
-    #     fig, axs = plt.subplots(3, 3, figsize=(6 * 3, 3 * 3))
-    #     plot_zdi.plot_zdi_components(zm0, zg=zg, axs=axs[0])
-    #     plot_zdi.plot_zdi_components(zm1, zg=zg, axs=axs[1])
-    #
-    #     for pid, f in enumerate((field_quotient_r, field_quotient_polar, field_quotient_azimuthal)):
-    #         img = axs[2, pid].pcolormesh(np.rad2deg(azimuth_centers),
-    #                                      np.rad2deg(polar_centers), f)
-    #
-    #         fig.colorbar(img, ax=axs[2, pid], orientation="horizontal", pad=0.2)
-    #
-    #         axs[2, pid].xaxis.set_ticks(np.arange(0, 361, 45))
-    #         axs[2, pid].yaxis.set_ticks(np.arange(0, 181, 30))
-    #         axs[2, pid].grid()
-    #         axs[2, pid].invert_yaxis()
-    #         axs[2, pid].set_aspect('equal')
-    #         axs[2, pid].set_xlabel("Azimuth angle [deg]")
-    #         axs[2, pid].set_ylabel("Polar angle [deg]")
-    #
-    #     plt.savefig(pn.get())
+    with context.PlotNamer(__file__, request.node.name) as (pn, plt):
+        from stellarwinds.magnetogram import plot_zdi
+
+        fig, axs = plt.subplots(3, 3, figsize=(6 * 3, 3 * 3))
+        plot_zdi.plot_zdi_components(zm0, zg=zg, axs=axs[0])
+        plot_zdi.plot_zdi_components(zm1, zg=zg, axs=axs[1])
+
+        for pid, f in enumerate((field_quotient_r, field_quotient_polar, field_quotient_azimuthal)):
+            img = axs[2, pid].pcolormesh(np.rad2deg(azimuth_centers),
+                                         np.rad2deg(polar_centers), f)
+
+            fig.colorbar(img, ax=axs[2, pid], orientation="horizontal", pad=0.2)
+
+            axs[2, pid].xaxis.set_ticks(np.arange(0, 361, 45))
+            axs[2, pid].yaxis.set_ticks(np.arange(0, 181, 30))
+            axs[2, pid].grid()
+            axs[2, pid].invert_yaxis()
+            axs[2, pid].set_aspect('equal')
+            axs[2, pid].set_xlabel("Azimuth angle [deg]")
+            axs[2, pid].set_ylabel("Polar angle [deg]")
+
+        plt.savefig(pn.get())
 
     # The values are close, except for a small number of points where cancellation effects dominate.
     assert almost_all(field_quotient_r) >= .95

@@ -125,34 +125,20 @@ def remove_m0_imaginary(coeffs):
             coeffs.set(degree, order, np.real(val))
 
 
-# @pytest.mark.parametrize("coeff_name", ("low", "m0", "m01", "m10", "random"))
-@pytest.mark.parametrize("coeff_name", (None,))
+@pytest.mark.parametrize("coeff_name", ("low", "m0", "m01", "m10", "random"))
+# @pytest.mark.parametrize("coeff_name", (None,))
 def test_beta_conversion(coeff_name, request):
     """Test that the discretized field can be reconstructed as zdi components."""
     zg = geometry.ZdiGeometry(64)
     polar_centers, azimuth_centers = zg.centers()
 
-    if coeff_name is not None:
-        coeffs0_beta = make_coeffs(coeff_name)
-    else:
-        # coeffs0_beta = shc.Coefficients()
-        # coeffs0_beta.append(1, 0, 0.1 + .3j)  # This is fine alone.
-        # coeffs0_beta.append(2, 0, -.2 + .1j)  # Works
-        # coeffs0_beta.append(3, 0, -.1    - .3j)  # Works
+    coeffs0_beta = make_coeffs(coeff_name)
 
-        coeffs0_beta = shc.Coefficients()
-        # coeffs0_beta.append(1, 1, 1.0j)  # fails
-        # coeffs0_beta.append(1, 1, -0.1 - .1j)  # fails
-        # coeffs0_beta.append(2, 2, 1.0)  # off by a constant?
-        coeffs0_beta.append(3, 1, 1.0)
+    remove_m0_imaginary(coeffs0_beta)
+    coeffs0_beta.set(0, 0, 0.0)  # This does not affect the field, so it cannot be reconstructed.
 
-        # coeffs0_beta.append(3, 3, 0)
-        remove_m0_imaginary(coeffs0_beta)
-
-    coeffs0_alpha = shc.zeros_like(coeffs0_beta)
-    
-    coeffs0 = shc.hstack((coeffs0_alpha, coeffs0_beta))
-    remove_m0_imaginary(coeffs0)
+    coeffs0 = shc.hstack((shc.zeros_like(coeffs0_beta),
+                          coeffs0_beta))
 
     zm0 = zdi_magnetogram.from_coefficients(coeffs0)
     field_r = zm0.get_radial_field(polar_centers, azimuth_centers)
@@ -190,7 +176,7 @@ def test_beta_conversion(coeff_name, request):
         plot_zdi.plot_zdi_components(zm1, zg=zg, axs=axs[1])
         plt.savefig(pn.get())
 
-    with np.printoptions(precision=3):
+    with np.printoptions(precision=3, suppress=True):
         print(coeffs0_beta)
         print(coeffs1_beta)
         print(coeffs1_beta - coeffs0_beta)
@@ -263,35 +249,35 @@ def test_beta_single_coeff(degree_l, order_m, request):
     else:
         field_quotient_azimuthal = np.zeros_like(field_azimuthal1)
 
-    with context.PlotNamer(__file__, request.node.name) as (pn, plt):
-        from stellarwinds.magnetogram import plot_zdi
-
-        fig, axs = plt.subplots(3, 3, figsize=(6 * 3, 3 * 3))
-        plot_zdi.plot_zdi_components(zm0, zg=zg, axs=axs[0])
-        plot_zdi.plot_zdi_components(zm1, zg=zg, axs=axs[1])
-
-        for pid, f in enumerate((field_quotient_r, field_quotient_polar, field_quotient_azimuthal)):
-            img = axs[2, pid].pcolormesh(np.rad2deg(azimuth_centers),
-                                         np.rad2deg(polar_centers), f)
-
-            fig.colorbar(img, ax=axs[2, pid], orientation="horizontal", pad=0.2)
-
-            axs[2, pid].xaxis.set_ticks(np.arange(0, 361, 45))
-            axs[2, pid].yaxis.set_ticks(np.arange(0, 181, 30))
-            axs[2, pid].grid()
-            axs[2, pid].invert_yaxis()
-            axs[2, pid].set_aspect('equal')
-            axs[2, pid].set_xlabel("Azimuth angle [deg]")
-            axs[2, pid].set_ylabel("Polar angle [deg]")
-
-        plt.savefig(pn.get())
+    # with context.PlotNamer(__file__, request.node.name) as (pn, plt):
+    #     from stellarwinds.magnetogram import plot_zdi
+    #
+    #     fig, axs = plt.subplots(3, 3, figsize=(6 * 3, 3 * 3))
+    #     plot_zdi.plot_zdi_components(zm0, zg=zg, axs=axs[0])
+    #     plot_zdi.plot_zdi_components(zm1, zg=zg, axs=axs[1])
+    #
+    #     for pid, f in enumerate((field_quotient_r, field_quotient_polar, field_quotient_azimuthal)):
+    #         img = axs[2, pid].pcolormesh(np.rad2deg(azimuth_centers),
+    #                                      np.rad2deg(polar_centers), f)
+    #
+    #         fig.colorbar(img, ax=axs[2, pid], orientation="horizontal", pad=0.2)
+    #
+    #         axs[2, pid].xaxis.set_ticks(np.arange(0, 361, 45))
+    #         axs[2, pid].yaxis.set_ticks(np.arange(0, 181, 30))
+    #         axs[2, pid].grid()
+    #         axs[2, pid].invert_yaxis()
+    #         axs[2, pid].set_aspect('equal')
+    #         axs[2, pid].set_xlabel("Azimuth angle [deg]")
+    #         axs[2, pid].set_ylabel("Polar angle [deg]")
+    #
+    #     plt.savefig(pn.get())
 
     # The values are close, except for a small number of points where cancellation effects dominate.
     assert almost_all(field_quotient_r) >= .95
     assert almost_all(field_quotient_polar) >= .95
     assert almost_all(field_quotient_azimuthal) >= .95
 
-    log.error(f"{degree_l}, {order_m}, {np.median(field_quotient_polar)}")
+    # log.error(f"{degree_l}, {order_m}, {np.median(field_quotient_polar)}")
 
 def almost_all(array):
     flat = array.flatten()
@@ -339,3 +325,38 @@ def test_beta_scale(request):
             assert np.allclose(q_pl, mq_pl), f"Failed pl for {(l, m)}."
             assert np.allclose(q_az, mq_az), f"Failed az for {(l, m)}."
 
+
+def test_beta_00(request):
+    """Verify that beta_00 does not affect field"""
+    zg = geometry.ZdiGeometry(64)
+    polar_centers, azimuth_centers = zg.centers()
+
+    coeffs_beta = shc.Coefficients()
+    coeffs_beta.append(0, 0, +13 - .431j)
+
+    coeffs = shc.hstack((shc.zeros_like(coeffs_beta),
+                          coeffs_beta,
+                          shc.zeros_like(coeffs_beta)))
+
+    zm = zdi_magnetogram.from_coefficients(coeffs)
+    field = zm.get_radial_field(polar_centers, azimuth_centers)
+
+    assert np.allclose(field, 0)
+
+
+def test_gamma_00(request):
+    """Verify that beta_00 does not affect field"""
+    zg = geometry.ZdiGeometry(64)
+    polar_centers, azimuth_centers = zg.centers()
+
+    coeffs_gamma = shc.Coefficients()
+    coeffs_gamma.append(0, 0, +13 - .431j)
+
+    coeffs = shc.hstack((shc.zeros_like(coeffs_gamma),
+                          shc.zeros_like(coeffs_gamma),
+                          coeffs_gamma))
+
+    zm = zdi_magnetogram.from_coefficients(coeffs)
+    field = zm.get_radial_field(polar_centers, azimuth_centers)
+
+    assert np.allclose(field, 0)

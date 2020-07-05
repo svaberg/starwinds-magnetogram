@@ -388,7 +388,7 @@ def test_gamma_conversion(coeff_name, request):
                                           max_degree=coeffs0.degree_max)
 
     coeffs1_gamma = shc.from_arrays(zm1.degrees_l, zm1.orders_m, zm1.gamma)
-    zm1.beta = np.zeros_like(zm1.beta)  # Drop any toroidal component
+    zm1.beta = np.zeros_like(zm1.beta)  # Drop any poloidal component
 
 
     with context.PlotNamer(__file__, request.node.name) as (pn, plt):
@@ -419,4 +419,62 @@ def test_gamma_conversion(coeff_name, request):
 
     print(shc.isclose(coeffs1_gamma, coeffs0_gamma, rtol=1e-2, atol=1e-2))
     assert shc.allclose(coeffs1_gamma, coeffs0_gamma, rtol=1e-2, atol=1e-2)
+
+
+@pytest.mark.parametrize("coeff_name", ("low", "m0", "m01", "m10", "random"))
+def test_full_conversion(coeff_name, request):
+    """Test that the discretized field can be reconstructed as zdi components."""
+    zg = geometry.ZdiGeometry(64)
+    polar_centers, azimuth_centers = zg.centers()
+
+    coeffs0 = shc.hstack((make_coeffs(coeff_name),
+                         make_coeffs(coeff_name),
+                         make_coeffs(coeff_name)))
+
+    remove_m0_imaginary(coeffs0)
+    c00 = coeffs0.get(0, 0) * np.array([1, 0, 0])  # beta00 and gamma00 do not affect the field.
+    coeffs0.set(0, 0, c00)
+
+    zm0 = zdi_magnetogram.from_coefficients(coeffs0)
+    field_r = zm0.get_radial_field(polar_centers, azimuth_centers)
+    field_polar = zm0.get_polar_field(polar_centers, azimuth_centers)
+    field_azimuthal = zm0.get_azimuthal_field(polar_centers, azimuth_centers)
+
+    # import pdb; pdb.set_trace()
+
+    zm1 = converter.convert_latlon_to_zdi(polar_centers, azimuth_centers,
+                                          field_r, field_polar, field_azimuthal,
+                                          max_degree=coeffs0.degree_max)
+
+    coeffs1 = shc.from_arrays(zm1.degrees_l, zm1.orders_m,
+                              np.stack((zm1.alpha, zm1.beta, zm1.gamma), axis=-1))
+
+    with context.PlotNamer(__file__, request.node.name) as (pn, plt):
+        from stellarwinds.magnetogram import plot_zdi
+
+        fig, axs = plt.subplots(1, 2)
+        ax = axs[0]
+        plot_zdi.plot_energy_by_degree(zm0, ax)
+        plt.draw()
+        ylim = np.asarray(ax.get_ylim()) * np.array([.1, 10])
+        ax.set_ylim(ylim)
+
+        ax = axs[1]
+        plot_zdi.plot_energy_by_degree(zm1, ax)
+        ax.set_ylim(ylim)
+        plt.savefig(pn.get())
+        plt.close()
+
+        fig, axs = plt.subplots(2, 3, figsize=(6 * 3, 2 * 3))
+        plot_zdi.plot_zdi_components(zm0, zg=zg, axs=axs[0])
+        plot_zdi.plot_zdi_components(zm1, zg=zg, axs=axs[1])
+        plt.savefig(pn.get())
+
+    with np.printoptions(precision=3, suppress=True):
+        print(coeffs0)
+        print(coeffs1)
+        print(coeffs1 - coeffs0)
+
+    print(shc.isclose(coeffs1, coeffs0, rtol=1e-2, atol=1e-2))
+    assert shc.allclose(coeffs1, coeffs0, rtol=1e-2, atol=1e-2)
 

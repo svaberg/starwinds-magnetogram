@@ -1,6 +1,7 @@
 import numpy as np
 import numpy.random
 import logging
+log = logging.getLogger(__name__)
 import pytest
 import cmath
 import os.path
@@ -85,20 +86,34 @@ def test_conversion(request):
 #     plt.plot(r, Rprime)
 
 
-def l_and_m(max_l):
-    for l in range(1, max_l + 1):
+def l_and_m(max_l, min_l=1):
+    for l in range(min_l, max_l + 1):
         for m in range(0, l+1):
             yield l, m
 
 
-@pytest.mark.parametrize("degree_l, order_m", l_and_m(3))
-def test_beta_values(degree_l, order_m, request):
-    """Test the $beta$ coefficients of the ZDI magnetogram."""
+def l_equals_m(max_l, min_l=1):
+    for l in range(min_l, max_l + 1):
+        yield l, l
+
+
+@pytest.mark.parametrize("degree_l, order_m", l_equals_m(12, min_l=0))
+def test_beta_values_scaling(degree_l, order_m, request):
+    """the low degrees are of by a multiplicative constant.
+    l=1 : 0.9593023255813953
+    l=2 : 0.9898193620804838
+    l=3 : 0.997934575322298
+    l=4 : 0.9996196507113944
+    l=5 : 0.999933455597231
+    l=6 : 0.9999887018304694
+    Leave this for now as this
+    functionality is not in use anywhere."""
+
     zg = geometry.ZdiGeometry(64)
     polar_centers, azimuth_centers = zg.centers()
 
     coeffs_pfss = shc.Coefficients()
-    coeffs_pfss.append(degree_l, order_m, 1.0 + 0.3j)
+    coeffs_pfss.append(degree_l, order_m, 1.0)
 
     coeffs_zdi = converter.convert_pfss_to_zdi(coeffs_pfss)
 
@@ -114,85 +129,146 @@ def test_beta_values(degree_l, order_m, request):
     Ba_zdi = np.flipud(Ba_zdi)
     Ba_zdi *= -1  # This is also because of the left-right flip
 
-    b = 1  # Bad border pixels
+    b = 10  # Bad border pixels
+    assert np.allclose(Br_zdi, Br_pfss)
 
-    with context.PlotNamer(__file__, request.node.name) as (pn, plt):
-        _, axs = plt.subplots(3, 3, figsize=(12, 12))
-        for f, ax in zip([Br_zdi, Br_pfss, np.abs(Br_zdi-Br_pfss)], axs[:, 0]):
-            plots.plot_magnetic_field(ax, polar_centers, azimuth_centers, f, legend_str='B_r', )
-            plots.add_extrema(polar_centers, azimuth_centers, f, ax, legend_str='B_r', markers='12')
-            ax.legend()
-        axs[0, 0].set_title("ZDI radial")
-        axs[1, 0].set_title("PFSS radial")
-        axs[2, 0].set_title("Error radial")
 
-        for f, ax in zip([Bp_zdi, Bp_pfss, np.abs(Bp_zdi-Bp_pfss)], axs[:, 1]):
-            plots.plot_magnetic_field(ax,
-                                      polar_centers[b:-b, b:-b],
-                                      azimuth_centers[b:-b, b:-b],
-                                      f[b:-b, b:-b],
-                                      legend_str='B_p', )
-            plots.add_extrema(polar_centers[b:-b, b:-b],
-                              azimuth_centers[b:-b, b:-b],
-                              f[b:-b, b:-b],
-                              ax, legend_str='B_p', markers='12')
-            ax.legend()
-        axs[0, 1].set_title("ZDI polar")
-        axs[1, 1].set_title("PFSS polar")
-        axs[2, 1].set_title("Error polar")
+    if not np.allclose(Br_pfss, Br_zdi):
+        field_quotient_polar = Br_pfss / Br_zdi
+    else:
+        field_quotient_r = np.ones_like(Br_pfss)
 
-        for f, ax in zip([Ba_zdi, Ba_pfss, np.abs(Ba_zdi-Ba_pfss)], axs[:, 2]):
-            plots.plot_magnetic_field(ax,
-                                      polar_centers[b:-b, b:-b],
-                                      azimuth_centers[b:-b, b:-b],
-                                      f[b:-b, b:-b],
-                                      legend_str='B_p', )
-            plots.add_extrema(polar_centers[b:-b, b:-b],
-                              azimuth_centers[b:-b, b:-b],
-                              f[b:-b, b:-b],
-                              ax, legend_str='B_p', markers='12')
-            ax.legend()
-        axs[0, 2].set_title("ZDI azimuthal")
-        axs[1, 2].set_title("PFSS azimuthal")
-        axs[2, 2].set_title("Error azimuthal")
-        plt.savefig(pn.get())
+    if not np.allclose(Bp_pfss, Bp_zdi):
+        field_quotient_polar = Bp_pfss / Bp_zdi
+    else:
+        field_quotient_polar = np.ones_like(Bp_zdi)
 
-        # Scatter curve of errors
-        _, axs = plt.subplots(1, 3, figsize=(12, 4))
+    if not np.allclose(Ba_pfss, Ba_zdi):
+        field_quotient_azimuthal = Ba_pfss / Ba_zdi
+    else:
+        field_quotient_azimuthal = np.ones_like(Ba_zdi)
 
-        for (fz, fp), ax in zip([(Br_zdi, Br_pfss), (Bp_zdi, Bp_pfss), (Ba_zdi, Ba_pfss)], axs):
-            ax.plot([np.min(fz), np.max(fz)], [np.min(fz), np.max(fz)])
-            ax.plot(fz.ravel(), fp.ravel(), ',')
+    # The values are close, except for a small number of points where cancellation effects dominate.
+    assert almost_all(field_quotient_r) >= .95
+    assert almost_all(field_quotient_polar) >= .95
+    assert almost_all(field_quotient_azimuthal) >= .95
 
-        plt.savefig(pn.get())
+    log.info(f"{degree_l}, {order_m}: Scale {np.median(field_quotient_polar)}, {np.median(field_quotient_azimuthal)}")
+    # import pdb; pdb.set_trace()
 
-        # Residual curve of errors
-        _, axs = plt.subplots(1, 3, figsize=(12, 4))
 
-        for (fz, fp), ax in zip([(Br_zdi, Br_pfss), (Bp_zdi, Bp_pfss), (Ba_zdi, Ba_pfss)], axs):
-            # ax.plot([np.min(fz), np.max(fz)], [np.min(fz), np.max(fz)])
-            ax.plot(fz.ravel(), fz.ravel() - fp.ravel(), ',')
+def almost_all(array):
+    flat = array.flatten()
+    flat = flat[np.logical_not(np.isnan(flat))]
+    return np.sum(np.isclose(array, np.median(flat))) / array.size
 
-        plt.savefig(pn.get())
 
-        # Residual curve of errors
-        _, axs = plt.subplots(1, 3, figsize=(12, 4))
+@pytest.mark.parametrize("degree_l, order_m", l_and_m(3, min_l=0))
+def test_beta_values(degree_l, order_m, request):
+    """Test the $beta$ coefficients of the ZDI magnetogram."""
+    # TODO the low degrees are of by a multiplicative constant
+    # approximately
+    zg = geometry.ZdiGeometry(64)
+    polar_centers, azimuth_centers = zg.centers()
 
-        for (fz, fp), ax in zip([(Br_zdi, Br_pfss), (Bp_zdi, Bp_pfss), (Ba_zdi, Ba_pfss)], axs):
-            # ax.plot([np.min(fz), np.max(fz)], [np.min(fz), np.max(fz)])
-            ax.plot(fz.ravel(), np.abs(1 - fz.ravel() / fp.ravel()), ',')
-            ax.set_yscale("log")
+    coeffs_pfss = shc.Coefficients()
+    coeffs_pfss.append(degree_l, order_m, 1.0)
 
-        plt.savefig(pn.get())
+    coeffs_zdi = converter.convert_pfss_to_zdi(coeffs_pfss)
+
+    Br_pfss, Bp_pfss, Ba_pfss = pfss_magnetogram.evaluate_spherical(coeffs_pfss, 1, polar_centers, azimuth_centers)
+
+    Br_zdi = zdi_magnetogram.from_coefficients(coeffs_zdi).get_radial_field(polar_centers, azimuth_centers)
+    Bp_zdi = zdi_magnetogram.from_coefficients(coeffs_zdi).get_polar_poloidal_field_new(polar_centers, azimuth_centers)
+    Ba_zdi = zdi_magnetogram.from_coefficients(coeffs_zdi).get_azimuthal_field(polar_centers, azimuth_centers)
+
+    # In the plot, this flips left and right. It might have to do with how solar longitude is defined.
+    Br_zdi = np.flipud(Br_zdi)
+    Bp_zdi = np.flipud(Bp_zdi)
+    Ba_zdi = np.flipud(Ba_zdi)
+    Ba_zdi *= -1  # This is also because of the left-right flip
+
+    b = 10  # Bad border pixels
+    #
+    # with context.PlotNamer(__file__, request.node.name) as (pn, plt):
+    #     fig, axs = plt.subplots(3, 3, figsize=(12, 12))
+    #     for f, ax in zip([Br_zdi, Br_pfss, np.abs(Br_zdi-Br_pfss)], axs[:, 0]):
+    #         plots.plot_magnetic_field(ax, polar_centers, azimuth_centers, f, legend_str='B_r', )
+    #         plots.add_extrema(polar_centers, azimuth_centers, f, ax, legend_str='B_r', markers='12')
+    #         ax.legend()
+    #     axs[0, 0].set_title("ZDI radial")
+    #     axs[1, 0].set_title("PFSS radial")
+    #     axs[2, 0].set_title("Error radial")
+    #
+    #     for f, ax in zip([Bp_zdi, Bp_pfss, np.abs(Bp_zdi-Bp_pfss)], axs[:, 1]):
+    #         plots.plot_magnetic_field(ax,
+    #                                   polar_centers[b:-b, b:-b],
+    #                                   azimuth_centers[b:-b, b:-b],
+    #                                   f[b:-b, b:-b],
+    #                                   legend_str='B_p', )
+    #         plots.add_extrema(polar_centers[b:-b, b:-b],
+    #                           azimuth_centers[b:-b, b:-b],
+    #                           f[b:-b, b:-b],
+    #                           ax, legend_str='B_p', markers='12')
+    #         ax.legend()
+    #     axs[0, 1].set_title("ZDI polar")
+    #     axs[1, 1].set_title("PFSS polar")
+    #     axs[2, 1].set_title("Error polar")
+    #
+    #     for f, ax in zip([Ba_zdi, Ba_pfss, np.abs(Ba_zdi-Ba_pfss)], axs[:, 2]):
+    #         plots.plot_magnetic_field(ax,
+    #                                   polar_centers[b:-b, b:-b],
+    #                                   azimuth_centers[b:-b, b:-b],
+    #                                   f[b:-b, b:-b],
+    #                                   legend_str='B_p', )
+    #         plots.add_extrema(polar_centers[b:-b, b:-b],
+    #                           azimuth_centers[b:-b, b:-b],
+    #                           f[b:-b, b:-b],
+    #                           ax, legend_str='B_p', markers='12')
+    #         ax.legend()
+    #     axs[0, 2].set_title("ZDI azimuthal")
+    #     axs[1, 2].set_title("PFSS azimuthal")
+    #     axs[2, 2].set_title("Error azimuthal")
+    #     fig.suptitle("Comparison")
+    #     plt.savefig(pn.get())
+    #
+    #     # Scatter curve of errors
+    #     fig, axs = plt.subplots(1, 3, figsize=(12, 4))
+    #
+    #     for (fz, fp), ax in zip([(Br_zdi, Br_pfss), (Bp_zdi, Bp_pfss), (Ba_zdi, Ba_pfss)], axs):
+    #         ax.plot([np.min(fz), np.max(fz)], [np.min(fz), np.max(fz)])
+    #         ax.plot(fz.ravel(), fp.ravel(), ',')
+    #
+    #     fig.suptitle("Scatter")
+    #     plt.savefig(pn.get())
+    #
+    #     # Residual curve of errors
+    #     fig, axs = plt.subplots(1, 3, figsize=(12, 4))
+    #
+    #     for (fz, fp), ax in zip([(Br_zdi, Br_pfss), (Bp_zdi, Bp_pfss), (Ba_zdi, Ba_pfss)], axs):
+    #         # ax.plot([np.min(fz), np.max(fz)], [np.min(fz), np.max(fz)])
+    #         ax.plot(fz.ravel(), fz.ravel() - fp.ravel(), ',')
+    #
+    #     fig.suptitle("Residual")
+    #     plt.savefig(pn.get())
+    #
+    #     # Residual curve of errors
+    #     fig, axs = plt.subplots(1, 3, figsize=(12, 4))
+    #
+    #     for (fz, fp), ax in zip([(Br_zdi, Br_pfss), (Bp_zdi, Bp_pfss), (Ba_zdi, Ba_pfss)], axs):
+    #         # ax.plot([np.min(fz), np.max(fz)], [np.min(fz), np.max(fz)])
+    #         ax.plot(fz.ravel(), np.abs(1 - fz.ravel() / fp.ravel()), ',')
+    #
+    #     fig.suptitle("1 - Quotient")
+    #     plt.savefig(pn.get())
 
     assert np.allclose(Br_zdi, Br_pfss)
 
-    assert np.allclose(Bp_zdi[b:-b, b:-b], Bp_pfss[b:-b, b:-b], rtol=1e-2, atol=1e-2)
-    assert np.allclose(Ba_zdi[b:-b, b:-b], Ba_pfss[b:-b, b:-b], rtol=1e-2, atol=1e-2)
+    assert np.allclose(Bp_zdi[b:-b, b:-b], Bp_pfss[b:-b, b:-b])#, rtol=1e-2, atol=1e-2)
+    assert np.allclose(Ba_zdi[b:-b, b:-b], Ba_pfss[b:-b, b:-b])#, rtol=1e-2, atol=1e-2)
 
 
 def test_beta_loop(request, magnetogram_name="mengel"):
-    # TODO test individual components to improve accuracy.
     zg = geometry.ZdiGeometry(64)
 
     centers = zg.centers()

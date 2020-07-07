@@ -44,15 +44,61 @@ def test_conversion(request):
 
     assert np.allclose(Br_zdi, Br_pfss)
 
+#
+# # Reconstruct beta values from potential field
+# pfss_coeffs = coefficients.Coefficients()
+# # pfss_coeffs.append(1, 1, 1.0-0.5j)
+# pfss_coeffs.append(1, 1, 1.0)
+#
+# # pfss_coeffs.append(1, 0, 0.5+0.4j)
+# # pfss_coeffs.append(2, 1, .5 + .3j)
+# fig, axs = plt.subplots(1, 3, figsize=(18, 3))
+# plot_pfss.plot_components(pfss_coeffs, axs=axs)
+# fig.suptitle("PFSS")
+# plt.show()
+#
+# zdi_coeffs = converter.convert_pfss_to_zdi(pfss_coeffs)
+# pfss_coeffs2 = converter.convert_zdi_to_pfss(zdi_coeffs)
+# print(pfss_coeffs)
+# print(zdi_coeffs)
+# print(pfss_coeffs2)
+#
+# zc = zdi_magnetogram.from_coefficients(zdi_coeffs)
+# fig, axs = plt.subplots(1, 3, figsize=(18, 3))
+# plot_zdi.plot_zdi_components(zc, axs=axs)
+# for ax in axs:
+#     ax.invert_xaxis()
+# fig.suptitle("ZDI")
+# plt.show()
+#
+# r_ss = pfss_magnetogram.default_radius_source_surface
+# r = np.linspace(1, r_ss)
+# for deg_l in range(1, 7):
+#     R, Rprime = pfss_magnetogram.r_l(deg_l, r, 1, r_ss)
+#     plt.plot(r, R * (deg_l + 1), label=f"$\ell={deg_l}$")
+#
+# # plt.yscale("log")
+# plt.legend()
+# plt.figure()
+# for deg_l in range(0, 7):
+#     R, Rprime = pfss_magnetogram.r_l(deg_l, r, 1, r_ss)
+#     plt.plot(r, Rprime)
 
-@pytest.mark.skip(reason="Never worked...")
-def test_beta_values(request):
+
+def l_and_m(max_l):
+    for l in range(1, max_l + 1):
+        for m in range(0, l+1):
+            yield l, m
+
+
+@pytest.mark.parametrize("degree_l, order_m", l_and_m(3))
+def test_beta_values(degree_l, order_m, request):
     """Test the $beta$ coefficients of the ZDI magnetogram."""
-    zg = geometry.ZdiGeometry(256)
+    zg = geometry.ZdiGeometry(64)
     polar_centers, azimuth_centers = zg.centers()
 
     coeffs_pfss = shc.Coefficients()
-    coeffs_pfss.append(3, 2, 1.0 + 0.3j)
+    coeffs_pfss.append(degree_l, order_m, 1.0 + 0.3j)
 
     coeffs_zdi = converter.convert_pfss_to_zdi(coeffs_pfss)
 
@@ -71,7 +117,7 @@ def test_beta_values(request):
     b = 1  # Bad border pixels
 
     with context.PlotNamer(__file__, request.node.name) as (pn, plt):
-        _, axs = plt.subplots(3, 2, figsize=(12, 12))
+        _, axs = plt.subplots(3, 3, figsize=(12, 12))
         for f, ax in zip([Br_zdi, Br_pfss, np.abs(Br_zdi-Br_pfss)], axs[:, 0]):
             plots.plot_magnetic_field(ax, polar_centers, azimuth_centers, f, legend_str='B_r', )
             plots.add_extrema(polar_centers, azimuth_centers, f, ax, legend_str='B_r', markers='12')
@@ -94,6 +140,21 @@ def test_beta_values(request):
         axs[0, 1].set_title("ZDI polar")
         axs[1, 1].set_title("PFSS polar")
         axs[2, 1].set_title("Error polar")
+
+        for f, ax in zip([Ba_zdi, Ba_pfss, np.abs(Ba_zdi-Ba_pfss)], axs[:, 2]):
+            plots.plot_magnetic_field(ax,
+                                      polar_centers[b:-b, b:-b],
+                                      azimuth_centers[b:-b, b:-b],
+                                      f[b:-b, b:-b],
+                                      legend_str='B_p', )
+            plots.add_extrema(polar_centers[b:-b, b:-b],
+                              azimuth_centers[b:-b, b:-b],
+                              f[b:-b, b:-b],
+                              ax, legend_str='B_p', markers='12')
+            ax.legend()
+        axs[0, 2].set_title("ZDI azimuthal")
+        axs[1, 2].set_title("PFSS azimuthal")
+        axs[2, 2].set_title("Error azimuthal")
         plt.savefig(pn.get())
 
         # Scatter curve of errors
@@ -126,12 +187,13 @@ def test_beta_values(request):
 
     assert np.allclose(Br_zdi, Br_pfss)
 
-    assert np.allclose(Bp_zdi[b:-b, b:-b], Bp_pfss[b:-b, b:-b])
+    assert np.allclose(Bp_zdi[b:-b, b:-b], Bp_pfss[b:-b, b:-b], rtol=1e-2, atol=1e-2)
+    assert np.allclose(Ba_zdi[b:-b, b:-b], Ba_pfss[b:-b, b:-b], rtol=1e-2, atol=1e-2)
 
 
 def test_beta_loop(request, magnetogram_name="mengel"):
-
-    zg = geometry.ZdiGeometry(128)
+    # TODO test individual components to improve accuracy.
+    zg = geometry.ZdiGeometry(64)
 
     centers = zg.centers()
 
@@ -199,6 +261,10 @@ def test_beta_loop(request, magnetogram_name="mengel"):
 
         plt.savefig(pn.get())
 
+    b = 5
+    assert np.allclose(Br_pfss[b:-b, b:-b], Br_zdi[b:-b, b:-b])
+    assert np.allclose(Bp_pfss[b:-b, b:-b], Bp_zdi[b:-b, b:-b], rtol=1e-1, atol=1e-1)
+    assert np.allclose(Ba_pfss[b:-b, b:-b], Ba_zdi[b:-b, b:-b], rtol=1e-1, atol=1e-1)
 
 
 def test_forward_conversion_factor():

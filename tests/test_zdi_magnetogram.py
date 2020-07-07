@@ -150,11 +150,11 @@ def test_zdi_magnetogram_3d(request, magnetogram_name="mengel"):
 
     B = [
         lz.get_radial_field(*zg.centers()),
-        lz.get_polar_poloidal_field(*zg.centers()),
+        lz.get_polar_poloidal_field_new(*zg.centers()),
         lz.get_polar_toroidal_field(*zg.centers()),
         -lz.get_polar_field(*zg.centers()),
         lz.get_azimuthal_poloidal_field(*zg.centers()),
-        lz.get_azimuthal_toroidal_field(*zg.centers()),
+        lz.get_azimuthal_toroidal_field_new(*zg.centers()),
         lz.get_azimuthal_field(*zg.centers())
     ]
 
@@ -305,11 +305,11 @@ def test_zdi_magnetogram(request, magnetogram_name="mengel"):
 
     B = [
         lz.get_radial_field(*zg.centers()),
-        lz.get_polar_poloidal_field(*zg.centers()),
+        lz.get_polar_poloidal_field_new(*zg.centers()),
         lz.get_polar_toroidal_field(*zg.centers()),
         -lz.get_polar_field(*zg.centers()),
         lz.get_azimuthal_poloidal_field(*zg.centers()),
-        lz.get_azimuthal_toroidal_field(*zg.centers()),
+        lz.get_azimuthal_toroidal_field_new(*zg.centers()),
         lz.get_azimuthal_field(*zg.centers())
     ]
 

@@ -2,13 +2,13 @@ import numpy as np
 import cmath
 import logging
 
-import magnetogram.associated_legendre
 
 log = logging.getLogger(__name__)
 
 import stellarwinds.magnetogram.coefficients as shc
 from stellarwinds.magnetogram import pfss_magnetogram
 from stellarwinds.magnetogram import zdi_magnetogram
+from stellarwinds.magnetogram import associated_legendre
 
 
 def collect_cosines(r, alpha, s, beta):
@@ -167,7 +167,7 @@ def get_zdi_coeffs(pl, az, degrees_l, orders_m, field_r, field_pl, field_az, are
         daz = np.mean(np.diff(az, axis=0))
         area = dpl * daz
 
-    plmct, dplmct = magnetogram.associated_legendre.calculate_lpmn(degrees_l, orders_m, pl)  # Uses n for degree
+    plmct, dplmct = associated_legendre.calculate_lpmn(degrees_l, orders_m, pl)  # Uses n for degree
     c_lm = zdi_magnetogram.get_c_lm(degrees_l, orders_m)
 
     Winv = 2.0 - (np.array(orders_m) == 0)

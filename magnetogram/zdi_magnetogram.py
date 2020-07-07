@@ -4,7 +4,7 @@ import scipy.special
 
 import logging
 
-from magnetogram.associated_legendre import calculate_lpmn
+from stellarwinds.magnetogram import associated_legendre
 
 log = logging.getLogger(__name__)
 
@@ -155,6 +155,7 @@ class ZdiMagnetogram:
         :param points_azimuth:
         :return: polar component of the toroidal field
         """
+        log.warning("Please use the new method")
         field_azimuthal_toroidal = np.zeros_like(points_azimuth, dtype=complex)
 
         for deg_l, ord_m, g_lm, c_lm in zip(self.degrees_l, self.orders_m, self.gamma, self.c_lm):
@@ -206,6 +207,7 @@ class ZdiMagnetogram:
         :param points_azimuth:
         :return: azimuthal component of the poloidal field
         """
+        log.warning("Please use the new method")
         field_polar_poloidal = np.zeros_like(points_azimuth, dtype=complex)
 
         for deg_l, ord_m, b_lm, c_lm in zip(self.degrees_l, self.orders_m, self.beta, self.c_lm):
@@ -240,7 +242,7 @@ class ZdiMagnetogram:
         return np.real(fpp_i_j)
 
     def _calculate_lpmn(self, points_polar):
-        return calculate_lpmn(self.degrees_l, self.orders_m, points_polar)
+        return associated_legendre.calculate_lpmn(self.degrees_l, self.orders_m, points_polar)
 
     def get_polar_toroidal_field(self, points_polar, points_azimuth):
         r"""

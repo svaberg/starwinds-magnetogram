@@ -211,7 +211,7 @@ def test_beta_loop(request, magnetogram_name="mengel"):
 
 
     Br_zdi0p = zm0.get_radial_poloidal_field(*centers)
-    Bp_zdi0p = zm0.get_polar_poloidal_field(*centers)
+    Bp_zdi0p = zm0.get_polar_poloidal_field_new(*centers)
     Ba_zdi0p = zm0.get_azimuthal_poloidal_field(*centers)
 
     # In the plot, this flips left and right. It might have to do with how solar longitude is defined.

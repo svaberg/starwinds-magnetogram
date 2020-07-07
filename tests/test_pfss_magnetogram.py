@@ -74,6 +74,68 @@ def test_reference(request,
     assert(np.allclose(B2[2], B1[2]))
 
 
+def test_legendre_single(request):
+    degree_l, order_m = 5, 2
+    degree_l, order_m = np.atleast_1d(degree_l, order_m)
+
+    points_polar = np.linspace(0, np.pi, 200)
+    p0, dp0 = pfss_stanford.theta_lm(degree_l, order_m, points_polar)
+
+    p1, dp1 = pfss_stanford.calculate_all_theta(degree_l, order_m, points_polar, scipy=True)
+    p1 = p1.flatten()
+    dp1 = dp1.flatten()
+
+    with context.PlotNamer(__file__, request.node.name) as (pn, plt):
+        fig, axs = plt.subplots(2, 1)
+        ax = axs[0]
+        ax.plot(points_polar, p0-p1)
+        # ax.plot(points_polar, p1)
+
+        ax = axs[1]
+        ax.plot(points_polar, dp0-dp1)
+        # ax.plot(points_polar, dp1)
+
+        plt.savefig(pn.get())
+        plt.close(fig)
+
+    assert np.allclose(p0, p1)  # These should work
+    assert not np.allclose(dp0, dp1)  # But these are inaccurate, that's why to use lpmn.
+    assert np.allclose(dp0, dp1, atol=.1)  # This should still work.
+
+
+def test_legendre_multiple(request):
+    degree_l = np.array([1, 1, 5, 20])
+    order_m = np.array([0, 1, 3, 20])
+
+    points_polar = np.linspace(0, np.pi, 400)
+
+    p1, dp1 = pfss_stanford.calculate_all_theta(degree_l, order_m, points_polar, scipy=True)
+
+    assert p1.shape == (len(points_polar), len(degree_l))
+    assert dp1.shape == (len(points_polar), len(degree_l))
+
+    with context.PlotNamer(__file__, request.node.name) as (pn, plt):
+        fig, axs = plt.subplots(2, 1)
+
+        for id_, (l, m) in enumerate(zip(degree_l, order_m)):
+            ax = axs[0]
+
+            p0, dp0 = pfss_stanford.theta_lm(l, m, points_polar)
+            # line, = ax.plot(points_polar, p0)
+            # ax.plot(points_polar, p1[..., id_], 'o:', color=line.get_color())
+            ax.plot(points_polar, p0-p1[..., id_])
+
+            ax = axs[1]
+            ax.plot(points_polar, dp0-dp1[..., id_])
+
+        plt.savefig(pn.get())
+        plt.close(fig)
+
+    for id_, (l, m) in enumerate(zip(degree_l, order_m)):
+        p0, dp0 = pfss_stanford.theta_lm(l, m, points_polar)
+        assert np.allclose(p0, p1[..., id_])  # These should work
+
+
 @pytest.mark.parametrize("points_shape", ((1,), (2,), (2, 3), (2, 3, 5), (5, 8, 2, 2, 1, 3)))
 @pytest.mark.parametrize("magnetogram_name", ("mengel",))
 def test_evaluate_cartesian(request,

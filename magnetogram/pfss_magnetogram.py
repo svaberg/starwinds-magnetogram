@@ -56,6 +56,49 @@ def theta_lm(deg_l, ord_m, points_polar):
     return value, deriv
 
 
+def calculate_all_theta(degree_l, order_m, points_polar, scipy=True):
+    
+    degree_l = np.asarray(degree_l)
+    order_m = np.asarray(order_m)
+
+    # Calculate all the theta_lm and theta_lm' values in one go using scipy
+    from stellarwinds.magnetogram.associated_legendre import calculate_lpmn
+    Pmn_cos_theta_result, Pmn_d_cos_theta_result = calculate_lpmn(degree_l, order_m, points_polar)
+
+    d0 = 0 + (np.asarray(order_m) == 0)
+    clm = (-1) ** order_m * np.sqrt(sp.special.factorial(degree_l - order_m)
+                                  / sp.special.factorial(degree_l + order_m)) * np.sqrt(2 - d0)
+
+    buffered_theta_scipy = Pmn_cos_theta_result * clm
+    buffered_dtheta_scipy = Pmn_d_cos_theta_result * clm
+
+    # The old method.
+    buffered_theta = []
+    buffered_dtheta = []
+
+    for (deg_l, ord_m) in zip(degree_l, order_m):
+        result = theta_lm(deg_l, ord_m, points_polar)
+        buffered_theta.append(result[0])
+        buffered_dtheta.append(result[1])
+
+    buffered_theta = np.stack(buffered_theta, axis=-1)
+    buffered_dtheta = np.stack(buffered_dtheta, axis=-1)
+
+    assert Pmn_cos_theta_result.shape == buffered_theta.shape
+    assert Pmn_d_cos_theta_result.shape == buffered_theta.shape
+    assert buffered_theta_scipy.shape == buffered_theta.shape
+    assert buffered_dtheta_scipy.shape == buffered_theta.shape
+
+    assert np.allclose(buffered_theta_scipy, buffered_theta)
+    # assert np.allclose(buffered_dtheta_scipy, buffered_dtheta)
+
+    # Return here.
+    if scipy:
+        return buffered_theta_scipy, buffered_dtheta_scipy
+    else:
+        return buffered_theta, buffered_dtheta
+
+
 def r_l(deg_l, r, r0, rss):
     r"""
     Calculate $R_\ell(r;r_\star, r_\text{ss})$
@@ -152,38 +195,26 @@ def evaluate_spherical(
     degree_l, order_m, alpha_lm = coefficients.as_arrays(include_unset=False)
     assert np.min(order_m) >= 0, "Stanford PFSS expects only positive orders (TBC)."
 
-    # Calculate all the theta_lm and theta_lm' values in one go using scipy
-
-    buffered_theta = [] # np.empty((len(degree_l),) + points_polar.shape)
-    buffered_dtheta = [] #np.empty_like(buffered_theta)
-
-    for (deg_l, ord_m) in zip(degree_l, order_m):
-        result = theta_lm(deg_l, ord_m, points_polar)
-        buffered_theta.append(result[0])
-        buffered_dtheta.append(result[1])
-
-    buffered_theta = np.stack(buffered_theta, axis=0)
-    buffered_dtheta = np.stack(buffered_dtheta, axis=0)
-    i = 0
-    # END of change.
+    buffered_theta, buffered_dtheta = calculate_all_theta(degree_l, order_m, points_polar)
 
     # Loop over magnetogram coefficient lines
-    for (deg_l, ord_m, g_lm, h_lm) in zip(degree_l,
-                                          order_m,
-                                          np.real(alpha_lm),
-                                          np.imag(alpha_lm)):
+    for coeff_id, (deg_l, ord_m, g_lm, h_lm) in enumerate(zip(degree_l,
+                                                       order_m,
+                                                       np.real(alpha_lm),
+                                                       np.imag(alpha_lm))):
 
         _r_l = r_l(deg_l, points_radial, radius_star, radius_source_surface)
         _theta_lm = theta_lm(deg_l, ord_m, points_polar)
         _phi_lm = phi_lm(ord_m, g_lm, h_lm, points_azimuth)
 
-        assert np.allclose(buffered_theta[i], _theta_lm[0])
-        assert np.allclose(buffered_dtheta[i], _theta_lm[1])
-        i += 1
+        # assert np.allclose(buffered_theta[..., coeff_id], _theta_lm[0])
+        # assert np.allclose(buffered_dtheta[..., coeff_id], _theta_lm[1])
 
-        unscaled_radial    = _r_l[1] * _theta_lm[0] * _phi_lm[0]
-        unscaled_polar     = _r_l[0] * _theta_lm[1] * _phi_lm[0]
-        unscaled_azimuthal = _r_l[0] * _theta_lm[0] * _phi_lm[1]
+        del _theta_lm
+
+        unscaled_radial    = _r_l[1] * buffered_theta[..., coeff_id]  * _phi_lm[0]
+        unscaled_polar     = _r_l[0] * buffered_dtheta[..., coeff_id] * _phi_lm[0]
+        unscaled_azimuthal = _r_l[0] * buffered_theta[..., coeff_id]  * _phi_lm[1]
 
         field_radial    -= unscaled_radial
         field_polar     -= unscaled_polar / points_radial

@@ -101,6 +101,109 @@ def phi_lm(ord_m, g_lm, h_lm, phi):
     return value, deriv
 
 
+def evaluate_spherical(
+        coefficients,
+        points_radial, points_polar, points_azimuth,
+        radius_star=None,
+        radius_source_surface=None):
+    r"""
+    Evaluate the radial, polar and azimuthal field components of a magnetogram represented
+    as a set of real spherical harmonics on Stanford PFSS form. The unit is the same as the
+    unit of the magnetogram, normally Gauss.
+    :param coefficients: Coefficients object
+    :param points_radial: 3d array of radial coordinate values
+    :param points_polar: 3d array of polar coordinate values
+    :param points_azimuth: 3d array of azimuth coordinate values
+    :param radius_star: Stellar radius
+    :param radius_source_surface: Source surface radius
+    :return:
+    """
+    if radius_star is None:
+        radius_star = default_radius_star
+
+    if radius_source_surface is None:
+        radius_source_surface = default_radius_source_surface
+
+    assert radius_star < radius_source_surface
+
+    points_radial = np.atleast_1d(points_radial)
+    points_polar = np.atleast_1d(points_polar)
+    points_azimuth = np.atleast_1d(points_azimuth)
+    assert points_polar.shape == points_azimuth.shape, "Shape mismatch."
+
+    # This is to accomodate points_radial having just 1 element
+    points_radial = points_radial * np.ones_like(points_polar)
+    assert points_radial.shape == points_polar.shape, "Shape mismatch."
+
+    assert radius_star < radius_source_surface
+
+    # The PFSS method is not valid inside the star
+    _invalid_inner_ids = np.where(points_radial < radius_star)
+    # The PFSS method is not valid outside the source surface
+    _invalid_outer_ids = np.where(points_radial > radius_source_surface)
+    original_radius = points_radial
+    points_radial = np.minimum(points_radial, radius_source_surface)
+
+    # Initialize field variables
+    field_radial = np.zeros_like(points_polar, dtype=float)
+    field_polar = np.zeros_like(field_radial, dtype=float)
+    field_azimuthal = np.zeros_like(field_radial, dtype=float)
+
+    degree_l, order_m, alpha_lm = coefficients.as_arrays(include_unset=False)
+    assert np.min(order_m) >= 0, "Stanford PFSS expects only positive orders (TBC)."
+
+    # Calculate all the theta_lm and theta_lm' values in one go using scipy
+
+    buffered_theta = [] # np.empty((len(degree_l),) + points_polar.shape)
+    buffered_dtheta = [] #np.empty_like(buffered_theta)
+
+    for (deg_l, ord_m) in zip(degree_l, order_m):
+        result = theta_lm(deg_l, ord_m, points_polar)
+        buffered_theta.append(result[0])
+        buffered_dtheta.append(result[1])
+
+    buffered_theta = np.stack(buffered_theta, axis=0)
+    buffered_dtheta = np.stack(buffered_dtheta, axis=0)
+    i = 0
+    # END of change.
+
+    # Loop over magnetogram coefficient lines
+    for (deg_l, ord_m, g_lm, h_lm) in zip(degree_l,
+                                          order_m,
+                                          np.real(alpha_lm),
+                                          np.imag(alpha_lm)):
+
+        _r_l = r_l(deg_l, points_radial, radius_star, radius_source_surface)
+        _theta_lm = theta_lm(deg_l, ord_m, points_polar)
+        _phi_lm = phi_lm(ord_m, g_lm, h_lm, points_azimuth)
+
+        assert np.allclose(buffered_theta[i], _theta_lm[0])
+        assert np.allclose(buffered_dtheta[i], _theta_lm[1])
+        i += 1
+
+        unscaled_radial    = _r_l[1] * _theta_lm[0] * _phi_lm[0]
+        unscaled_polar     = _r_l[0] * _theta_lm[1] * _phi_lm[0]
+        unscaled_azimuthal = _r_l[0] * _theta_lm[0] * _phi_lm[1]
+
+        field_radial    -= unscaled_radial
+        field_polar     -= unscaled_polar / points_radial
+        field_azimuthal -= np.divide(unscaled_azimuthal, points_radial * np.sin(points_polar),
+                                     out=np.zeros_like(field_azimuthal),
+                                     where=unscaled_azimuthal != 0)
+
+    # Set field inside star to zero
+    field_radial[_invalid_inner_ids] = 0.0
+    field_polar[_invalid_inner_ids] = 0.0
+    field_azimuthal[_invalid_inner_ids] = 0.0
+
+    # Extrapolate field outside source surface from source surface values.
+    field_radial[_invalid_outer_ids]    *= (points_radial[_invalid_outer_ids]/original_radius[_invalid_outer_ids])**2
+    field_polar[_invalid_outer_ids]     *= (points_radial[_invalid_outer_ids]/original_radius[_invalid_outer_ids])**2
+    field_azimuthal[_invalid_outer_ids] *= (points_radial[_invalid_outer_ids]/original_radius[_invalid_outer_ids])**2
+
+    return field_radial, field_polar, field_azimuthal
+
+
 def evaluate_cartesian(
         coefficients,
         px, py, pz,
@@ -111,6 +214,7 @@ def evaluate_cartesian(
     as a set of real spherical harmonics on Stanford PFSS form. The unit is the same as the
     unit of the magnetogram, normally Gauss.
 
+    This function calls evaluate_spherical internally.
     :param coefficients: Coefficients object
     :param px: Array of x coordinates
     :param py: Array of y coordinates
@@ -164,90 +268,6 @@ def evaluate_cartesian(
     fy = Fxyz[:, 1].reshape(px.shape)
     fz = Fxyz[:, 2].reshape(px.shape)
     return fr, fp, fa, fx, fy, fz
-
-
-def evaluate_spherical(
-        coefficients,
-        points_radial, points_polar, points_azimuth,
-        radius_star=None,
-        radius_source_surface=None):
-    r"""
-    Evaluate the radial, polar and azimuthal field components of a magnetogram represented
-    as a set of real spherical harmonics on Stanford PFSS form. The unit is the same as the
-    unit of the magnetogram, normally Gauss.
-    :param coefficients: Coefficients object
-    :param points_radial: 3d array of radial coordinate values
-    :param points_polar: 3d array of polar coordinate values
-    :param points_azimuth: 3d array of azimuth coordinate values
-    :param radius_star: Stellar radius
-    :param radius_source_surface: Source surface radius
-    :return:
-    """
-    if radius_star is None:
-        radius_star = default_radius_star
-
-    if radius_source_surface is None:
-        radius_source_surface = default_radius_source_surface
-
-    assert radius_star < radius_source_surface
-
-    points_radial = np.atleast_1d(points_radial)
-    points_polar = np.atleast_1d(points_polar)
-    points_azimuth = np.atleast_1d(points_azimuth)
-    assert points_polar.shape == points_azimuth.shape, "Shape mismatch."
-
-    # This is to accomodate points_radial having just 1 element
-    points_radial = points_radial * np.ones_like(points_polar)
-    assert points_radial.shape == points_polar.shape, "Shape mismatch."
-
-    assert radius_star < radius_source_surface
-
-    # The PFSS method is not valid inside the star
-    _invalid_inner_ids = np.where(points_radial < radius_star)
-    # The PFSS method is not valid outside the source surface
-    _invalid_outer_ids = np.where(points_radial > radius_source_surface)
-    original_radius = points_radial
-    points_radial = np.minimum(points_radial, radius_source_surface)
-
-    # Initialize field variables
-    field_radial = np.zeros_like(points_polar, dtype=float)
-    field_polar = np.zeros_like(field_radial, dtype=float)
-    field_azimuthal = np.zeros_like(field_radial, dtype=float)
-
-    degree_l, order_m, alpha_lm = coefficients.as_arrays(include_unset=False)
-    assert np.min(order_m) >= 0, "Stanford PFSS expects only positive orders (TBC)."
-
-    # Loop over magnetogram coefficient lines
-    for (deg_l, ord_m, g_lm, h_lm) in zip(degree_l,
-                                          order_m,
-                                          np.real(alpha_lm),
-                                          np.imag(alpha_lm)):
-
-        _r_l = r_l(deg_l, points_radial, radius_star, radius_source_surface)
-        _theta_lm = theta_lm(deg_l, ord_m, points_polar)
-        _phi_lm = phi_lm(ord_m, g_lm, h_lm, points_azimuth)
-
-        unscaled_radial    = _r_l[1] * _theta_lm[0] * _phi_lm[0]
-        unscaled_polar     = _r_l[0] * _theta_lm[1] * _phi_lm[0]
-        unscaled_azimuthal = _r_l[0] * _theta_lm[0] * _phi_lm[1]
-
-        field_radial    -= unscaled_radial
-        field_polar     -= unscaled_polar / points_radial
-        field_azimuthal -= np.divide(unscaled_azimuthal, points_radial * np.sin(points_polar),
-                                     out=np.zeros_like(field_azimuthal),
-                                     where=unscaled_azimuthal != 0)
-
-    # Set field inside star to zero
-    field_radial[_invalid_inner_ids] = 0.0
-    field_polar[_invalid_inner_ids] = 0.0
-    field_azimuthal[_invalid_inner_ids] = 0.0
-
-    # Extrapolate field outside source surface from source surface values.
-    field_radial[_invalid_outer_ids]    *= (points_radial[_invalid_outer_ids]/original_radius[_invalid_outer_ids])**2
-    field_polar[_invalid_outer_ids]     *= (points_radial[_invalid_outer_ids]/original_radius[_invalid_outer_ids])**2
-    field_azimuthal[_invalid_outer_ids] *= (points_radial[_invalid_outer_ids]/original_radius[_invalid_outer_ids])**2
-
-    return field_radial, field_polar, field_azimuthal
 
 
 def normal_plane(p1, p2, normal):

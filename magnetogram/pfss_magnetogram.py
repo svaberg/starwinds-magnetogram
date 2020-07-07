@@ -17,6 +17,7 @@ def theta_lm(deg_l, ord_m, points_polar):
     :param ord_m: Order $m$ of coefficient
     :param points_polar: 2d array of polar coordinate values
     :return: 2d array of $\Theta_{\ell m}(\theta)$ values
+    TODO redo this with lpmn like in zdi magnetogram.
     """
     def _inner(deg_l, ord_m, points_polar):
         #  Associated Legendre polynomial $P_{\ell}^{m}(\cos\theta)$

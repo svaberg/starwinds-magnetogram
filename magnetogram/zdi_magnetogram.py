@@ -156,6 +156,7 @@ class ZdiMagnetogram:
         :return: polar component of the toroidal field
         """
         log.warning("Please use the new method")
+        assert False
         field_azimuthal_toroidal = np.zeros_like(points_azimuth, dtype=complex)
 
         for deg_l, ord_m, g_lm, c_lm in zip(self.degrees_l, self.orders_m, self.gamma, self.c_lm):
@@ -349,6 +350,8 @@ class ZdiMagnetogram:
         else:
             dict_ = dest
 
+        fmt = "5.1"
+
         energy_alpha = self._energy_helper(self.alpha)
         energy_beta = self._energy_helper(self.beta, require_l_term=True)
         energy_gamma = self._energy_helper(self.gamma, require_l_term=True)
@@ -360,29 +363,25 @@ class ZdiMagnetogram:
         dict_['magnetogram.total.energy.B2'] = total_energy
 
         # Ignore warnings when total energy or total poloidal energy is zero.
-        with np.errstate(divide='ignore', invalid='ignore'):
+        with np.errstate(divide="ignore", invalid="ignore"):
 
             dict_['magnetogram.radial.energy.fraction'] = np.sum(energy_alpha) / total_energy
             dict_['magnetogram.poloidal.energy.fraction'] = total_energy_poloidal / total_energy
             dict_['magnetogram.toroidal.energy.fraction'] = total_energy_toroidal / total_energy
 
             if dest is None and show_fractions:
-                print('Fraction of magnetic energy in each component. Should sum to 1.')
-                print('l   m    E(alpha)   E(beta)    E(gamma)')
-                for i in range(len(self.alpha)):
-                    print('%2i %2i %10.5g %10.5g %10.5g' % (self.degrees_l[i],
-                                                            self.orders_m[i],
-                                                            energy_alpha[i] / total_energy,
-                                                            energy_beta[i] / total_energy,
-                                                            energy_gamma[i] / total_energy))
+                print("Fraction of magnetic energy in each component. Should sum to 1.")
+                print("  l    m       E_alpha        E_beta       E_gamma")
+                for l, m, a, b, g in zip(self.degrees_l, self.orders_m,
+                                         energy_alpha, energy_beta, energy_gamma):
+                    print(f"{l:3}  {m:3}  {a/total_energy:e}  {b/total_energy:e}  {g/total_energy:e}")
 
             if dest is None:
-                print('Total energy: %g (B^2)' % dict_['magnetogram.total.energy.B2'])
-
-                print('Radial   energy* %g %%' % (100 * dict_['magnetogram.radial.energy.fraction']))
-                print('Poloidal energy  %g %%' % (100 * dict_['magnetogram.poloidal.energy.fraction']))
-                print('Toroidal energy  %g %%' % (100 * dict_['magnetogram.toroidal.energy.fraction']))
-                print('* The radial energy is part of the poloidal energy.')
+                print(f"Total energy: {dict_['magnetogram.total.energy.B2']:.3g} (B^2)")
+                print(f"Radial   energy* {dict_['magnetogram.radial.energy.fraction']:{fmt}%}")
+                print(f"Poloidal energy  {dict_['magnetogram.poloidal.energy.fraction']:{fmt}%}")
+                print(f"Toroidal energy  {dict_['magnetogram.toroidal.energy.fraction']:{fmt}%}")
+                print("* The radial energy is part of the poloidal energy.")
 
             total_energy_poloidal = np.sum(energy_alpha) + np.sum(energy_beta)
             total_energy_toroidal = np.sum(energy_gamma)
@@ -396,27 +395,27 @@ class ZdiMagnetogram:
 
             dict_['magnetogram.total.energy.dipole.fraction'] = Epol_l1 / total_energy_poloidal
             dict_['magnetogram.total.energy.quadrupole.fraction'] = Epol_l2 / total_energy_poloidal
-            # TODO Folsom calls this octopole but l3 is a hexapole.
             dict_['magnetogram.total.energy.octopole.fraction'] = Epol_l3 / total_energy_poloidal
+
             dict_['magnetogram.total.energy.toroidal.l1.fraction'] = Etor_l1 / total_energy_toroidal
             dict_['magnetogram.total.energy.toroidal.l2.fraction'] = Etor_l2 / total_energy_toroidal
             dict_['magnetogram.total.energy.toroidal.l3.fraction'] = Etor_l3 / total_energy_toroidal
 
-
             if dest is None:
-                print('dipole: {:7.3%} (% pol)'.format(Epol_l1 / total_energy_poloidal))
-                print('quadrupole: {:7.3%} (% pol)'.format(Epol_l2 / total_energy_poloidal))
-                print('octopole: {:7.3%} (% pol)'.format(Epol_l3 / total_energy_poloidal))  # Should be hexapole
-                print('toroidal l1: {:7.3%} (% tor)'.format(Etor_l1 / total_energy_toroidal))
-                print('toroidal l2: {:7.3%} (% tor)'.format(Etor_l2 / total_energy_toroidal))
-                print('toroidal l3: {:7.3%} (% tor)'.format(Etor_l3 / total_energy_toroidal))
+                print(f"poloidal l1 (dipole):     {Epol_l1 / total_energy_poloidal:{fmt}%} (% poloidal)")
+                print(f"poloidal l2 (quadrupole): {Epol_l2 / total_energy_poloidal:{fmt}%} (% poloidal)")
+                print(f"poloidal l3 (octopole):   {Epol_l3 / total_energy_poloidal:{fmt}%} (% poloidal)")
+                print(f"toroidal l1: {Etor_l1 / total_energy_toroidal:{fmt}%} (% toroidal)")
+                print(f"toroidal l2: {Etor_l2 / total_energy_toroidal:{fmt}%} (% toroidal)")
+                print(f"toroidal l3: {Etor_l3 / total_energy_toroidal:{fmt}%} (% toroidal)")
 
             polEaxi = np.sum((energy_alpha + energy_beta)[self.orders_m == 0])
             torEaxi = np.sum(energy_gamma[self.orders_m == 0])
             totEaxi = polEaxi + torEaxi
 
-            dict_['magnetogram.total.energy.axisymmetric.fraction'] \
-                = totEaxi / (total_energy_poloidal + total_energy_toroidal)
+            dict_['magnetogram.total.energy.axisymmetric.fraction'] = totEaxi / total_energy
+
+            assert np.allclose(total_energy, total_energy_poloidal + total_energy_toroidal)
             dict_['magnetogram.total.energy.poloidal.axisymmetric.fraction'] = polEaxi / total_energy_poloidal
             dict_['magnetogram.total.energy.toroidal.axisymmetric.fraction'] = torEaxi / total_energy_toroidal
 
@@ -425,10 +424,10 @@ class ZdiMagnetogram:
             dict_['magnetogram.total.energy.dipole.axisymmetric.fraction'] = symdipfrac
 
             if dest is None:
-                print('axisymmetric: {:7.3%} (% tot)'.format(totEaxi / (total_energy_poloidal + total_energy_toroidal)))
-                print('poloidal axisymmetric: {:7.3%} (% pol)'.format(polEaxi / total_energy_poloidal))
-                print('toroidal axisymmetric: {:7.3%} (% tor)'.format(torEaxi / total_energy_toroidal))
-                print('dipole axisymmetric: {:7.3%} (% dip)'.format(symdipfrac))
+                print(f"axisymmetric:          {totEaxi / total_energy:{fmt}%} (% total)")
+                print(f"poloidal axisymmetric: {polEaxi / total_energy_poloidal:{fmt}%} (% poloidal)")
+                print(f"toroidal axisymmetric: {torEaxi / total_energy_toroidal:{fmt}%} (% toroidal)")
+                print(f"dipole axisymmetric:   {symdipfrac:{fmt}%} (% dipole)")
 
         return energy_alpha, energy_beta, energy_gamma
 

@@ -113,6 +113,8 @@ def convert_zdi_to_pfss(zdi_radial_coeffs):
     :param zdi_radial_coeffs: Radial ZDI coefficents.
     :return: Coefficients in WSO PFSS format.
     """
+    if len(zdi_radial_coeffs.default_coefficients) != 1:
+        log.warning("Expected single complex coefficient values")
     pfss_coeffs = zdi_radial_coeffs.scale(forward_conversion_factor, 1)
     return pfss_coeffs
 
@@ -189,6 +191,8 @@ def get_zdi_coeffs(pl, az, degrees_l, orders_m, field_r, field_pl, field_az, are
     field_pl = field_pl[..., np.newaxis]
     field_az = field_az[..., np.newaxis]
 
+    total_area = np.sum(np.sin(pl), axis=(0, 1)) * area
+    log.error(total_area / (4 * np.pi))
     #
     # Calculate alpha
     #

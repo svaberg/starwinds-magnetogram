@@ -13,7 +13,10 @@ from stellarwinds.magnetogram import plot_zdi
 
 
 def main():
-    parser = argparse.ArgumentParser(description='Plot magnetograms')
+    parser = argparse.ArgumentParser(
+        description="""Plot magnetograms. 
+        Plot type can be map, radial, polar, azimuthal, strength,
+        energy-by-degree, energy-matrix, or energy-summary""")
     parser.add_argument('input_file', type=str, help='input magnetogram file')
     parser.add_argument('output_file', type=str, nargs='?', help='output image file')
     parser.add_argument('-p', '--plot_type', type=str, help='plot type', default='map')

@@ -18,15 +18,13 @@ def plot_energy_summary(zc, axs=None):
         axs = np.atleast_1d(axs)
 
     results = dict()
-    zc.energy()
     zc.energy(dest=results)
 
     ax = axs[0]
     ax.set_title("Total energy")
 
-    w, *_ = ax.pie([results[f'magnetogram.radial.energy.fraction'] +
-                        results[f'magnetogram.poloidal.energy.fraction'],
-                        results[f'magnetogram.toroidal.energy.fraction'],],
+    w, *_ = ax.pie([results[f'magnetogram.poloidal.energy.fraction'],
+                    results[f'magnetogram.toroidal.energy.fraction'],],
                        radius=2,
                        autopct='%1.0f%%',
                        pctdistance=.75,
@@ -233,9 +231,9 @@ def plot_zdi_components(mgm, radius=1, axs=None, zg=None, symmetric=None, cmap=N
     if term is None:
         getter_fns = (mgm.get_radial_field, mgm.get_polar_field, mgm.get_azimuthal_field)
     elif term == "poloidal":
-        getter_fns = (mgm.get_radial_poloidal_field, mgm.get_polar_poloidal_field, mgm.get_azimuthal_poloidal_field)
+        getter_fns = (mgm.get_radial_poloidal_field, mgm.get_polar_poloidal_field_new, mgm.get_azimuthal_poloidal_field)
     elif term == "toroidal":
-        getter_fns = (mgm.get_radial_toroidal_field, mgm.get_polar_toroidal_field, mgm.get_azimuthal_toroidal_field)
+        getter_fns = (mgm.get_radial_toroidal_field, mgm.get_polar_toroidal_field, mgm.get_azimuthal_toroidal_field_new)
     else:
         raise NotImplementedError(f"Unrecognized term \"{term}\"")
 

@@ -145,6 +145,15 @@ def convert_pfss_to_zdi(pfss_coeffs):
 
 def convert_latlon_to_zdi(pl, az, field_r, field_polar, field_azimuthal, area=None, max_degree=5):
 
+    coeffs = convert_latlon_to_zdi_coeffs(pl, az,
+                            field_r, field_polar, field_azimuthal,
+                            area, max_degree)
+
+    return zdi_magnetogram.from_coefficients(coeffs)
+
+
+def convert_latlon_to_zdi_coeffs(pl, az, field_r, field_polar, field_azimuthal, area=None, max_degree=5):
+
     degrees_l, orders_m = list(zip(*positive_lm(max_degree)))
 
     coeffs = get_zdi_coeffs(pl, az,
@@ -152,9 +161,7 @@ def convert_latlon_to_zdi(pl, az, field_r, field_polar, field_azimuthal, area=No
                             field_r, field_polar, field_azimuthal,
                             area)
 
-    return zdi_magnetogram.from_coefficients(coeffs)
-    # return zdi_magnetogram.ZdiMagnetogram(degrees_l=degrees_l, orders_m=orders_m,
-    #                                       alpha_lm=alpha, beta_lm=beta, gamma_lm=gamma)
+    return coeffs
 
 
 def get_zdi_coeffs(pl, az, degrees_l, orders_m, field_r, field_pl, field_az, area=None):
@@ -162,6 +169,9 @@ def get_zdi_coeffs(pl, az, degrees_l, orders_m, field_r, field_pl, field_az, are
     degrees_l = np.atleast_1d(degrees_l)
     orders_m = np.atleast_1d(orders_m)
     orders_m_shape = orders_m.shape
+
+    if pl.shape[0] <= pl.shape[1]:
+        log.warning("Expected first coordinate to be azimuth, but second coordinate has more elements.")
 
     if area is None:
         # More like pseudo-area
@@ -192,7 +202,10 @@ def get_zdi_coeffs(pl, az, degrees_l, orders_m, field_r, field_pl, field_az, are
     field_az = field_az[..., np.newaxis]
 
     total_area = np.sum(np.sin(pl), axis=(0, 1)) * area
-    log.error(total_area / (4 * np.pi))
+    sphere_coverage = total_area / (4 * np.pi)
+    if sphere_coverage < .8:
+        log.error("Sphere is not covered by area; check inputs.")
+
     #
     # Calculate alpha
     #

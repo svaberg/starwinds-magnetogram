@@ -409,24 +409,26 @@ class ZdiMagnetogram:
                 print(f"toroidal l2: {Etor_l2 / total_energy_toroidal:{fmt}%} (% toroidal)")
                 print(f"toroidal l3: {Etor_l3 / total_energy_toroidal:{fmt}%} (% toroidal)")
 
-            polEaxi = np.sum((energy_alpha + energy_beta)[self.orders_m == 0])
-            torEaxi = np.sum(energy_gamma[self.orders_m == 0])
-            totEaxi = polEaxi + torEaxi
+            radial_axisym = np.sum(energy_alpha[self.orders_m == 0])
+            poloidal_axisym = np.sum((energy_alpha + energy_beta)[self.orders_m == 0])
+            toroidal_axisym = np.sum(energy_gamma[self.orders_m == 0])
+            total_axisym = poloidal_axisym + toroidal_axisym
 
-            dict_['magnetogram.total.energy.axisymmetric.fraction'] = totEaxi / total_energy
+            dict_['magnetogram.total.energy.axisymmetric.fraction'] = total_axisym / total_energy
 
             assert np.allclose(total_energy, total_energy_poloidal + total_energy_toroidal)
-            dict_['magnetogram.total.energy.poloidal.axisymmetric.fraction'] = polEaxi / total_energy_poloidal
-            dict_['magnetogram.total.energy.toroidal.axisymmetric.fraction'] = torEaxi / total_energy_toroidal
+            dict_['magnetogram.total.energy.radial.axisymmetric.fraction'] = radial_axisym / total_energy_poloidal
+            dict_['magnetogram.total.energy.poloidal.axisymmetric.fraction'] = poloidal_axisym / total_energy_poloidal
+            dict_['magnetogram.total.energy.toroidal.axisymmetric.fraction'] = toroidal_axisym / total_energy_toroidal
 
             symdipfrac = float((energy_alpha + energy_beta)[np.logical_and(self.degrees_l == 1, self.orders_m == 0)] /
                                np.sum((energy_alpha + energy_beta)[self.degrees_l == 1]))
             dict_['magnetogram.total.energy.dipole.axisymmetric.fraction'] = symdipfrac
 
             if dest is None:
-                print(f"axisymmetric:          {totEaxi / total_energy:{fmt}%} (% total)")
-                print(f"poloidal axisymmetric: {polEaxi / total_energy_poloidal:{fmt}%} (% poloidal)")
-                print(f"toroidal axisymmetric: {torEaxi / total_energy_toroidal:{fmt}%} (% toroidal)")
+                print(f"axisymmetric:          {total_axisym / total_energy:{fmt}%} (% total)")
+                print(f"poloidal axisymmetric: {poloidal_axisym / total_energy_poloidal:{fmt}%} (% poloidal)")
+                print(f"toroidal axisymmetric: {toroidal_axisym / total_energy_toroidal:{fmt}%} (% toroidal)")
                 print(f"dipole axisymmetric:   {symdipfrac:{fmt}%} (% dipole)")
 
         return energy_alpha, energy_beta, energy_gamma

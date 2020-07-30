@@ -302,3 +302,152 @@ def evaluate_real_magnetogram_stanford_pfss_reference(degree_l, order_m, cosine_
 
     return field_radial, field_polar, field_azimuthal
 
+
+def field_line_integral(points, coeffs, rs=1, rss=3, dir='both'):
+
+    def _dxds(points):
+        px, py, pz = points
+        _r, _p, _a, *field_xyz = pfss_stanford.evaluate_cartesian(
+            coeffs,
+            px, py, pz,
+            radius_star=rs,
+            radius_source_surface=rss)
+
+        field_xyz = np.stack(field_xyz)
+
+        lengths = np.sum(field_xyz ** 2, axis=0) ** .5
+
+        assert not np.any(np.isnan(field_xyz))
+
+        dxds_ = field_xyz / lengths
+        dxds_[:, lengths == 0] = 0  # Remove NaNs from length==0
+
+        return dxds_
+
+    _dxds(points)
+
+    ds = .05
+    steps = 50
+    rss = 3
+
+    trajectories = np.empty(shape=(steps,)+points.shape)
+    trajectories.fill(np.nan)
+    trajectories[0] = points
+
+    if dir == 'forward':
+        for id_ in range(1, trajectories.shape[0]):
+            dxds = _dxds(trajectories[id_ - 1])
+            trajectories[id_] = trajectories[id_ - 1] + dxds * ds
+    elif dir == 'backwards':
+        for id_ in range(1, trajectories.shape[0]):
+            dxds = _dxds(trajectories[id_ - 1])
+            trajectories[id_] = trajectories[id_ - 1] - dxds * ds
+    else:
+        tbw = np.empty_like(trajectories)
+        tbw.fill(np.nan)
+        tbw[-1] = points
+        for id_ in reversed(range(1, tbw.shape[0])):
+            dxds = _dxds(tbw[id_])
+            tbw[id_-1] = tbw[id_] - dxds * ds
+
+        for id_ in range(1, trajectories.shape[0]):
+            dxds = _dxds(trajectories[id_ - 1])
+            trajectories[id_] = trajectories[id_ - 1] + dxds * ds
+
+        trajectories = np.concatenate((tbw, trajectories), axis=0)
+
+    return trajectories
+
+
+def test_fieldlines_3d(request):
+
+    rs = 1
+    rss = 3
+
+    import stellarwinds.magnetogram.coefficients as shc
+    from stellarwinds.magnetogram import geometry
+    import matplotlib as mpl
+
+    coeffs = shc.Coefficients()
+    coeffs.append(0, 0, 0.0)
+    coeffs.append(1, 0, 0.1)
+    coeffs.append(2, 1, 0.7)
+
+    x, y, z = geometry.ZdiGeometry(20).centers_cartesian()
+
+    points = np.stack((x, y, z))
+    trajectories = field_line_integral(points, coeffs, rs=rs, rss=rss)
+
+    # Don't plot past source surface radius
+    radial_distances = np.sum(trajectories**2, axis=1, keepdims=True)**.5
+    mask = 1/(radial_distances < rss)
+    trajectories = trajectories * mask
+
+    # For coloring the lines
+    max_radial_distances = np.max(radial_distances, axis=0).squeeze()
+
+    with context.PlotNamer(__file__, request.node.name) as (pn, plt):
+        from mpl_toolkits.mplot3d import Axes3D
+        fig = plt.figure()
+        ax = fig.add_subplot(111, projection='3d')
+
+        for i in range(0, trajectories.shape[2]):
+            for j in range(0, trajectories.shape[3]):
+                col = mpl.cm.jet((max_radial_distances[i, j] - rs)/(rss-rs))
+
+                ax.plot(trajectories[:, 0, i, j],
+                        trajectories[:, 1, i, j],
+                        trajectories[:, 2, i, j],
+                        color=col)
+        fig.savefig(pn.get())
+        plt.show()
+        plt.close(fig)
+
+def test_fieldlines_3d_flat_points(request):
+
+    rs = 1
+    rss = 3
+
+    import stellarwinds.magnetogram.coefficients as shc
+    from stellarwinds.magnetogram import geometry
+    import matplotlib as mpl
+    from stellarwinds import fibonacci_sphere
+    coeffs = shc.Coefficients()
+    coeffs.append(0, 0, 0.0)
+    # coeffs.append(1, 0, 0.1)
+    coeffs.append(5, 3, 0.7)
+    coeffs.append(5, 4, 0.7)
+
+    x, y, z = geometry.ZdiGeometry(20).centers_cartesian()
+    res = fibonacci_sphere.fibonacci_sphere(1000)
+    x = res[:, 0]
+    y = res[:, 1]
+    z = res[:, 2]
+
+    points = np.stack((x, y, z))
+    trajectories = field_line_integral(points, coeffs, rs=rs, rss=rss)
+
+    # Don't plot past source surface radius
+    radial_distances = np.sum(trajectories**2, axis=1, keepdims=True)**.5
+    mask = 1/(radial_distances < rss)
+    trajectories = trajectories * mask
+
+    # For coloring the lines
+    max_radial_distances = np.max(radial_distances, axis=0).squeeze()
+
+    with context.PlotNamer(__file__, request.node.name) as (pn, plt):
+        from mpl_toolkits.mplot3d import Axes3D
+        fig = plt.figure()
+        ax = fig.add_subplot(111, projection='3d')
+
+        for i in range(0, trajectories.shape[2]):
+
+            col = mpl.cm.jet((max_radial_distances[i] - rs)/(rss-rs))
+
+            ax.plot(trajectories[:, 0, i],
+                    trajectories[:, 1, i],
+                    trajectories[:, 2, i],
+                    color=col)
+        fig.savefig(pn.get())
+        plt.show()
+        plt.close(fig)

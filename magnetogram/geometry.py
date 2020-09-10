@@ -123,21 +123,31 @@ def numerical_description(zdi_geometry, zdi_magnetogram, dest=None):
         dest = dict()
 
     def describe(name, values):
-        log.info("Describing %s component." %  name)
+        """Calculate area-weighted average (mean) and find maximum value."""
+        log.info("Describing %s component." % name)
         abs_max_indices = np.unravel_index(np.argmax(np.abs(values), axis=None), values.shape)
         abs_max_polar = zdi_geometry.centers()[0][abs_max_indices]
         abs_max_azimuth = zdi_geometry.centers()[1][abs_max_indices]
         abs_max = np.abs(values[abs_max_indices])
 
-        mean = np.sum(values * zdi_geometry.areas()) / (4 * np.pi)
         abs_mean = np.sum(np.abs(values) * zdi_geometry.areas()) / (4 * np.pi)
+        abs_rms = (np.sum(values**2 * zdi_geometry.areas()) / (4 * np.pi))**.5
+        abs_std = (np.sum((np.abs(values) - abs_mean)**2 * zdi_geometry.areas()) / (4 * np.pi))**.5
+
+        # This is a statistical identity.
+        assert np.isclose(abs_rms**2, abs_mean**2 + abs_std**2), "RMS does not match mean and std."
 
         dest[f"magnetogram.{name}.abs.max"] = abs_max
         log.info(f"{name} |B|_max = %4.4g Gauss" % abs_max)
         log.info(f"{name} |B|_max at az=%2.2f deg, pl=%3.2f deg" % (np.rad2deg(abs_max_azimuth),
                                                                     np.rad2deg(abs_max_polar)))
         log.info(f"{name} |B|_mean = %4.4g Gauss" % abs_mean)
+        log.info(f"{name} |B|_var = %4.4g Gauss" % abs_std)
         dest[f"magnetogram.{name}.abs.mean"] = abs_mean
+        dest[f"magnetogram.{name}.abs.rms"] = abs_rms
+        dest[f"magnetogram.{name}.abs.std"] = abs_std
+
+        return abs_mean
 
     _dict = zdi_magnetogram.get_all()
 
@@ -154,4 +164,6 @@ def numerical_description(zdi_geometry, zdi_magnetogram, dest=None):
         accumulated_strength_squared += accumulated_component ** 2
 
     describe("field strength", accumulated_strength_squared**.5)
+
+    return dest
 

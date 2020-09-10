@@ -327,8 +327,8 @@ def field_line_integral(points, coeffs, rs=1, rss=3, dir='both'):
     _dxds(points)
 
     ds = .05
-    steps = 50
-    rss = 3
+    steps = 100
+    rss = 2
 
     trajectories = np.empty(shape=(steps,)+points.shape)
     trajectories.fill(np.nan)
@@ -451,3 +451,247 @@ def test_fieldlines_3d_flat_points(request):
         fig.savefig(pn.get())
         plt.show()
         plt.close(fig)
+
+
+def single_field_line_integral(points, coeffs, rs=1, rss=3, dir='both'):
+
+    def _dxds(points):
+        px, py, pz = points
+        _r, _p, _a, *field_xyz = pfss_stanford.evaluate_cartesian(
+            coeffs,
+            px, py, pz,
+            radius_star=rs,
+            radius_source_surface=rss)
+
+        field_xyz = np.stack(field_xyz)
+
+        lengths = np.sum(field_xyz ** 2, axis=0) ** .5
+
+        assert not np.any(np.isnan(field_xyz))
+
+        dxds_ = field_xyz / lengths
+        dxds_[:, lengths == 0] = 0  # Remove NaNs from length==0
+
+        return dxds_
+
+    _dxds(points)
+
+import stellarwinds.magnetogram.coefficients as shc
+from stellarwinds.magnetogram import geometry
+import matplotlib as mpl
+from stellarwinds import fibonacci_sphere
+from scipy.integrate import solve_ivp
+from mpl_toolkits.mplot3d import Axes3D
+
+
+def to_uniform(sol_fwd, sol_bwd):
+
+    uniform = []
+    for fwd, bwd in zip(sol_fwd, sol_bwd):
+        t_fwd = np.linspace(0, fwd.t[-1])
+        y_fwd = fwd.sol(t_fwd)
+
+        t_bwd = np.linspace(bwd.t[-1], 0)
+        y_bwd = bwd.sol(t_bwd)
+
+        assert np.allclose(y_bwd[:, -1], y_fwd[:, 0])
+
+        y = np.hstack((y_bwd[:, :-2], y_fwd))
+        uniform.append(y)
+
+    return np.stack(uniform)
+
+def plot_uniform(ax, uniform):
+    rmax = np.max(uniform)
+    rmin = np.min(uniform)
+
+    for y in uniform:
+        col = mpl.cm.viridis((np.max(y[0, :]) - rmin) / (rmax - rmin))
+        ax.plot(*y[1:], '-', color=col)
+
+
+def test_single_line(request):
+
+    r = 1
+    rs = 1
+    rss = 3
+    trange = [0, 1000]
+
+    n_points = 300
+
+    coeffs = shc.Coefficients()
+    coeffs.append(0, 0, 0.0)
+    coeffs.append(1, 0, 0.1)
+    coeffs.append(5, 3, 0.7)
+    coeffs.append(5, 4, 0.7)
+
+    def _dyds(t, rxyz):
+
+        pr, px, py, pz = rxyz
+
+        # assert np.isclose(pr**2, px**2 + py**2 + pz**2)
+
+        drpaxyz = pfss_stanford.evaluate_cartesian(
+            coeffs,
+            px, py, pz,
+            radius_star=rs,
+            radius_source_surface=rss)
+
+        drpaxyz = np.stack(drpaxyz)
+
+        strength = np.sum(drpaxyz[3:] ** 2, axis=0) ** .5
+
+        assert not np.any(np.isnan(drpaxyz))
+
+        dyds = drpaxyz[[0, 3, 4, 5]]
+        dyds = dyds / strength
+        dyds[:, strength == 0] = 0  # Remove NaNs from length==0
+
+        # Shape should be (3, 1); remove last dimension
+        return dyds[:, 0]
+
+    def _dyds_backwards(t, rxyz):
+        return -1 * _dyds(t, rxyz)
+    
+    def _reach_rss(t, y):
+        return y[0] - rss
+    _reach_rss.direction = 1  # Trigger when going from negative to positive
+    _reach_rss.terminal = True
+
+    def _reach_rs(t, y):
+        return y[0] - rs
+    _reach_rs.direction = -1  # Trigger when going from positive to negative
+    _reach_rs.terminal = True
+
+
+    points_rxyz = np.empty(shape=(n_points, 4))
+    points_rxyz[:, 1:] = r * fibonacci_sphere.fibonacci_sphere(n_points)
+    points_rxyz[:, 0] = np.sum(points_rxyz[:, 1:] ** 2, axis=1)**.5
+
+    sols_fwd = []
+    for fl_id in range(points_rxyz.shape[0]):
+        point_rxyz = points_rxyz[fl_id, :]
+        sol = solve_ivp(_dyds, trange, point_rxyz,
+                        events=(_reach_rs, _reach_rss),
+                        dense_output=True)
+        sols_fwd.append(sol)
+
+    sols_bwd = []
+    for fl_id in range(points_rxyz.shape[0]):
+        point_rxyz = points_rxyz[fl_id, :]
+        sol = solve_ivp(_dyds_backwards, trange, point_rxyz,
+                        events=(_reach_rs, _reach_rss),
+                        dense_output=True)
+        sols_bwd.append(sol)
+
+    uniform = to_uniform(sols_fwd, sols_bwd)
+
+    with context.PlotNamer(__file__, request.node.name) as (pn, plt):
+        fig = plt.figure()
+        ax = fig.add_subplot(111, projection='3d')
+
+        for sols in zip(sols_fwd, sols_bwd):
+
+            rxyz = sol.y
+            line, *_ = ax.plot([rxyz[1, 0]], [rxyz[2, 0]], [rxyz[3, 0]], 'o')  # Starting point
+            color = line.get_color()
+
+            for sol in sols:
+                rxyz = sol.y
+                ax.plot(rxyz[1, :],
+                        rxyz[2, :],
+                        rxyz[3, :], ':', color=color)
+
+                tmax = sol.t[-1]
+                trange = np.linspace(0, tmax)
+                rxyz = sol.sol(trange)
+                ax.plot(rxyz[1, :],
+                        rxyz[2, :],
+                        rxyz[3, :], color=color)
+
+                # e0_rxyz = sol.y_events[0]
+                # if e0_rxyz.size > 0:
+                #     ax.plot(e0_rxyz[:, 1], e0_rxyz[:, 2], e0_rxyz[:, 3], 'v', color=color)
+                #
+                # e1_rxyz = sol.y_events[1]
+                # if e1_rxyz.size > 0:
+                #     ax.plot(e1_rxyz[:, 1], e1_rxyz[:, 2], e1_rxyz[:, 3], '^', color=color)
+
+        fig.savefig(pn.get())
+        # plt.show()
+        plt.close(fig)
+
+        fig = plt.figure()
+        ax = fig.add_subplot(111, projection='3d')
+        plot_uniform(ax, uniform)
+        fig.savefig(pn.get())
+        # plt.show()
+
+
+def test_single_line_spherical(request):
+    rs = 1
+    rss = 3
+
+    def _dyds(t, rpa):
+
+        px, py, pz = rpa
+
+        _r, _p, _a, *_ = pfss_stanford.evaluate_cartesian(
+            coeffs,
+            px, py, pz,
+            radius_star=rs,
+            radius_source_surface=rss)
+
+        field_rpa = np.stack((_r, _p, _a))
+
+        lengths = np.sum(field_rpa ** 2, axis=0) ** .5
+
+        assert not np.any(np.isnan(field_rpa))
+
+        dfds_ = field_rpa / lengths
+        dfds_[:, lengths == 0] = 0  # Remove NaNs from length==0
+
+        # Shape should be (3, 1); remove last dimension
+        return dfds_[:, 0]
+
+    def _reach_rss(t, y):
+        return not np.any(y > rss)
+
+    _reach_rss.direction = 1
+    _reach_rss.terminal = True
+
+    import stellarwinds.magnetogram.coefficients as shc
+    from stellarwinds.magnetogram import geometry
+    import matplotlib as mpl
+    from stellarwinds import fibonacci_sphere
+    from scipy.integrate import solve_ivp
+
+    coeffs = shc.Coefficients()
+    coeffs.append(0, 0, 0.0)
+    # coeffs.append(1, 0, 0.1)
+    coeffs.append(5, 3, 0.7)
+    coeffs.append(5, 4, 0.7)
+
+    trange = [0, 1000]
+
+    res = fibonacci_sphere.fibonacci_sphere(30)
+
+    sols = []
+    for fl_id in range(res.shape[0]):
+        rpa = res[fl_id, :]
+        sol = solve_ivp(_dyds, trange, rpa, events=_reach_rss)
+        sols.append(sol)
+
+    with context.PlotNamer(__file__, request.node.name) as (pn, plt):
+        from mpl_toolkits.mplot3d import Axes3D
+        fig = plt.figure()
+        ax = fig.add_subplot(111, projection='3d')
+
+        for sol in sols:
+            ax.plot(sol.y[0, :],
+                    sol.y[1, :],
+                    sol.y[2, :])
+        fig.savefig(pn.get())
+        plt.show()
+        plt.close(fig)
+

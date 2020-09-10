@@ -33,3 +33,6 @@ Out.txt
 artifacts
 *.pickle
 run-Sun-CR2077
+
+*.rds
+*.rda

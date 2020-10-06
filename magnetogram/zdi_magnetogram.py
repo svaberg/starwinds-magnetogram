@@ -307,8 +307,7 @@ class ZdiMagnetogram:
         return _dict
 
     def as_dipole(self):
-
-        return self.as_restricted(degree_l_range=(0, 1))
+        return self.as_restricted(degree_l_range=1)
 
     def as_restricted(self, degree_l_range=(0, 1000), order_m_range=(0, 1000)):
 
@@ -335,6 +334,26 @@ class ZdiMagnetogram:
         log.info("Retaining %d coefficients" % len(good_indices))
 
         return ZdiMagnetogram(*new_args, self._dplm_method)
+
+    def copy(self):
+        """Create a deep copy"""
+        return ZdiMagnetogram(np.copy(self.degrees_l),
+                              np.copy(self.orders_m),
+                              np.copy(self.alpha),
+                              np.copy(self.beta),
+                              np.copy(self.gamma),
+                              self._dplm_method)
+
+    def as_poloidal(self):
+        result = self.copy()
+        result.gamma = np.zeros_like(result.gamma)
+        return result
+
+    def as_toroidal(self):
+        result = self.copy()
+        result.alpha = np.zeros_like(result.alpha)
+        result.beta = np.zeros_like(result.beta)
+        return result
 
     def energy(self, *, show_fractions=False, dest=None):
         """

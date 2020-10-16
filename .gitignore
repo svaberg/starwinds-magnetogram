@@ -36,3 +36,8 @@ run-Sun-CR2077
 
 *.rds
 *.rda
+
+*.p
+*.tex
+*.pgf
+*.aux

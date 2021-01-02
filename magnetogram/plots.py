@@ -130,10 +130,12 @@ def plot_magnetic_field(ax,
                             field_centers,
                             cmap=cmap)
     else:
+        log.warning("Corners in pcolormesh not specified. Falling back to nearest shading.")
         img = ax.pcolormesh(np.rad2deg(azimuth_centers),
                             np.rad2deg(polar_centers),
                             field_centers,
-                            cmap=cmap)
+                            cmap=cmap,
+                            shading='nearest')
 
     if abs_max is not None:
         img.set_clim(vmax=abs_max)

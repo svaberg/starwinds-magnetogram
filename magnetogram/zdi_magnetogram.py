@@ -456,7 +456,10 @@ class ZdiMagnetogram:
     def energy_matrix(self):
         """
         Calculate matrix of magnetogram energy indexed by degree and order.
-        :return:
+        Returns radial energy from alpha coefficients,
+        poloidal energy from alpha and beta coefficients (INCLUDES RADIAL)
+        toroidal component from gamma coefficients.
+        :return: radial, poloidal, toroidal energy matrices
         """
         energy_alpha = self._energy_helper(self.alpha)
         energy_beta = self._energy_helper(self.beta, require_l_term=True)

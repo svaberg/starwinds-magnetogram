@@ -195,27 +195,59 @@ def _plot_energy(zc, name="total", negative_orders=False, ax=None):
     return ax
 
 
-def plot_energy_by_degree(zc, ax=None):
+def plot_energy_by_degree(zc, ax=None, scaled=True):
+    """Plot energy in ZDI magnetogram degrees. Plots
+    poloidal, toroidal, and total energy."""
+
     if ax is None:
         _, ax = plt.subplots()
 
     erad, epol, etor = zc.energy_matrix()
+    erestpol = epol - erad
 
-    ax.semilogy(np.sum(epol + etor, axis=1), 'o:', label='Total', color='k')
-    _lp = ax.semilogy(np.sum(epol, axis=1), '^:', label='Poloidal')
-    _lt = ax.semilogy(np.sum(etor, axis=1), '>:', label='Toroidal')
-    ax.semilogy(np.cumsum(np.sum(epol + etor, axis=1)), 'o-', label='Total cumulative', color='k')
-    ax.semilogy(np.cumsum(np.sum(epol, axis=1)), '^-', label='Poloidal cumulative',
-                color=_lp[0].get_color())
-    ax.semilogy(np.cumsum(np.sum(etor, axis=1)), '>-', label='Toroidal cumulative',
-                color=_lt[0].get_color())
+    if scaled:
+        """Scale by total energy"""
+        total_e = np.sum(epol) + np.sum(etor)
+        erad /= total_e
+        epol /= total_e
+        erestpol /= total_e
+        etor /= total_e
+        assert np.isclose(np.sum(epol + etor), 1), "Scaled energy does not add up to 1"
+        assert np.allclose(erad + erestpol, epol), "Rest-poloidal and radial does not match poloidal"
+
+    draw_map = {
+        "Total": (epol + etor, dict(marker='o', color='black')),
+        "Poloidal": (epol, dict(marker='^', color="C0")),
+        "Toroidal": (etor, dict(marker='>', color="C1")),
+        # "Radial": (erad, dict(marker='^', color="C2")),
+        # "Rest-poloidal": (erestpol, dict(marker='^', color="C3")),
+    }
+    import pdb; pdb.set_trace()
+    for label, (data, plot_kwargs) in draw_map.items():
+        # Non-cumulative
+        xvals = np.array(range(data.shape[0]))
+        yvals = np.sum(data, axis=1)
+        _line = ax.semilogy(xvals[1:], yvals[1:],
+                            linestyle=':', label=label,
+                            **plot_kwargs)
+    for label, (data, plot_kwargs) in draw_map.items():
+        # Cumulative
+        xvals = np.array(range(data.shape[0]))
+        yvals = np.cumsum(np.sum(data, axis=1))
+        ax.semilogy(xvals[1:], yvals[1:],
+                    linestyle='-',
+                    # label=label + " cumulative",
+                    **plot_kwargs)
+
     ax.grid()
     ax.legend(ncol=2)
     ax.set_xlabel(r"Degree $\ell$")
     ax.set_ylabel("Summed component energy [B$^2$]")
     ax.set_title(r"Energy as a function of $\ell$")
 
+    ax.set_yscale('linear')
     return ax.figure, ax
+
 
 def plot_zdi_components(mgm, radius=1, axs=None, zg=None, symmetric=None, cmap=None, term=None):
     """

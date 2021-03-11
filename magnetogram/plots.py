@@ -84,10 +84,10 @@ def plot_components(polar_centers, azimuth_centers, field_centers, axs, azimuth_
     axs[0].set_title(r"Radial field $B_r$ at $r = %2.1f r_\star$" % radius)
     axs[1].set_title(r"Polar field $B_\theta$ at $r = %2.1f r_\star$" % radius)
     axs[2].set_title(r"Azimuthal field $B_\phi$ at $r = %2.1f r_\star$" % radius)
-    axs[0].set_ylabel(r"Polar angle $\theta$ [deg]")
+    axs[0].set_ylabel(r"Polar angle $\theta$ (deg)")
 
     for ax in axs:
-        ax.set_xlabel(r"Azimuth angle $\phi$ [deg]")
+        ax.set_xlabel(r"Azimuth angle $\phi$ (deg)")
 
     return axs
 
@@ -171,8 +171,8 @@ def plot_magnetic_field(ax,
     ax.grid()
     ax.invert_yaxis()
     ax.set_aspect('equal')
-    ax.set_xlabel("Azimuth angle [deg]")
-    ax.set_ylabel("Polar angle [deg]")
+    ax.set_xlabel("Azimuth angle (deg)")
+    ax.set_ylabel("Polar angle (deg)")
 
     return img, zero_contour
 
@@ -208,6 +208,8 @@ def add_extrema(polar_centers, azimuth_centers, field, ax, legend_str='x', marke
     ax.plot(np.rad2deg(field_min_azimuth),
              np.rad2deg(field_min_polar), color='k', marker=markers[1], linestyle="none", fillstyle='none',
              label=f'Min ${legend_str}={latex_float(field_min)}$ G', markersize=2)
+
+    return (field_min, field_max)
 
 
 # TODO move to utils or similar.

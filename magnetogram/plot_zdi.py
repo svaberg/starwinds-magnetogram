@@ -222,7 +222,6 @@ def plot_energy_by_degree(zc, ax=None, scaled=True):
         # "Radial": (erad, dict(marker='^', color="C2")),
         # "Rest-poloidal": (erestpol, dict(marker='^', color="C3")),
     }
-    import pdb; pdb.set_trace()
     for label, (data, plot_kwargs) in draw_map.items():
         # Non-cumulative
         xvals = np.array(range(data.shape[0]))

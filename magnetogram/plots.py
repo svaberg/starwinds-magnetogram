@@ -96,7 +96,9 @@ def plot_magnetic_field(ax,
                         polar_centers, azimuth_centers, field_centers,
                         polar_corners=None, azimuth_corners=None,
                         symmetric=None,
+                        zero_contour=True,
                         cmap=None,
+                        norm=None,
                         abs_max=None,
                         legend_str='X'):
     """
@@ -109,6 +111,7 @@ def plot_magnetic_field(ax,
     :param azimuth_corners: Used in pcolormesh (if specified)
     :param symmetric: Setting this to True forces the colour scale to be symmetric around 0.
     :param cmap: Use the given matplotlib colormap. Otherwise "jet" or "RdBu_r" will be used.
+    :param norm: Optional user-supplied norm (e.g. symlog).
     :return:
     """
 
@@ -128,21 +131,25 @@ def plot_magnetic_field(ax,
         img = ax.pcolormesh(np.rad2deg(azimuth_corners),
                             np.rad2deg(polar_corners),
                             field_centers,
-                            cmap=cmap)
+                            cmap=cmap,
+                            norm=norm)
     else:
         log.warning("Corners in pcolormesh not specified. Falling back to nearest shading.")
         img = ax.pcolormesh(np.rad2deg(azimuth_centers),
                             np.rad2deg(polar_centers),
                             field_centers,
                             cmap=cmap,
+                            norm=norm,
                             shading='nearest')
 
     if abs_max is not None:
         img.set_clim(vmax=abs_max)
 
+    symmetric = False
     if symmetric:
         img.set_clim(np.array([-1, 1]) * np.max(np.abs(img.get_clim())))
 
+    if symmetric and zero_contour:
         zero_contour = ax.contour(np.rad2deg(azimuth_centers),
                                   np.rad2deg(polar_centers),
                                   field_centers,

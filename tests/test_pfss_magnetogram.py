@@ -400,7 +400,6 @@ def test_fieldlines_3d(request):
                         trajectories[:, 2, i, j],
                         color=col)
         fig.savefig(pn.get())
-        plt.show()
         plt.close(fig)
 
 def test_fieldlines_3d_flat_points(request):
@@ -449,7 +448,6 @@ def test_fieldlines_3d_flat_points(request):
                     trajectories[:, 2, i],
                     color=col)
         fig.savefig(pn.get())
-        plt.show()
         plt.close(fig)
 
 
@@ -618,16 +616,15 @@ def test_single_line(request):
                 #     ax.plot(e1_rxyz[:, 1], e1_rxyz[:, 2], e1_rxyz[:, 3], '^', color=color)
 
         fig.savefig(pn.get())
-        # plt.show()
         plt.close(fig)
 
         fig = plt.figure()
         ax = fig.add_subplot(111, projection='3d')
         plot_uniform(ax, uniform)
         fig.savefig(pn.get())
-        # plt.show()
+        plt.close(fig)
 
-
+@pytest.mark.skip("This is very slow and may not work as intended.")
 def test_single_line_spherical(request):
     rs = 1
     rss = 3
@@ -692,6 +689,8 @@ def test_single_line_spherical(request):
                     sol.y[1, :],
                     sol.y[2, :])
         fig.savefig(pn.get())
-        plt.show()
         plt.close(fig)
 
+# These are very slow:
+# magnetogram/test_pfss_magnetogram.py::test_single_line PASSED                                                                           [ 95%]
+# magnetogram/test_pfss_magnetogram.py::test_single_line_spherical

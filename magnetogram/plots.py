@@ -145,7 +145,6 @@ def plot_magnetic_field(ax,
     if abs_max is not None:
         img.set_clim(vmax=abs_max)
 
-    symmetric = False
     if symmetric:
         img.set_clim(np.array([-1, 1]) * np.max(np.abs(img.get_clim())))
 

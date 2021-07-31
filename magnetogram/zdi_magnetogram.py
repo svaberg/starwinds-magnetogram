@@ -420,6 +420,14 @@ class ZdiMagnetogram:
             dict_['magnetogram.total.energy.toroidal.l2.fraction'] = Etor_l2 / total_energy_toroidal
             dict_['magnetogram.total.energy.toroidal.l3.fraction'] = Etor_l3 / total_energy_toroidal
 
+            # Note this overlaps with total energy dipole fraction, etc. above but contains all the l values.
+            for deg_l in range(1, 16):  # From 1 to 15 inclusive
+                pol_energy_at_deg_l = np.sum((energy_alpha + energy_beta)[self.degrees_l == deg_l])
+                dict_[f'magnetogram.pol.energy.l{deg_l}.fraction'] = pol_energy_at_deg_l/total_energy_poloidal
+            for deg_l in range(1, 16):  # From 1 to 15 inclusive
+                tor_energy_at_deg_l = np.sum(energy_gamma[self.degrees_l == deg_l])
+                dict_[f'magnetogram.tor.energy.l{deg_l}.fraction'] = tor_energy_at_deg_l/total_energy_toroidal
+
             if dest is None:
                 print(f"poloidal l1 (dipole):     {Epol_l1 / total_energy_poloidal:{fmt}%} (% poloidal)")
                 print(f"poloidal l2 (quadrupole): {Epol_l2 / total_energy_poloidal:{fmt}%} (% poloidal)")

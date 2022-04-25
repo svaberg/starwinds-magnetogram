@@ -2,7 +2,7 @@ import matplotlib.pyplot as plt
 import numpy as np
 
 
-def auto_symlog_tickmarks(cb, major_tick_step=1):
+def auto_symlog_tickmarks(cb, major_tick_step=1, axis="x"):
     """
     Set both minor and major tick marks on a symlog scale in a pretty way.
     :param cb: Matplotlib colorbar object
@@ -26,8 +26,16 @@ def auto_symlog_tickmarks(cb, major_tick_step=1):
         major_tick_max,
         major_tick_step)
 
-    fully_manual_tickmarks(cb.ax.yaxis, norm,
-                           major_values, major_labels, minor_values)
+    target_axis = None
+    if axis == "x":
+        target_axis = cb.ax.xaxis
+    elif axis == "y":
+        target_axis = cb.ax.yaxis
+
+    fully_manual_tickmarks(target_axis,
+                           norm,
+                           major_values, major_labels,
+                           minor_values)
 
 
 def fully_manual_tickmarks(axis, norm, major_values, major_labels, minor_values):

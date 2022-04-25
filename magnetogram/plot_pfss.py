@@ -45,7 +45,7 @@ def plot_components(coefficients, geometry=None, radius_source_surface=None, axs
     return axs[0].figure, axs
 
 
-def plot_slice(coefficients, normal="x", rmax=8,
+def plot_slice(coefficients, normal="x", rmax=5,
                radius_source_surface=None, radius_star=None):
 
     if radius_star is None:
@@ -90,6 +90,9 @@ def plot_slice(coefficients, normal="x", rmax=8,
     # Add star and source surface.
     radial_distance = np.squeeze((px**2 + py**2 + pz**2)**.5)
     ax.contour(p1[:, :], p2[:, :], radial_distance, levels=[radius_star, radius_source_surface], colors='k')
+
+    # Add field lines:
+    ax.streamplot(py[..., 0], pz[..., 0], fy[..., 0], fz[..., 0], color='k')
 
     return fig, ax
 

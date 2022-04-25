@@ -17,6 +17,38 @@ from stellarwinds.magnetogram import plot_pfss
 from stellarwinds.magnetogram import geometry
 
 
+def test_r_l_values(request):
+    rss = 2
+    rs = 1
+
+    r = np.linspace(rs, rss)
+
+    for deg_l in range(10):
+        r_l, dr_l = pfss_stanford.r_l(deg_l, r, rs, rss)
+        assert dr_l[0] == -1, "Expected analytical result -1"
+
+
+
+def test_r_l_plot(request):
+    rss = 2
+    rs = 1
+
+    r = np.linspace(rs, rss)
+
+    with context.PlotNamer(__file__, request.node.name) as (pn, plt):
+        fig, axs = plt.subplots(2, 1)
+        for deg_l in range(10):
+            r_l, dr_l = pfss_stanford.r_l(deg_l, r, rs, rss)
+            axs[0].plot(r, r_l)
+            axs[1].plot(r, dr_l)
+            axs[1].set_xlabel('radius')
+            axs[0].set_ylabel('R(r)')
+            axs[1].set_ylabel('d R(r) / dr')
+            axs[0].set_title("rss=%f" % rss)
+        plt.savefig(pn.get())
+        plt.close(fig)
+
+
 @pytest.mark.skip(reason="Never worked...")
 def test_reference(request,
                    magnetogram_name="mengel"):
@@ -185,13 +217,15 @@ def test_plot_pfss_equirectangular(request,
         plt.close(fig)
 
 
+@pytest.mark.parametrize("rss", (1.5, 3.0, 5.0))
 def test_plot_pfss_slice(request,
-                      magnetogram_name="dipole"):
+                         rss,
+                         magnetogram_name="dipole"):
 
     magnetogram = magnetograms.get_radial(magnetogram_name)
 
     with context.PlotNamer(__file__, request.node.name) as (pn, plt):
-        fig, axs = plot_pfss.plot_slice(magnetogram)
+        fig, axs = plot_pfss.plot_slice(magnetogram, radius_source_surface=rss)
         fig.savefig(pn.get())
         plt.close(fig)
 
@@ -218,6 +252,36 @@ def test_plot_pfss_magnitudes(request,
 
         plt.savefig(pn.get())
         plt.close(fig)
+
+def test_plot_pfss_magnitudes_ss(request,
+                magnetogram_name="mengel"):
+    """Test different source surface radii"""
+
+    _geometry = geometry.ZdiGeometry()
+    coefficients = magnetograms.get_radial(magnetogram_name)
+    polar, azimuth = geometry.ZdiGeometry().centers()
+
+    with context.PlotNamer(__file__, request.node.name) as (pn, plt):
+
+        field_rpa_by_ss = []
+
+        for radius_source_surface in [1.5, 2]:
+            fig, axs = plt.subplots(1, 2)
+
+            for radial, ax in zip((1, radius_source_surface), axs):
+                field_rpa = pfss_stanford.evaluate_spherical(
+                    coefficients,
+                    radial, polar, azimuth,
+                    radius_source_surface=radius_source_surface)
+
+                field_rpa_by_ss.append(field_rpa)
+                field_magnitude = np.sqrt(np.sum([f**2 for f in field_rpa], axis=0))
+                img = plots.plot_equirectangular(_geometry, field_magnitude, ax, cmap='viridis')
+                fig.colorbar(img, ax=ax, orientation='horizontal')
+                ax.set_title("Bmag at r=%2.1f, rss=%2.1f" % (radial, radius_source_surface))
+
+            plt.savefig(pn.get())
+            plt.close(fig)
 
 
 def test_plot_pfss_quiver(request,
@@ -328,7 +392,7 @@ def field_line_integral(points, coeffs, rs=1, rss=3, dir='both'):
 
     ds = .05
     steps = 100
-    rss = 2
+
 
     trajectories = np.empty(shape=(steps,)+points.shape)
     trajectories.fill(np.nan)
@@ -358,11 +422,10 @@ def field_line_integral(points, coeffs, rs=1, rss=3, dir='both'):
 
     return trajectories
 
-
-def test_fieldlines_3d(request):
+@pytest.mark.parametrize("rss", (1.5, 3.0, 5.0))
+def test_fieldlines_3d(request, rss):
 
     rs = 1
-    rss = 3
 
     import stellarwinds.magnetogram.coefficients as shc
     from stellarwinds.magnetogram import geometry
@@ -378,9 +441,9 @@ def test_fieldlines_3d(request):
     points = np.stack((x, y, z))
     trajectories = field_line_integral(points, coeffs, rs=rs, rss=rss)
 
-    # Don't plot past source surface radius
     radial_distances = np.sum(trajectories**2, axis=1, keepdims=True)**.5
-    mask = 1/(radial_distances < rss)
+    # Don't plot past six radii
+    mask = 1/(radial_distances < 6)
     trajectories = trajectories * mask
 
     # For coloring the lines
@@ -399,6 +462,7 @@ def test_fieldlines_3d(request):
                         trajectories[:, 1, i, j],
                         trajectories[:, 2, i, j],
                         color=col)
+                ax.set_title(f"Rss={rss:2.1}")
         fig.savefig(pn.get())
         plt.close(fig)
 

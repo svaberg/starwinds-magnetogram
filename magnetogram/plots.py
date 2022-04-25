@@ -10,7 +10,7 @@ log = logging.getLogger(__name__)
 # No plot function should generate more than one figure.
 
 
-def plot_equirectangular(geometry, value, ax, vmin=None, vmax=None, cmap='RdBu_r'):
+def plot_equirectangular(geometry, value, ax, vmin=None, vmax=None, cmap='RdBu_r', norm=None):
 
     centers_polar, centers_azimuth = geometry.centers()
     corners_polar, corners_azimuth = geometry.corners()
@@ -19,7 +19,8 @@ def plot_equirectangular(geometry, value, ax, vmin=None, vmax=None, cmap='RdBu_r
                       np.rad2deg(corners_polar.T),
                       value.T,
                       cmap=cmap,
-                      vmin=vmin, vmax=vmax)
+                      vmin=vmin, vmax=vmax,
+                        norm=norm)
 
     if np.min(value) < 0 < np.max(value):
         ax.contour(180 / np.pi * centers_azimuth.T, 180 / np.pi * centers_polar.T, value.T, levels=[0], colors=('k',), linewidths=.25)

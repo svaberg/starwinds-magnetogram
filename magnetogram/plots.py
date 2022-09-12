@@ -16,17 +16,17 @@ def plot_equirectangular(geometry, value, ax, vmin=None, vmax=None, cmap='RdBu_r
     corners_polar, corners_azimuth = geometry.corners()
 
     img = ax.pcolormesh(np.rad2deg(corners_azimuth.T),
-                      np.rad2deg(corners_polar.T),
-                      value.T,
-                      cmap=cmap,
-                      vmin=vmin, vmax=vmax,
+                        np.rad2deg(corners_polar.T),
+                        value.T,
+                        cmap=cmap,
+                        vmin=vmin, vmax=vmax,
                         norm=norm)
 
     if np.min(value) < 0 < np.max(value):
         ax.contour(180 / np.pi * centers_azimuth.T, 180 / np.pi * centers_polar.T, value.T, levels=[0], colors=('k',), linewidths=.25)
 
     ax.set_xticks(180 / np.pi * np.linspace(corners_azimuth[0, 0], corners_azimuth[-1, -1], 9))
-    ax.set_xlabel('Azimuth angle $\phi$')
+    ax.set_xlabel(r'Azimuth angle $\phi$')
     ax.set_yticks(180 / np.pi * np.linspace(corners_polar[0, 0], corners_polar[-1, -1], 5))
     ax.set_ylabel(r'Polar angle $\theta$')
     ax.set_aspect('equal')
@@ -73,8 +73,6 @@ def plot_components(polar_centers, azimuth_centers, field_centers, axs, azimuth_
                    np.max(Bi), color='k', marker=markers[0], linestyle="none", markersize=4, fillstyle='none')
         cb.ax.plot(np.mean(cb.ax.get_xlim()),
                    np.min(Bi), color='k', marker=markers[1], linestyle="none", markersize=4, fillstyle='none')
-
-    # cb=add_colorbar(img, polar_centers, azimuth_centers, field_centers[0], axs[0], zero_contour, legend_str=latex_name, cax=cax)
 
     for ax, Bi, latex_name in zip(axs, field_centers, latex_names):
         add_contours(polar_centers, azimuth_centers, Bi, ax, legend_str=latex_name, cb=cb)
@@ -166,12 +164,11 @@ def plot_magnetic_field(ax,
         except IndexError:
             collection = zero_contour.collections[0]
         finally:
-            collection.set_label(f'${legend_str}=0$ G')
+            pass
+            # For some reason this does not work anymore. TODO get it to work again.
+            # collection.set_label(f'${legend_str}=0$ G')
     else:
         zero_contour = None
-
-    # add_colorbar(img, polar_centers, azimuth_centers, field_centers, ax, zero_contour, legend_str)
-    # add_range(polar_centers, azimuth_centers, field_centers, ax, legend_str)
 
     ax.xaxis.set_ticks(np.arange(0, 361, 45))
     ax.yaxis.set_ticks(np.arange(0, 181, 30))
@@ -193,7 +190,8 @@ def add_contours(polar_centers, azimuth_centers, field_centers, ax, legend_str, 
                           colors='k',
                           linestyles=linestyles
                           )
-    contours.collections[0].set_label(fr'$\Delta {legend_str} = %g$ G' % (cb.get_ticks()[1] - cb.get_ticks()[0]))
+    # For some reason set_label does not work anymore. TODO get it to work again.
+    # contours.collections[0].set_label(fr'$\Delta {legend_str} = %g$ G' % (cb.get_ticks()[1] - cb.get_ticks()[0]))
     cb.add_lines(contours)
     cb.lines[-1].set_linestyle(linestyles)
 
@@ -216,7 +214,7 @@ def add_extrema(polar_centers, azimuth_centers, field, ax, legend_str='x', marke
              np.rad2deg(field_min_polar), color='k', marker=markers[1], linestyle="none", fillstyle='none',
              label=f'Min ${legend_str}={latex_float(field_min)}$ G', markersize=2)
 
-    return (field_min, field_max)
+    return field_min, field_max
 
 
 # TODO move to utils or similar.

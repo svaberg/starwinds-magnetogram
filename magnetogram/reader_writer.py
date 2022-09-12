@@ -84,7 +84,7 @@ def read_magnetogram_file(file_name):
     return shc.hstack(coefficient_sets)
 
 
-def write_magnetogram_file(coefficient_sets, file_name, degree_max=None, order_min=0):
+def write_magnetogram_file(coefficient_sets, file_name, degree_max=None, order_min=0, write_header=False):
     """
 
     :param coefficient_sets:
@@ -98,17 +98,44 @@ def write_magnetogram_file(coefficient_sets, file_name, degree_max=None, order_m
 
     log.debug("Begin writing magnetogram file \"%s\"..." % file_name)
 
-    lines = []
+    data_lines = []
     for coefficients in shc.hsplit(coefficient_sets):
-        lines.append("".join(["%3d  %3d  %13e  %13e\n" % (d, m, np.real(data), np.imag(data)) for
+        data_lines.append("".join(["%3d  %3d  %13e  %13e\n" % (d, m, np.real(data), np.imag(data)) for
                               (d, m, data) in zip(*coefficients.as_arrays(degree_l_max=degree_max,
                                                                           order_m_min=order_min))]))
+
+    if write_header:
+        header_lines = create_swmf_header(file_name, len(data_lines), degree_max,
+                                    carrington_rotation_number=0, dlon=0.0)
+    else:
+        header_lines = []
+
 
     with open(file_name, 'w') as f:
         f.write("Output of %s\n" % __file__)
         f.write("Order:%d\n" % degree_max)
-        f.write("\n".join(lines))
+        f.write("\n".join(header_lines + data_lines))
 
     log.info("Finished writing magnetogram file \"%s\"." % file_name)
 
 
+def create_swmf_header(file_name="Default-file-name", num_data_lines=496, max_degree=30,
+                       carrington_rotation_number=2077, dlon=0.0):
+    """Add new style SWMF file header. The header looks like this
+        CR2077_GNG.dat
+        0    0.0    -2  3  2
+        496    1
+        30    2077    0.0
+        n m g h nOrder CR dLon
+    where the parameters are timestep, time, and data dimensions (-2, 3, 2); see ModReadMagnetogram.f90
+    The 496,1 is the number of data lines, and 30, 2077, 0.0 is max degree, carrington rotation number and
+    delta longitude. For stellar models the only parameter to change is number of data lines."""
+    log.debug('Adding SWMF header')
+    header = [
+        str(file_name),
+        "  ".join([str(s) for s in (0, 0.0, -2, 3, 2)]),
+        "  ".join([str(s) for s in (num_data_lines, 1)]),
+        "  ".join([str(s) for s in (max_degree, carrington_rotation_number, dlon)]),
+        "  ".join([str(s) for s in ("n", "m", "g", "h", "nOrder", "CR", "dLon")])
+    ]
+    return header

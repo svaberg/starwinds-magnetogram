@@ -17,7 +17,7 @@ def main():
     parser.add_argument('--pfss-to-zdi', dest='pfss_to_zdi', action='store_const',
                         const=True, default=False, help='Convert WSO magnetogram back to zdipy magnetogram')
     parser.add_argument('--degree-max', type=int, default=None, help='Pad magnetogram with zeros up to given degree')
-    parser.add_argument('--no-header', dest='write_header', action='store_const', const=False, default=True,
+    parser.add_argument('--no-header', dest='write_swmf_header', action='store_const', const=False, default=True,
                         help='Do not create new style SWMF header when converting coefficients from ZDIPy to WSO format')
     parser.add_argument('-q', '--quiet', dest='log_level', action='store_const',
                         const=logging.WARNING, default=logging.INFO, help='only log warnings and errors')
@@ -31,10 +31,10 @@ def main():
         convert_pfss_to_zdi(args.input_file, args.output_file, degree_max=args.degree_max,)
     else:
         convert_zdi_to_pfss(args.input_file, args.output_file, degree_max=args.degree_max,
-                            write_header=args.write_header)
+                            write_swmf_header=args.write_swmf_header)
 
 
-def convert_zdi_to_pfss(input_file, output_name=None, degree_max=None, write_header=False):
+def convert_zdi_to_pfss(input_file, output_name=None, degree_max=None, write_swmf_header=False):
 
     zdi_coefficients = reader_writer.read_magnetogram_file(input_file)
     zdi_radial_coefficients, *_ = coefficients.hsplit(zdi_coefficients)
@@ -42,7 +42,7 @@ def convert_zdi_to_pfss(input_file, output_name=None, degree_max=None, write_hea
 
     output_name = _make_output_file(input_file, output_name, postfix="wso")
     reader_writer.write_magnetogram_file(pfss_coefficients, file_name=output_name, degree_max=degree_max,
-                                         write_header=write_header)
+                                         write_swmf_header=write_swmf_header)
 
 
 def convert_pfss_to_zdi(input_file, output_name=None, degree_max=None):

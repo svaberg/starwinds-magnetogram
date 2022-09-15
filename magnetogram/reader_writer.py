@@ -84,7 +84,7 @@ def read_magnetogram_file(file_name):
     return shc.hstack(coefficient_sets)
 
 
-def write_magnetogram_file(coefficient_sets, file_name, degree_max=None, order_min=0, write_header=False):
+def write_magnetogram_file(coefficient_sets, file_name, degree_max=None, order_min=0, write_swmf_header=False):
     """
 
     :param coefficient_sets:
@@ -98,23 +98,24 @@ def write_magnetogram_file(coefficient_sets, file_name, degree_max=None, order_m
 
     log.debug("Begin writing magnetogram file \"%s\"..." % file_name)
 
-    data_lines = []
+    coefficient_data_lines = []
     for coefficients in shc.hsplit(coefficient_sets):
-        data_lines.append("".join(["%3d  %3d  %13e  %13e\n" % (d, m, np.real(data), np.imag(data)) for
+        coefficient_data_lines.append(["%3d  %3d  %13e  %13e" % (d, m, np.real(data), np.imag(data)) for
                               (d, m, data) in zip(*coefficients.as_arrays(degree_l_max=degree_max,
-                                                                          order_m_min=order_min))]))
+                                                                          order_m_min=order_min))])
 
-    if write_header:
-        header_lines = create_swmf_header(file_name, len(data_lines), degree_max,
+    if write_swmf_header:
+        header_lines = create_swmf_header(file_name, len(coefficient_data_lines[0]), degree_max,
                                     carrington_rotation_number=0, dlon=0.0)
     else:
-        header_lines = []
-
+        header_lines = ["Output of %s" % __file__, "Order:%d" % degree_max]
 
     with open(file_name, 'w') as f:
-        f.write("Output of %s\n" % __file__)
-        f.write("Order:%d\n" % degree_max)
-        f.write("\n".join(header_lines + data_lines))
+        f.write("\n".join(header_lines))
+        f.write("\n")
+        for data_lines in coefficient_data_lines:
+            f.write("\n".join(data_lines))
+            f.write("\n")
 
     log.info("Finished writing magnetogram file \"%s\"." % file_name)
 

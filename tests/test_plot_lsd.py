@@ -8,6 +8,7 @@ import stellarwinds.magnetogram.plot_lsd as plsd
 
 # TODO stop referring to files outside project.
 
+@pytest.mark.skip("Missing data file")
 @pytest.mark.parametrize("parameters", ("VNI", "VI"))
 def test_plot_lsd_profile(request, parameters, skip_header=2):
 
@@ -28,6 +29,7 @@ def test_plot_lsd_profile(request, parameters, skip_header=2):
         plt.savefig(pn.get())
 
 
+@pytest.mark.skip("Missing data file")
 @pytest.mark.parametrize("range_nm", ((500, 600), (600, 604), None))
 def test_plot_spectrum(request, range_nm):
 
@@ -47,6 +49,7 @@ def test_plot_spectrum(request, range_nm):
         plt.savefig(pn.get())
 
 
+@pytest.mark.skip("Missing data file")
 def test_plot_lsd_stack(request):
 
     lsd_files = glob.glob("/Users/u1092841/Documents/PHD/sw_tools/zdipy/zdipy/LSDProf/*.profD.norm")

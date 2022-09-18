@@ -253,7 +253,7 @@ def plot_zdi_components(mgm, radius=1, axs=None, zg=None, symmetric=None, cmap=N
     """
 
     if zg is None:
-        zg = magnetogram.geometry.ZdiGeometry()
+        zg = starwinds_magnetogram.geometry.ZdiGeometry()
 
     if axs is None:
         fig, axs = plt.subplots(1, 3, figsize=(24, 6))
@@ -280,7 +280,7 @@ def plot_zdi_components(mgm, radius=1, axs=None, zg=None, symmetric=None, cmap=N
 def plot_zdi_field(getter_fn, ax=None, zg=None, symmetric=None, cmap=None, legend_str='X'):
 
     if zg is None:
-        zg = magnetogram.geometry.ZdiGeometry()
+        zg = starwinds_magnetogram.geometry.ZdiGeometry()
 
     if ax is None:
         _, ax = plt.subplots(figsize=(10, 4))
@@ -337,7 +337,7 @@ def plot_streamtraces(mgm, geometry=None, ax=None):
     """Plot streamtraces and field strength"""
 
     if geometry is None:
-        geometry = magnetogram.geometry.ZdiGeometry()
+        geometry = starwinds_magnetogram.geometry.ZdiGeometry()
 
     polar, azimuth = geometry.centers()
 

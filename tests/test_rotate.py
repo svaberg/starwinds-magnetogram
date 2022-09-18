@@ -4,15 +4,15 @@ log = logging.getLogger(__name__)
 import quaternion
 import pytest
 from tests import context  # Test context
-from tests.magnetogram import magnetograms
-from tests.magnetogram.test_converter import get_field_values
+from tests import magnetograms
+from tests.test_converter import get_field_values
 import starwinds_magnetogram.rotate as rm
 from starwinds_magnetogram import converter
 from starwinds_magnetogram import zdi_magnetogram
 import starwinds_magnetogram.geometry as zdi_geometry
 
-starwinds_magnetogram import fibonacci_sphere
-starwinds_magnetogram import coordinate_transforms
+from starwinds_magnetogram import fibonacci_sphere
+from starwinds_magnetogram import coordinate_transforms
 
 _magnetograms = "mengel",
 _angles_deg = np.array([15, 30, 45, 90, 180, 360])

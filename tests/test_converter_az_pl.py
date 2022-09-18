@@ -8,7 +8,7 @@ import pytest
 import cmath
 import os.path
 from tests import context  # Test context
-from tests.magnetogram import magnetograms
+from tests import magnetograms
 
 from starwinds_magnetogram import converter
 from starwinds_magnetogram import coefficients as shc

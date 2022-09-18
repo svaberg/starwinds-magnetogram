@@ -6,8 +6,8 @@ import logging
 # Test "context"
 import starwinds_magnetogram.plot_zdi
 from tests import context  # Test context
-from tests.magnetogram import magnetograms
-from tests.magnetogram import test_flow
+from tests import magnetograms
+from tests import test_flow
 log = logging.getLogger(__name__)
 
 # Local

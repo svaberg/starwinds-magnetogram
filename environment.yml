@@ -13,8 +13,8 @@ dependencies:
   - pip
   # - psutil
   # - quantities
-  # - quaternion
-  # - spherical_functions
+  - quaternion
+  - spherical_functions
   # - numba
   # - cartopy
   # - plotly

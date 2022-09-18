@@ -6,7 +6,6 @@ from matplotlib import pyplot as plt, colors
 from matplotlib.ticker import IndexLocator
 from mpl_toolkits.axes_grid1 import make_axes_locatable
 
-# from starwinds_magnetogram import magnetogram
 import starwinds_magnetogram.geometry
 import starwinds_magnetogram.plots
 

@@ -6,15 +6,15 @@ import logging
 # Test "context"
 import starwinds_magnetogram.plot_zdi
 from tests import context  # Test context
-from tests.magnetogram import magnetograms
-from tests.magnetogram import test_flow
+from tests import magnetograms
+from tests import test_flow
 log = logging.getLogger(__name__)
 
 # Local
 import starwinds_magnetogram.zdi_magnetogram
 import starwinds_magnetogram.geometry
 from starwinds_magnetogram import plots
-starwinds_magnetogram import coordinate_transforms
+from starwinds_magnetogram import coordinate_transforms
 from starwinds_magnetogram import longitudinal_field
 from starwinds_magnetogram import coefficients as shc
 import pytest

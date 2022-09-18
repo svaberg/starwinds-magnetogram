@@ -9,7 +9,7 @@ log = logging.getLogger(__name__)
 # Test "context"
 import pytest
 from tests import context  # Test context
-import tests.magnetogram.magnetograms
+from tests import magnetograms
 
 # Local
 from starwinds_magnetogram.geometry import ZdiGeometry
@@ -166,7 +166,7 @@ def test_slice(request,
     :return:
     """
 
-    radial_coefficients = tests.magnetogram.magnetograms.get_radial(magnetogram_name) * 10
+    radial_coefficients = magnetograms.get_radial(magnetogram_name) * 10
 
     with context.PlotNamer(__file__, request.node.name) as (pn, plt):
         fig, ax = plot_pfss.plot_slice(radial_coefficients)
@@ -206,7 +206,7 @@ def test_alfven_shape(request):
 
         for _id, _scale in enumerate(np.geomspace(1/4, 4, 5)):
             # This returns a starwinds_magnetogram.coefficients.Coefficients object.
-            radial_coefficients = tests.magnetogram.magnetograms.get_radial("dipole") * _scale
+            radial_coefficients = magnetograms.get_radial("dipole") * _scale
 
             f_rpa_xyz = pfss_magnetogram.evaluate_cartesian(radial_coefficients,
                                                             *pxyz,
@@ -294,7 +294,7 @@ def test_alfven_shape_simple(request):
     p = ParkerSolution()
 
     # This returns a starwinds_magnetogram.coefficients.Coefficients object.
-    radial_coefficients = tests.magnetogram.magnetograms.get_radial("dipole")
+    radial_coefficients = magnetograms.get_radial("dipole")
 
     f_rpa_xyz = pfss_magnetogram.evaluate_cartesian(radial_coefficients,
                                                     *pxyz,
@@ -433,7 +433,7 @@ def test_alfven_slice(request,
     pxyz = pfss_magnetogram.normal_plane(p1, p2, normal)
 
     # This returns a starwinds_magnetogram.coefficients.Coefficients object.
-    radial_coefficients = tests.magnetogram.magnetograms.get_radial(magnetogram_name)
+    radial_coefficients = magnetograms.get_radial(magnetogram_name)
 
     f_rpa_xyz = pfss_magnetogram.evaluate_cartesian(radial_coefficients, *pxyz,
                                                     radius_star=radius_star,
@@ -566,7 +566,7 @@ def test_max_alfven_radius_by_field_strength(request,
         fig, ax = plt.subplots(figsize=(6, 9))
 
         for magnetogram_scale in (.1, 1, 10):
-            magnetogram = tests.magnetogram.magnetograms.get_radial(magnetogram_name)
+            magnetogram = magnetograms.get_radial(magnetogram_name)
             magnetogram *= magnetogram_scale
             degree_l, order_m, alpha_lm = magnetogram.as_arrays(include_unset=False)
 
@@ -617,7 +617,7 @@ def test_max_alfven_radius_by_density(request,
         fig, ax = plt.subplots(figsize=(6, 9))
 
         for density_scale in (.1, 1, 10):
-            magnetogram = tests.magnetogram.magnetograms.get_radial(magnetogram_name)
+            magnetogram = magnetograms.get_radial(magnetogram_name)
 
             polar_max, azimuth_max, bmax = source_surface_field_maximum(magnetogram,
                                                                         rs, rss)
@@ -663,7 +663,7 @@ def test_max_alfven_radius_by_temperature(request,
         fig, ax = plt.subplots(figsize=(6, 9))
 
         for temperature_scale in 2**np.linspace(-2, 2, 5):
-            magnetogram = tests.magnetogram.magnetograms.get_radial(magnetogram_name)
+            magnetogram = magnetograms.get_radial(magnetogram_name)
 
             polar_max, azimuth_max, bmax = source_surface_field_maximum(magnetogram,
                                                                         rs, rss)

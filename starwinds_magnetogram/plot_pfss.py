@@ -3,7 +3,6 @@ from matplotlib import pyplot as plt, colors
 from matplotlib.lines import Line2D
 from matplotlib.ticker import MaxNLocator
 
-from starwinds_magnetogram import magnetogram
 from starwinds_magnetogram import pfss_magnetogram
 from starwinds_magnetogram import plots
 from starwinds_magnetogram.geometry import ZdiGeometry

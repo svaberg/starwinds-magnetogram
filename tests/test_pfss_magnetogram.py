@@ -8,7 +8,7 @@ log = logging.getLogger(__name__)
 # Test "context"
 from tests import context  # Test context
 import pytest
-from tests.magnetogram import magnetograms
+from tests import magnetograms
 
 # Local
 import starwinds_magnetogram.pfss_magnetogram as pfss_stanford
@@ -474,7 +474,7 @@ def test_fieldlines_3d_flat_points(request):
     import starwinds_magnetogram.coefficients as shc
     from starwinds_magnetogram import geometry
     import matplotlib as mpl
-    starwinds_magnetogram import fibonacci_sphere
+    from starwinds_magnetogram import fibonacci_sphere
     coeffs = shc.Coefficients()
     coeffs.append(0, 0, 0.0)
     # coeffs.append(1, 0, 0.1)
@@ -541,7 +541,7 @@ def single_field_line_integral(points, coeffs, rs=1, rss=3, dir='both'):
 import starwinds_magnetogram.coefficients as shc
 from starwinds_magnetogram import geometry
 import matplotlib as mpl
-starwinds_magnetogram import fibonacci_sphere
+from starwinds_magnetogram import fibonacci_sphere
 from scipy.integrate import solve_ivp
 from mpl_toolkits.mplot3d import Axes3D
 
@@ -724,7 +724,7 @@ def test_single_line_spherical(request):
     import starwinds_magnetogram.coefficients as shc
     from starwinds_magnetogram import geometry
     import matplotlib as mpl
-    starwinds_magnetogram import fibonacci_sphere
+    from starwinds_magnetogram import fibonacci_sphere
     from scipy.integrate import solve_ivp
 
     coeffs = shc.Coefficients()

@@ -91,7 +91,7 @@ class ZdiGeometry:
     def corners_cartesian(self):
         """Facet corner cartesian coordinates"""
         x_corners, y_corners, z_corners = \
-            stellarwinds.coordinate_transforms.rectangular_coordinates_from_spherical(
+            starwinds_magnetogram.coordinate_transforms.rectangular_coordinates_from_spherical(
                 np.ones(self.polar_corners.shape),
                 self.polar_corners,
                 self.azimuthal_corners)
@@ -102,7 +102,7 @@ class ZdiGeometry:
         """Facet center cartesian coordinates"""
         polar_centers, azimuthal_centers = self.centers()
         x_centers, y_centers, z_centers = \
-            stellarwinds.coordinate_transforms.rectangular_coordinates_from_spherical(
+            starwinds_magnetogram.coordinate_transforms.rectangular_coordinates_from_spherical(
                 np.ones(polar_centers.shape),
                 polar_centers,
                 azimuthal_centers)

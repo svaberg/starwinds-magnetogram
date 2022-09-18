@@ -3,3 +3,6 @@ scipy
 matplotlib
 quaternion
 spherical-functions
+
+# For testing
+psutil

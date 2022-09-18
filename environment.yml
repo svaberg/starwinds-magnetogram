@@ -11,7 +11,7 @@ dependencies:
   # - jupyter
   # - ipympl
   - pip
-  # - psutil
+  - psutil
   # - quantities
   - quaternion
   - spherical_functions

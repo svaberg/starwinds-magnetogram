@@ -6,10 +6,10 @@ import argparse
 import os.path
 import matplotlib.pyplot as plt
 
-from stellarwinds.magnetogram import reader_writer
-from stellarwinds.magnetogram import converter
-from stellarwinds.magnetogram import zdi_magnetogram
-from stellarwinds.magnetogram import plot_zdi
+from starwinds_magnetogram import reader_writer
+from starwinds_magnetogram import converter
+from starwinds_magnetogram import zdi_magnetogram
+from starwinds_magnetogram import plot_zdi
 
 
 def main():

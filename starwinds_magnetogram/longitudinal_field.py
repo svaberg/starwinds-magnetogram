@@ -5,7 +5,7 @@ log = logging.getLogger(__name__)
 import matplotlib.ticker
 
 # Local
-from stellarwinds import coordinate_transforms
+from starwinds_magnetogram import coordinate_transforms
 
 
 def get_longitudinal_field_curve(zdi_geometry, zdi_magnetogram, observer_polar, observer_azimuths=None):

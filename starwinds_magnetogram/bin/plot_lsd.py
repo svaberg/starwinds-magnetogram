@@ -5,7 +5,7 @@ import numpy as np
 
 
 import matplotlib.pyplot as plt
-from stellarwinds.magnetogram import plot_lsd
+from starwinds_magnetogram import plot_lsd
 
 _def = " (default: %(default)s)"
 #

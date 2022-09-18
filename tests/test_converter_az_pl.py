@@ -10,12 +10,12 @@ import os.path
 from tests import context  # Test context
 from tests.magnetogram import magnetograms
 
-from stellarwinds.magnetogram import converter
-from stellarwinds.magnetogram import coefficients as shc
-from stellarwinds.magnetogram import zdi_magnetogram
-from stellarwinds.magnetogram import pfss_magnetogram
-from stellarwinds.magnetogram import geometry
-from stellarwinds.magnetogram import plots
+from starwinds_magnetogram import converter
+from starwinds_magnetogram import coefficients as shc
+from starwinds_magnetogram import zdi_magnetogram
+from starwinds_magnetogram import pfss_magnetogram
+from starwinds_magnetogram import geometry
+from starwinds_magnetogram import plots
 
 
 def test_conversion(request):
@@ -55,7 +55,7 @@ def test_alpha_conversion(coeff_name, request):
     coeffs1_alpha = shc.from_arrays(zm1.degrees_l, zm1.orders_m, zm1.alpha)
 
     with context.PlotNamer(__file__, request.node.name) as (pn, plt):
-        from stellarwinds.magnetogram import plot_zdi
+        from starwinds_magnetogram import plot_zdi
 
         fig, axs = plt.subplots(1, 2)
         ax = axs[0]
@@ -155,7 +155,7 @@ def test_beta_conversion(coeff_name, request):
 
 
     with context.PlotNamer(__file__, request.node.name) as (pn, plt):
-        from stellarwinds.magnetogram import plot_zdi
+        from starwinds_magnetogram import plot_zdi
 
         fig, axs = plt.subplots(1, 2)
         ax = axs[0]
@@ -249,7 +249,7 @@ def test_beta_single_coeff(degree_l, order_m, request):
         field_quotient_azimuthal = np.zeros_like(field_azimuthal1)
 
     # with context.PlotNamer(__file__, request.node.name) as (pn, plt):
-    #     from stellarwinds.magnetogram import plot_zdi
+    #     from starwinds_magnetogram import plot_zdi
     #
     #     fig, axs = plt.subplots(3, 3, figsize=(6 * 3, 3 * 3))
     #     plot_zdi.plot_zdi_components(zm0, zg=zg, axs=axs[0])
@@ -392,7 +392,7 @@ def test_gamma_conversion(coeff_name, request):
 
 
     with context.PlotNamer(__file__, request.node.name) as (pn, plt):
-        from stellarwinds.magnetogram import plot_zdi
+        from starwinds_magnetogram import plot_zdi
 
         fig, axs = plt.subplots(1, 2)
         ax = axs[0]
@@ -450,7 +450,7 @@ def test_full_conversion(coeff_name, request):
                               np.stack((zm1.alpha, zm1.beta, zm1.gamma), axis=-1))
 
     with context.PlotNamer(__file__, request.node.name) as (pn, plt):
-        from stellarwinds.magnetogram import plot_zdi
+        from starwinds_magnetogram import plot_zdi
 
         fig, axs = plt.subplots(1, 2)
         ax = axs[0]

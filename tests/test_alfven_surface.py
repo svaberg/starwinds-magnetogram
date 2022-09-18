@@ -12,10 +12,10 @@ from tests import context  # Test context
 import tests.magnetogram.magnetograms
 
 # Local
-from stellarwinds.magnetogram.geometry import ZdiGeometry
-from stellarwinds.magnetogram.parker_solution import ParkerSolution
-from stellarwinds.magnetogram import pfss_magnetogram
-from stellarwinds.magnetogram import plot_pfss
+from starwinds_magnetogram.geometry import ZdiGeometry
+from starwinds_magnetogram.parker_solution import ParkerSolution
+from starwinds_magnetogram import pfss_magnetogram
+from starwinds_magnetogram import plot_pfss
 from matplotlib.colors import SymLogNorm
 
 
@@ -205,7 +205,7 @@ def test_alfven_shape(request):
         fig, ax = plt.subplots(figsize=(9, 6))
 
         for _id, _scale in enumerate(np.geomspace(1/4, 4, 5)):
-            # This returns a stellarwinds.magnetogram.coefficients.Coefficients object.
+            # This returns a starwinds_magnetogram.coefficients.Coefficients object.
             radial_coefficients = tests.magnetogram.magnetograms.get_radial("dipole") * _scale
 
             f_rpa_xyz = pfss_magnetogram.evaluate_cartesian(radial_coefficients,
@@ -293,7 +293,7 @@ def test_alfven_shape_simple(request):
 
     p = ParkerSolution()
 
-    # This returns a stellarwinds.magnetogram.coefficients.Coefficients object.
+    # This returns a starwinds_magnetogram.coefficients.Coefficients object.
     radial_coefficients = tests.magnetogram.magnetograms.get_radial("dipole")
 
     f_rpa_xyz = pfss_magnetogram.evaluate_cartesian(radial_coefficients,
@@ -432,7 +432,7 @@ def test_alfven_slice(request,
 
     pxyz = pfss_magnetogram.normal_plane(p1, p2, normal)
 
-    # This returns a stellarwinds.magnetogram.coefficients.Coefficients object.
+    # This returns a starwinds_magnetogram.coefficients.Coefficients object.
     radial_coefficients = tests.magnetogram.magnetograms.get_radial(magnetogram_name)
 
     f_rpa_xyz = pfss_magnetogram.evaluate_cartesian(radial_coefficients, *pxyz,

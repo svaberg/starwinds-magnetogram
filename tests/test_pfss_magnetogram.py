@@ -11,10 +11,10 @@ import pytest
 from tests.magnetogram import magnetograms
 
 # Local
-import stellarwinds.magnetogram.pfss_magnetogram as pfss_stanford
-from stellarwinds.magnetogram import plots  #TODO: remove this.
-from stellarwinds.magnetogram import plot_pfss
-from stellarwinds.magnetogram import geometry
+import starwinds_magnetogram.pfss_magnetogram as pfss_stanford
+from starwinds_magnetogram import plots  #TODO: remove this.
+from starwinds_magnetogram import plot_pfss
+from starwinds_magnetogram import geometry
 
 
 def test_r_l_values(request):
@@ -427,8 +427,8 @@ def test_fieldlines_3d(request, rss):
 
     rs = 1
 
-    import stellarwinds.magnetogram.coefficients as shc
-    from stellarwinds.magnetogram import geometry
+    import starwinds_magnetogram.coefficients as shc
+    from starwinds_magnetogram import geometry
     import matplotlib as mpl
 
     coeffs = shc.Coefficients()
@@ -471,10 +471,10 @@ def test_fieldlines_3d_flat_points(request):
     rs = 1
     rss = 3
 
-    import stellarwinds.magnetogram.coefficients as shc
-    from stellarwinds.magnetogram import geometry
+    import starwinds_magnetogram.coefficients as shc
+    from starwinds_magnetogram import geometry
     import matplotlib as mpl
-    from stellarwinds import fibonacci_sphere
+    starwinds_magnetogram import fibonacci_sphere
     coeffs = shc.Coefficients()
     coeffs.append(0, 0, 0.0)
     # coeffs.append(1, 0, 0.1)
@@ -538,10 +538,10 @@ def single_field_line_integral(points, coeffs, rs=1, rss=3, dir='both'):
 
     _dxds(points)
 
-import stellarwinds.magnetogram.coefficients as shc
-from stellarwinds.magnetogram import geometry
+import starwinds_magnetogram.coefficients as shc
+from starwinds_magnetogram import geometry
 import matplotlib as mpl
-from stellarwinds import fibonacci_sphere
+starwinds_magnetogram import fibonacci_sphere
 from scipy.integrate import solve_ivp
 from mpl_toolkits.mplot3d import Axes3D
 
@@ -721,10 +721,10 @@ def test_single_line_spherical(request):
     _reach_rss.direction = 1
     _reach_rss.terminal = True
 
-    import stellarwinds.magnetogram.coefficients as shc
-    from stellarwinds.magnetogram import geometry
+    import starwinds_magnetogram.coefficients as shc
+    from starwinds_magnetogram import geometry
     import matplotlib as mpl
-    from stellarwinds import fibonacci_sphere
+    starwinds_magnetogram import fibonacci_sphere
     from scipy.integrate import solve_ivp
 
     coeffs = shc.Coefficients()

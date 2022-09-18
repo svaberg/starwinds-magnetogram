@@ -6,9 +6,9 @@ from matplotlib import pyplot as plt, colors
 from matplotlib.ticker import IndexLocator
 from mpl_toolkits.axes_grid1 import make_axes_locatable
 
-from stellarwinds import magnetogram
-import stellarwinds.magnetogram.geometry
-import stellarwinds.magnetogram.plots
+# from starwinds_magnetogram import magnetogram
+import starwinds_magnetogram.geometry
+import starwinds_magnetogram.plots
 
 
 def plot_energy_summary(zc, axs=None):
@@ -272,7 +272,7 @@ def plot_zdi_components(mgm, radius=1, axs=None, zg=None, symmetric=None, cmap=N
     polar_corners, azimuth_corners = zg.corners()
     Brpa = np.array([g(polar_centers, azimuth_centers) for g in getter_fns])
 
-    axs = stellarwinds.magnetogram.plots.plot_components(polar_centers, azimuth_centers,
+    axs = starwinds_magnetogram.plots.plot_components(polar_centers, azimuth_centers,
                                                         Brpa, axs, azimuth_corners, polar_corners, radius)
 
     return axs
@@ -291,7 +291,7 @@ def plot_zdi_field(getter_fn, ax=None, zg=None, symmetric=None, cmap=None, legen
 
     field_centers = getter_fn(polar_centers, azimuth_centers)
 
-    _p = stellarwinds.magnetogram.plots
+    _p = starwinds_magnetogram.plots
     img, zero_contour = _p.plot_magnetic_field(ax, polar_centers, azimuth_centers, field_centers,
                         polar_corners=polar_corners, azimuth_corners=azimuth_corners,
                         symmetric=symmetric,
@@ -354,7 +354,7 @@ def plot_streamtraces(mgm, geometry=None, ax=None):
     if ax is None:
         _, ax = plt.subplots(figsize=(18, 6))
 
-    img = stellarwinds.magnetogram.plots.plot_equirectangular(geometry, B_mag, ax,
+    img = starwinds_magnetogram.plots.plot_equirectangular(geometry, B_mag, ax,
                                vmin=0, cmap='viridis')
 
     c = plt.colorbar(img, ax=ax)#, extend='both')

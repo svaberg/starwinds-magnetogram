@@ -13,11 +13,11 @@ log = logging.getLogger(__name__)
 import itertools
 
 # Local
-import stellarwinds.magnetogram.geometry
+import starwinds_magnetogram.geometry
 
 
 def test_make_corners(request):
-    zg = stellarwinds.magnetogram.geometry.ZdiGeometry()
+    zg = starwinds_magnetogram.geometry.ZdiGeometry()
 
     with context.PlotNamer(__file__, request.node.name) as (pn, plt):
         fig, ax = plt.subplots()
@@ -29,7 +29,7 @@ def test_make_corners(request):
 
 
 def test_make_geometry(request):
-    zg = stellarwinds.magnetogram.geometry.ZdiGeometry()
+    zg = starwinds_magnetogram.geometry.ZdiGeometry()
 
     polar_corners, azimuthal_corners = zg.corners()
     polar_centers, azimuthal_centers = zg.centers()
@@ -52,7 +52,7 @@ def test_make_geometry(request):
 
 
 def test_make_areas(request):
-    zg = stellarwinds.magnetogram.geometry.ZdiGeometry()
+    zg = starwinds_magnetogram.geometry.ZdiGeometry()
 
     polar, azimuth = zg.corners()
     areas = zg.areas()
@@ -70,7 +70,7 @@ def test_make_areas(request):
 
 def test_make_geometry_3d(request):
 
-    zg = stellarwinds.magnetogram.geometry.ZdiGeometry(
+    zg = starwinds_magnetogram.geometry.ZdiGeometry(
         polar_corners = np.pi * np.linspace(.25, .5, 11),
         azimuthal_corners = np.pi * np.linspace(0, 2, 21))
     corners = zg.corners_cartesian()

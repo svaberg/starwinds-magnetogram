@@ -5,10 +5,10 @@ import logging
 
 log = logging.getLogger(__name__)
 
-import stellarwinds.magnetogram.coefficients as shc
-from stellarwinds.magnetogram import pfss_magnetogram
-from stellarwinds.magnetogram import zdi_magnetogram
-from stellarwinds.magnetogram import associated_legendre
+import starwinds_magnetogram.coefficients as shc
+from starwinds_magnetogram import pfss_magnetogram
+from starwinds_magnetogram import zdi_magnetogram
+from starwinds_magnetogram import associated_legendre
 
 
 def collect_cosines(r, alpha, s, beta):

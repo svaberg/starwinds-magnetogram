@@ -4,24 +4,24 @@ import numpy as np
 import logging
 
 # Test "context"
-import stellarwinds.magnetogram.plot_zdi
+import starwinds_magnetogram.plot_zdi
 from tests import context  # Test context
 from tests.magnetogram import magnetograms
 from tests.magnetogram import test_flow
 log = logging.getLogger(__name__)
 
 # Local
-import stellarwinds.magnetogram.zdi_magnetogram
-import stellarwinds.magnetogram.geometry
-from stellarwinds.magnetogram import plots
-from stellarwinds import coordinate_transforms
-from stellarwinds.magnetogram import longitudinal_field
-from stellarwinds.magnetogram import coefficients as shc
+import starwinds_magnetogram.zdi_magnetogram
+import starwinds_magnetogram.geometry
+from starwinds_magnetogram import plots
+starwinds_magnetogram import coordinate_transforms
+from starwinds_magnetogram import longitudinal_field
+from starwinds_magnetogram import coefficients as shc
 import pytest
 
 
 def test_normals():
-    zg = stellarwinds.magnetogram.geometry.ZdiGeometry(11)
+    zg = starwinds_magnetogram.geometry.ZdiGeometry(11)
     unit_normals = zg.unit_normals()
     assert np.allclose(np.sum(unit_normals**2, axis=-1), 1)
 
@@ -29,7 +29,7 @@ def test_normals():
 def test_observation_angle(request):
     observer_direction = np.array([0, 1, 1])
     obs_dir_length = np.sum(observer_direction**2)**.5
-    zg = stellarwinds.magnetogram.geometry.ZdiGeometry(64)
+    zg = starwinds_magnetogram.geometry.ZdiGeometry(64)
     unit_normals = zg.unit_normals()
 
     # Dot product of observer direction and normal vectors
@@ -61,7 +61,7 @@ observer_directions = (np.array([1, 0, 0]),
 @pytest.mark.parametrize("observer_direction", observer_directions)
 def test_visible_area_fraction(request, observer_direction):
 
-    zg = stellarwinds.magnetogram.geometry.ZdiGeometry(256)
+    zg = starwinds_magnetogram.geometry.ZdiGeometry(256)
 
     visible_fraction = zg.projected_visible_area_fraction(observer_direction)
 
@@ -84,7 +84,7 @@ def test_visible_area_fraction(request, observer_direction):
 
 @pytest.mark.parametrize("observer_direction", observer_directions)
 def test_radial_parallel_field(request, observer_direction):
-    zg = stellarwinds.magnetogram.geometry.ZdiGeometry(64)
+    zg = starwinds_magnetogram.geometry.ZdiGeometry(64)
     field_xyz = zg.unit_normals()  # Create a field of unit normals.
     parallel_field = np.sum(field_xyz * observer_direction, axis=-1)
     average_proj_field = np.sum(zg.areas() * parallel_field) / np.sum(zg.areas())
@@ -98,7 +98,7 @@ def test_x_parallel_field(request, observer_direction):
     def expected(observer_direction):
         return np.sum(np.array([1, 0, 0]) * observer_direction)
 
-    zg = stellarwinds.magnetogram.geometry.ZdiGeometry(64)
+    zg = starwinds_magnetogram.geometry.ZdiGeometry(64)
     field_xyz = np.zeros_like(zg.unit_normals())  # Create a field of unit normals.
     field_xyz[..., 0] = 1  # Set x components to 1
 
@@ -112,9 +112,9 @@ def test_x_parallel_field(request, observer_direction):
 @pytest.mark.parametrize("observer_direction", observer_directions)
 def test_parallel_field(request, magnetogram_name, observer_direction):
     """Longitudinal refers to the direction towards the observer."""
-    zg = stellarwinds.magnetogram.geometry.ZdiGeometry(64)
+    zg = starwinds_magnetogram.geometry.ZdiGeometry(64)
 
-    lz = stellarwinds.magnetogram.zdi_magnetogram.from_coefficients(magnetograms.get_all(magnetogram_name))
+    lz = starwinds_magnetogram.zdi_magnetogram.from_coefficients(magnetograms.get_all(magnetogram_name))
 
     field_xyz = lz.get_cartesian_field(*zg.centers())
 
@@ -146,9 +146,9 @@ def test_longitudinal_field(request, magnetogram_name="mengel"):
     """Longitudinal refers to the direction towards the observer.
     This is the same as each facet's parallel field multiplied by its visible area"""
     observer_direction = np.array([0, 1, 1])
-    zg = stellarwinds.magnetogram.geometry.ZdiGeometry(64)
+    zg = starwinds_magnetogram.geometry.ZdiGeometry(64)
 
-    lz = stellarwinds.magnetogram.zdi_magnetogram.from_coefficients(magnetograms.get_all(magnetogram_name))
+    lz = starwinds_magnetogram.zdi_magnetogram.from_coefficients(magnetograms.get_all(magnetogram_name))
 
     field_xyz = lz.get_cartesian_field(*zg.centers())
     parallel_field = np.sum(field_xyz * observer_direction, axis=-1)
@@ -193,8 +193,8 @@ def test_longitudinal_field_curve(request, magnetogram_name="mengel"):
 
     observer_polar = np.deg2rad(50)
 
-    zdi_geometry = stellarwinds.magnetogram.geometry.ZdiGeometry(64)
-    zdi_magnetogram = stellarwinds.magnetogram.zdi_magnetogram.from_coefficients(magnetograms.get_all(magnetogram_name))
+    zdi_geometry = starwinds_magnetogram.geometry.ZdiGeometry(64)
+    zdi_magnetogram = starwinds_magnetogram.zdi_magnetogram.from_coefficients(magnetograms.get_all(magnetogram_name))
 
     observer_azimuths = np.deg2rad(np.linspace(0, 360, 20))
 
@@ -247,8 +247,8 @@ def test_polar_view(request, magnetogram_name="mengel"):
 
     observer_polar = np.deg2rad(0)
 
-    zdi_geometry = stellarwinds.magnetogram.geometry.ZdiGeometry(64)
-    zdi_magnetogram = stellarwinds.magnetogram.zdi_magnetogram.from_coefficients(magnetograms.get_all(magnetogram_name))
+    zdi_geometry = starwinds_magnetogram.geometry.ZdiGeometry(64)
+    zdi_magnetogram = starwinds_magnetogram.zdi_magnetogram.from_coefficients(magnetograms.get_all(magnetogram_name))
 
     lf = longitudinal_field.get_longitudinal_field_curve(zdi_geometry, zdi_magnetogram, observer_polar)
 
@@ -260,13 +260,13 @@ def test_polar_view(request, magnetogram_name="mengel"):
 def test_poloidal(request, magnetogram_name="mengel"):
 
     observer_polar = np.deg2rad(10)
-    zdi_geometry = stellarwinds.magnetogram.geometry.ZdiGeometry(256)
+    zdi_geometry = starwinds_magnetogram.geometry.ZdiGeometry(256)
 
     coefficients = shc.Coefficients(np.zeros(3, dtype=complex))
     # coefficients.append(13, 7, np.array([1e6+0.0j, 0.0+0.0j, 1.0e6+0.0j]))
     # coefficients.append(11, 8, np.array([0.0+0.0j, 0.0+0.0j, 1.0e6+0.0j]))
     coefficients.append(3, 2, np.array([0.0+0.0j, 0.0+0.0j, 0.0+1.0j]))
-    zdi_magnetogram = stellarwinds.magnetogram.zdi_magnetogram.from_coefficients(coefficients)
+    zdi_magnetogram = starwinds_magnetogram.zdi_magnetogram.from_coefficients(coefficients)
 
     # lf = longitudinal_field.get_longitudinal_field_curve(zdi_geometry, zdi_magnetogram, observer_polar)
     #
@@ -285,11 +285,11 @@ def test_poloidal(request, magnetogram_name="mengel"):
 def test_poloidal2(request, magnetogram_name="mengel"):
 
     observer_polar = np.deg2rad(60)
-    zdi_geometry = stellarwinds.magnetogram.geometry.ZdiGeometry(256)
+    zdi_geometry = starwinds_magnetogram.geometry.ZdiGeometry(256)
 
     coefficients = shc.Coefficients(np.zeros(3, dtype=complex))
     coefficients.append(1, 0, np.array([0.0+0.0j, 0.0+0.0j, 1.0+0.0j]))
-    zdi_magnetogram = stellarwinds.magnetogram.zdi_magnetogram.from_coefficients(coefficients)
+    zdi_magnetogram = starwinds_magnetogram.zdi_magnetogram.from_coefficients(coefficients)
 
     lf = longitudinal_field.get_longitudinal_field_curve(zdi_geometry, zdi_magnetogram, observer_polar)
     assert np.allclose(lf, 0)
@@ -299,8 +299,8 @@ def test_plot_longitudinal_field(request, magnetogram_name="mengel"):
     """Why is the toroidal component of the mengel magnetogram so close to zero??"""
     observer_polar = np.deg2rad(30)
 
-    zdi_geometry = stellarwinds.magnetogram.geometry.ZdiGeometry(64)
-    zdi_magnetogram = stellarwinds.magnetogram.zdi_magnetogram.from_coefficients(magnetograms.get_all(magnetogram_name))
+    zdi_geometry = starwinds_magnetogram.geometry.ZdiGeometry(64)
+    zdi_magnetogram = starwinds_magnetogram.zdi_magnetogram.from_coefficients(magnetograms.get_all(magnetogram_name))
 
     with context.PlotNamer(__file__, request.node.name) as (pn, plt):
         fig, ax = plt.subplots()

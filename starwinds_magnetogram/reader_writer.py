@@ -4,7 +4,7 @@ import logging
 
 log = logging.getLogger(__name__)
 
-import stellarwinds.magnetogram.coefficients as shc
+import starwinds_magnetogram.coefficients as shc
 
 
 def read_magnetogram_file(file_name):

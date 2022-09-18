@@ -5,8 +5,8 @@ from scipy.special import sph_harm
 import time
 import functools
 
-from stellarwinds.magnetogram import geometry
-from stellarwinds.magnetogram import coefficients
+from starwinds_magnetogram import geometry
+from starwinds_magnetogram import coefficients
 
 
 _degree_l_max = 30  # Highest expected harmonic degree

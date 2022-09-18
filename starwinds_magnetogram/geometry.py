@@ -2,7 +2,8 @@ import numpy as np
 import logging
 log = logging.getLogger(__name__)
 from functools import cached_property
-import stellarwinds.coordinate_transforms
+
+import starwinds_magnetogram.coordinate_transforms
 
 
 class ZdiGeometry:

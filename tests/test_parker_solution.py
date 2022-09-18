@@ -9,7 +9,7 @@ import pytest
 from tests import context  # Test context
 
 # Local
-from stellarwinds.magnetogram.parker_solution import ParkerSolution
+from starwinds_magnetogram.parker_solution import ParkerSolution
 
 
 def test_dimensionless(request):

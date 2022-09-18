@@ -2,7 +2,7 @@ import numpy as np
 import logging
 log = logging.getLogger(__name__)
 
-from stellarwinds.magnetogram import coefficients as shc
+from starwinds_magnetogram import coefficients as shc
 
 
 def data_mengel():

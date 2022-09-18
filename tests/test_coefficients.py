@@ -4,7 +4,7 @@ import pytest
 
 from tests import context  # Test context
 
-from stellarwinds.magnetogram import coefficients
+from starwinds_magnetogram import coefficients
 
 log = logging.getLogger(__name__)
 

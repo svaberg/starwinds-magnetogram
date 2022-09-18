@@ -4,11 +4,11 @@ import scipy.special
 
 import logging
 
-from stellarwinds.magnetogram import associated_legendre
+from starwinds_magnetogram import associated_legendre
 
 log = logging.getLogger(__name__)
 
-from stellarwinds import coordinate_transforms
+from starwinds_magnetogram import coordinate_transforms
 
 
 class ZdiMagnetogram:

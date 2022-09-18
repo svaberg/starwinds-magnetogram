@@ -1,10 +1,10 @@
 import os.path
 from tests import context  # Test context
 
-from stellarwinds.magnetogram import reader_writer
-from stellarwinds.magnetogram import converter
-from stellarwinds.magnetogram import coefficients
-from stellarwinds.magnetogram import zdi_magnetogram
+from starwinds_magnetogram import reader_writer
+from starwinds_magnetogram import converter
+from starwinds_magnetogram import coefficients
+from starwinds_magnetogram import zdi_magnetogram
 
 
 def test_read(zdi_file):

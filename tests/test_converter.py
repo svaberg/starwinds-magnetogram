@@ -8,12 +8,12 @@ import os.path
 from tests import context  # Test context
 from tests.magnetogram import magnetograms
 
-from stellarwinds.magnetogram import converter
-from stellarwinds.magnetogram import coefficients as shc
-from stellarwinds.magnetogram import zdi_magnetogram
-from stellarwinds.magnetogram import pfss_magnetogram
-from stellarwinds.magnetogram import geometry
-from stellarwinds.magnetogram import plots
+from starwinds_magnetogram import converter
+from starwinds_magnetogram import coefficients as shc
+from starwinds_magnetogram import zdi_magnetogram
+from starwinds_magnetogram import pfss_magnetogram
+from starwinds_magnetogram import geometry
+from starwinds_magnetogram import plots
 
 
 def test_conversion(request):

@@ -4,17 +4,17 @@ import numpy as np
 import logging
 
 # Test "context"
-import stellarwinds.magnetogram.plot_zdi
+import starwinds_magnetogram.plot_zdi
 from tests import context  # Test context
 from tests.magnetogram import magnetograms
 from tests.magnetogram import test_flow
 log = logging.getLogger(__name__)
 
 # Local
-import stellarwinds.magnetogram.zdi_magnetogram
-import stellarwinds.magnetogram.geometry
-from stellarwinds.magnetogram import plots
-import stellarwinds.magnetogram.coefficients as shc
+import starwinds_magnetogram.zdi_magnetogram
+import starwinds_magnetogram.geometry
+from starwinds_magnetogram import plots
+import starwinds_magnetogram.coefficients as shc
 # This import registers the 3D projection, but is otherwise unused.
 from mpl_toolkits.mplot3d import Axes3D  # noqa: F401 unused import
 import pytest
@@ -22,8 +22,8 @@ import pytest
 
 def test_properties(request):
     """Use ZdiGeometry object with ZdiMagnetogram object to calculate properties"""
-    zg = stellarwinds.magnetogram.geometry.ZdiGeometry()
-    lz = stellarwinds.magnetogram.zdi_magnetogram.ZdiMagnetogram(1, 0, 1, 0, 0)
+    zg = starwinds_magnetogram.geometry.ZdiGeometry()
+    lz = starwinds_magnetogram.zdi_magnetogram.ZdiMagnetogram(1, 0, 1, 0, 0)
 
     field_strengths = lz.get_field_strength(*zg.centers())
     areas = zg.areas()
@@ -43,15 +43,15 @@ def test_properties(request):
 
 def test_dplm(request, magnetogram_name="mengel"):
 
-    lz = stellarwinds.magnetogram.zdi_magnetogram.from_coefficients(magnetograms.get_all(magnetogram_name))
-    zg = stellarwinds.magnetogram.geometry.ZdiGeometry(64)
+    lz = starwinds_magnetogram.zdi_magnetogram.from_coefficients(magnetograms.get_all(magnetogram_name))
+    zg = starwinds_magnetogram.geometry.ZdiGeometry(64)
 
     polar, azimuth = zg.centers()
 
     B = {}
     Bmax = 0
     for dplm_method in ("roll", "roll2", "gradient"):
-        lz = stellarwinds.magnetogram.zdi_magnetogram.from_coefficients(magnetograms.get_all(magnetogram_name),
+        lz = starwinds_magnetogram.zdi_magnetogram.from_coefficients(magnetograms.get_all(magnetogram_name),
                                                                         dplm_method=dplm_method)
         B[dplm_method] = lz.get_field_strength(*zg.centers())
         Bmax = np.maximum(Bmax, np.max(B[dplm_method]))
@@ -74,7 +74,7 @@ def test_dplm(request, magnetogram_name="mengel"):
 
 
 def test_lpmn(request):
-    zg = stellarwinds.magnetogram.geometry.ZdiGeometry(64)
+    zg = starwinds_magnetogram.geometry.ZdiGeometry(64)
     polar_centers, azimuth_centers = zg.centers()
 
     coeffs_zdi = shc.Coefficients()
@@ -82,9 +82,9 @@ def test_lpmn(request):
     coeffs_zdi.append(3, 1, 1.0 + 0.0j)
     coeffs_zdi.append(3, 2, 1.0 + 0.0j)
 
-    Bref = stellarwinds.magnetogram.zdi_magnetogram.from_coefficients(coeffs_zdi).get_polar_poloidal_field(polar_centers, azimuth_centers)
+    Bref = starwinds_magnetogram.zdi_magnetogram.from_coefficients(coeffs_zdi).get_polar_poloidal_field(polar_centers, azimuth_centers)
 
-    Bnew = -stellarwinds.magnetogram.zdi_magnetogram.from_coefficients(coeffs_zdi).get_polar_poloidal_field_new(polar_centers, azimuth_centers)
+    Bnew = -starwinds_magnetogram.zdi_magnetogram.from_coefficients(coeffs_zdi).get_polar_poloidal_field_new(polar_centers, azimuth_centers)
 
     assert Bref.shape == Bnew.shape
 
@@ -119,7 +119,7 @@ def test_lpmn(request):
 
 def test_lpmn_lpmv(request):
 
-    zg = stellarwinds.magnetogram.geometry.ZdiGeometry(64)
+    zg = starwinds_magnetogram.geometry.ZdiGeometry(64)
     polar_centers, azimuth_centers = zg.centers()
 
     coeffs_zdi = shc.Coefficients()
@@ -129,19 +129,19 @@ def test_lpmn_lpmv(request):
 
     points_polar = np.linspace(0, np.pi)
 
-    zm = stellarwinds.magnetogram.zdi_magnetogram.from_coefficients(coeffs_zdi)
+    zm = starwinds_magnetogram.zdi_magnetogram.from_coefficients(coeffs_zdi)
     Pmn_z_result, Pmn_d_z_result = zm._calculate_lpmn(points_polar)
 
     assert Pmn_z_result.shape == points_polar.shape + (coeffs_zdi.size,)
 
 
 def test_zdi_magnetogram_3d(request, magnetogram_name="mengel"):
-    lz = stellarwinds.magnetogram.zdi_magnetogram.from_coefficients(magnetograms.get_all(magnetogram_name))
+    lz = starwinds_magnetogram.zdi_magnetogram.from_coefficients(magnetograms.get_all(magnetogram_name))
 
-    # zg = stellarwinds.magnetogram.zdi_geometry.ZdiGeometry(polar_corners = np.pi * np.linspace(0, 1, 128),
+    # zg = starwinds_magnetogram.zdi_geometry.ZdiGeometry(polar_corners = np.pi * np.linspace(0, 1, 128),
     #                  azimuthal_corners = np.pi * np.linspace(0, 2, 256))
 
-    zg = stellarwinds.magnetogram.geometry.ZdiGeometry(64)
+    zg = starwinds_magnetogram.geometry.ZdiGeometry(64)
 
     polar, azimuth = zg.centers()
     corners = zg.corners_cartesian()
@@ -298,9 +298,9 @@ def test_zdi_magnetogram_3d(request, magnetogram_name="mengel"):
 
 
 def test_zdi_magnetogram(request, magnetogram_name="mengel"):
-    lz = stellarwinds.magnetogram.zdi_magnetogram.from_coefficients(magnetograms.get_all(magnetogram_name))
+    lz = starwinds_magnetogram.zdi_magnetogram.from_coefficients(magnetograms.get_all(magnetogram_name))
 
-    zg = stellarwinds.magnetogram.geometry.ZdiGeometry()
+    zg = starwinds_magnetogram.geometry.ZdiGeometry()
     polar, azimuth = zg.corners()
 
     B = [
@@ -337,14 +337,14 @@ def test_negative_order(request):
     beta_lm = 0
     gamma_lm = 0
 
-    zg = stellarwinds.magnetogram.geometry.ZdiGeometry()
+    zg = starwinds_magnetogram.geometry.ZdiGeometry()
     polar, azimuth = zg.corners()
 
     with context.PlotNamer(__file__, request.node.name) as (pn, plt):
         fig, axs = plt.subplots(1, 2)
 
         for order_m, ax in zip ((-1, 1), axs):
-            lz = stellarwinds.magnetogram.zdi_magnetogram.ZdiMagnetogram(degree_l, order_m, alpha_lm, beta_lm, gamma_lm)
+            lz = starwinds_magnetogram.zdi_magnetogram.ZdiMagnetogram(degree_l, order_m, alpha_lm, beta_lm, gamma_lm)
 
             img1 = ax.pcolormesh(np.rad2deg(azimuth), np.rad2deg(polar), np.real(lz.get_radial_field(*zg.centers())),
                                  cmap='RdBu_r',
@@ -358,7 +358,7 @@ def test_negative_order(request):
 
 
 def test_compare_scipy(request):
-    from stellarwinds.magnetogram import coefficients
+    from starwinds_magnetogram import coefficients
     from scipy.special import sph_harm
     c = coefficients.Coefficients(0j)
     c.append(1, 1, 1.0)
@@ -367,7 +367,7 @@ def test_compare_scipy(request):
     c.append(2, 0, 1.0)
     c.append(11, 7, .20 + .1j)
 
-    zg = stellarwinds.magnetogram.geometry.ZdiGeometry()
+    zg = starwinds_magnetogram.geometry.ZdiGeometry()
     # corner_pl, corner_az = zg.corners()
     center_pl, center_az = zg.centers()
 
@@ -376,7 +376,7 @@ def test_compare_scipy(request):
         field_scipy += data * sph_harm(order_m, degree_l, center_az, center_pl)
 
     degrees_l, orders_m, alpha_lm = c.as_arrays()
-    lz = stellarwinds.magnetogram.zdi_magnetogram.ZdiMagnetogram(degrees_l, orders_m, alpha_lm)
+    lz = starwinds_magnetogram.zdi_magnetogram.ZdiMagnetogram(degrees_l, orders_m, alpha_lm)
     field_zdi = lz.get_radial_field(center_pl, center_az)
 
     assert np.allclose(
@@ -389,9 +389,9 @@ def test_negative_and_positive_order(request):
     beta_lm = 0
     gamma_lm = 0
 
-    zg = stellarwinds.magnetogram.geometry.ZdiGeometry()
+    zg = starwinds_magnetogram.geometry.ZdiGeometry()
     polar, azimuth = zg.corners()
-    lz = stellarwinds.magnetogram.zdi_magnetogram.ZdiMagnetogram(
+    lz = starwinds_magnetogram.zdi_magnetogram.ZdiMagnetogram(
         np.array([1,  1]),
         np.array([1, -1]),
         np.array([1,  0]),
@@ -412,9 +412,9 @@ def test_negative_and_positive_order(request):
 
 
 def test_zdi_magnetogram_stats(request, magnetogram_name="mengel"):
-    lz = stellarwinds.magnetogram.zdi_magnetogram.from_coefficients(magnetograms.get_all(magnetogram_name))
+    lz = starwinds_magnetogram.zdi_magnetogram.from_coefficients(magnetograms.get_all(magnetogram_name))
 
-    zg = stellarwinds.magnetogram.geometry.ZdiGeometry()
+    zg = starwinds_magnetogram.geometry.ZdiGeometry()
     polar, azimuth = zg.corners()
 
     bstr = lz.get_field_strength(*zg.centers())
@@ -435,7 +435,7 @@ def test_zdi_magnetogram_stats(request, magnetogram_name="mengel"):
 def test_zdi_magnetogram_energy(request):
     coeffs = shc.Coefficients()
     coeffs.append(1, 0, 1.0)
-    zc = stellarwinds.magnetogram.zdi_magnetogram.from_coefficients(coeffs)
+    zc = starwinds_magnetogram.zdi_magnetogram.from_coefficients(coeffs)
     zc.energy()
 
 
@@ -449,38 +449,38 @@ def test_plot_zdi_magnetogram_energy(request):
     coeffs.append(2, 2, 1.0)
     coeffs.append(6, 5, 1.0)
 
-    zc = stellarwinds.magnetogram.zdi_magnetogram.from_coefficients(coeffs)
+    zc = starwinds_magnetogram.zdi_magnetogram.from_coefficients(coeffs)
     with context.PlotNamer(__file__, request.node.name) as (pn, plt):
 
-        fig, axs = stellarwinds.magnetogram.plot_zdi.plot_energy_matrix(zc)
+        fig, axs = starwinds_magnetogram.plot_zdi.plot_energy_matrix(zc)
         fig.savefig(pn.get())
 
-        fig, axs = stellarwinds.magnetogram.plot_zdi.plot_energy_matrix(zc, types=("poloidal", "toroidal"))
+        fig, axs = starwinds_magnetogram.plot_zdi.plot_energy_matrix(zc, types=("poloidal", "toroidal"))
         fig.savefig(pn.get())
 
 
 def test_plot_strength(request, magnetogram_name="mengel"):
-    lz = stellarwinds.magnetogram.zdi_magnetogram.from_coefficients(magnetograms.get_all(magnetogram_name))
+    lz = starwinds_magnetogram.zdi_magnetogram.from_coefficients(magnetograms.get_all(magnetogram_name))
 
     with context.PlotNamer(__file__, request.node.name) as (pn, plt):
-        fig, ax = stellarwinds.magnetogram.plot_zdi.plot_zdi_field(lz.get_field_strength)
+        fig, ax = starwinds_magnetogram.plot_zdi.plot_zdi_field(lz.get_field_strength)
         fig.savefig(pn.get())
         plt.close()
 
 
 def test_plot_radial_field(request, magnetogram_name="mengel"):
-    lz = stellarwinds.magnetogram.zdi_magnetogram.from_coefficients(magnetograms.get_all(magnetogram_name))
+    lz = starwinds_magnetogram.zdi_magnetogram.from_coefficients(magnetograms.get_all(magnetogram_name))
 
     with context.PlotNamer(__file__, request.node.name) as (pn, plt):
-        fig, ax = stellarwinds.magnetogram.plot_zdi.plot_zdi_field(lz.get_radial_field)
+        fig, ax = starwinds_magnetogram.plot_zdi.plot_zdi_field(lz.get_radial_field)
         fig.savefig(pn.get())
         plt.close()
 
 
 def test_plot_radial_field_lic(request, magnetogram_name="mengel"):
-    lz = stellarwinds.magnetogram.zdi_magnetogram.from_coefficients(magnetograms.get_all(magnetogram_name))
+    lz = starwinds_magnetogram.zdi_magnetogram.from_coefficients(magnetograms.get_all(magnetogram_name))
 
-    zg = stellarwinds.magnetogram.geometry.ZdiGeometry(111)  # Increase this for prettier results
+    zg = starwinds_magnetogram.geometry.ZdiGeometry(111)  # Increase this for prettier results
     polar_centers, azimuth_centers = zg.centers()
     polar_corners, azimuth_corners = zg.corners()
 
@@ -490,7 +490,7 @@ def test_plot_radial_field_lic(request, magnetogram_name="mengel"):
 
     with context.PlotNamer(__file__, request.node.name) as (pn, plt):
         fig, ax = plt.subplots(figsize=(10, 4))
-        stellarwinds.magnetogram.plots.plot_magnetic_field(ax, polar_centers, azimuth_centers, radial_field_centers,
+        starwinds_magnetogram.plots.plot_magnetic_field(ax, polar_centers, azimuth_centers, radial_field_centers,
                             polar_corners=polar_corners, azimuth_corners=azimuth_corners)
         fig.savefig(pn.get())
         plt.close()
@@ -506,7 +506,7 @@ def test_plot_radial_field_lic(request, magnetogram_name="mengel"):
                           # length=40
                           )
 
-        stellarwinds.magnetogram.plots.plot_magnetic_field(ax,
+        starwinds_magnetogram.plots.plot_magnetic_field(ax,
                                                               azimuth_centers,
                                                               polar_centers,
                                                               radial_field_centers,
@@ -534,12 +534,12 @@ def test_plot_radial_field_lic(request, magnetogram_name="mengel"):
                                     "get_field_strength"))
 @pytest.mark.parametrize("magnetogram_name", ("mengel",))
 def test_plot_field(request, method, magnetogram_name):
-    lz = stellarwinds.magnetogram.zdi_magnetogram.from_coefficients(magnetograms.get_all(magnetogram_name))
+    lz = starwinds_magnetogram.zdi_magnetogram.from_coefficients(magnetograms.get_all(magnetogram_name))
 
     _method = getattr(lz, method)
 
     with context.PlotNamer(__file__, request.node.name) as (pn, plt):
-        fig, ax = stellarwinds.magnetogram.plot_zdi.plot_zdi_field(_method,
+        fig, ax = starwinds_magnetogram.plot_zdi.plot_zdi_field(_method,
                                                                    zg=None,
                                                                    symmetric=None)
         ax.set_title(method)

@@ -5,9 +5,9 @@ import numpy as np
 import pytest
 from tests import context  # Test context
 
-from stellarwinds.magnetogram import geometry
-from stellarwinds.magnetogram import plots
-from stellarwinds.magnetogram import image_converter
+from starwinds_magnetogram import geometry
+from starwinds_magnetogram import plots
+from starwinds_magnetogram import image_converter
 
 from matplotlib.image import imread
 

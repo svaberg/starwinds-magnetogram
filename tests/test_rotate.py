@@ -6,13 +6,13 @@ import pytest
 from tests import context  # Test context
 from tests.magnetogram import magnetograms
 from tests.magnetogram.test_converter import get_field_values
-import stellarwinds.magnetogram.rotate as rm
-from stellarwinds.magnetogram import converter
-from stellarwinds.magnetogram import zdi_magnetogram
-import stellarwinds.magnetogram.geometry as zdi_geometry
+import starwinds_magnetogram.rotate as rm
+from starwinds_magnetogram import converter
+from starwinds_magnetogram import zdi_magnetogram
+import starwinds_magnetogram.geometry as zdi_geometry
 
-from stellarwinds import fibonacci_sphere
-from stellarwinds import coordinate_transforms
+starwinds_magnetogram import fibonacci_sphere
+starwinds_magnetogram import coordinate_transforms
 
 _magnetograms = "mengel",
 _angles_deg = np.array([15, 30, 45, 90, 180, 360])

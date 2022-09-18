@@ -2,7 +2,7 @@ import logging
 log = logging.getLogger(__name__)
 import numpy as np
 import scipy as sp
-from stellarwinds import coordinate_transforms
+from starwinds_magnetogram import coordinate_transforms
 
 
 # This is the default in the SWMF so follow them.
@@ -62,7 +62,7 @@ def calculate_all_theta(degree_l, order_m, points_polar, scipy=True):
     order_m = np.asarray(order_m)
 
     # Calculate all the theta_lm and theta_lm' values in one go using scipy
-    from stellarwinds.magnetogram.associated_legendre import calculate_lpmn
+    from starwinds_magnetogram.associated_legendre import calculate_lpmn
     Pmn_cos_theta_result, Pmn_d_cos_theta_result = calculate_lpmn(degree_l, order_m, points_polar)
 
     d0 = 0 + (np.asarray(order_m) == 0)

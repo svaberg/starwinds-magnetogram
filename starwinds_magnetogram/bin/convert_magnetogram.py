@@ -2,9 +2,9 @@ import argparse
 import logging
 log = logging.getLogger(__name__)
 
-from stellarwinds.magnetogram import reader_writer
-from stellarwinds.magnetogram import coefficients
-from stellarwinds.magnetogram import converter
+from starwinds_magnetogram import reader_writer
+from starwinds_magnetogram import coefficients
+from starwinds_magnetogram import converter
 
 #
 # Main method. Use -h for usage and help.

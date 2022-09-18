@@ -1,0 +1,44 @@
+name: starwinds-magnetogram
+channels:
+  - conda-forge
+  - defaults
+dependencies:
+  - numpy
+  - scipy
+  - matplotlib
+  # - boltons
+  # - cmocean
+  # - jupyter
+  # - ipympl
+  - pip
+  # - psutil
+  # - quantities
+  # - quaternion
+  # - spherical_functions
+  # - numba
+  # - cartopy
+  # - plotly
+  # - pandas
+  # # xlrd is used by pandas to read MS Excel files.
+  # - xlrd
+  # Nbstripout is used with git
+  - nbstripout
+  - pip:
+    # For testing
+    - pytest-console-scripts
+  #   - pytecplot
+  #   - chiantipy
+  #   - pyastronomy
+
+  #
+  # These are for testing
+  #
+  - pytest
+  - nbval
+  - pytest-cov
+
+  #
+  # For Codacy integration
+  #
+  - codacy-coverage
+  

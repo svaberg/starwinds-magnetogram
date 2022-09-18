@@ -6,3 +6,4 @@ spherical-functions
 
 # For testing
 psutil
+pytest-console-scripts

@@ -5,7 +5,7 @@ from distutils.core import setup
 exec(open('starwinds_magnetogram/version.py').read())
 
 setup(name='starwinds_magnetogram',
-      version=__version__,
+      version=__version__,  # noqa: F821
       description='Stellar magnetogram visualisation and manipulation',
       author='Dag Evensberget',
       author_email='Dag.Evensberget@usq.edu.au',

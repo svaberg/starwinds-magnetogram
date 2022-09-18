@@ -18,16 +18,16 @@ swmf/temp
 tests/artifacts
 tests/.cache
 tests/.pytest_cache/
-tests/stellarwinds_test_log.txt
+tests/starwinds_magnetogram_test_log.txt
 tests/report.html
 
 .pytest_cache/
-Stellarwinds.egg-info/
+*.egg-info/
 
 untitled.*
 tecplot_log.txt
 .coverage
-stellarwinds_test_log.txt
+starwinds_magnetogram_test_log.txt
 myresults.xml
 Out.txt
 artifacts

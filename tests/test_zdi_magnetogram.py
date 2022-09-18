@@ -201,7 +201,7 @@ def test_zdi_magnetogram_3d(request, magnetogram_name="mengel"):
 
                 m = cm.ScalarMappable(cmap=color_map, norm=color_norm)
                 m.set_array(values)
-                fig.colorbar(m)
+                fig.colorbar(m, ax=ax)
 
                 # ax.set_aspect('equal')
                 ax.set_title("az=%f, el=%f" % (ax.azim, ax.elev))

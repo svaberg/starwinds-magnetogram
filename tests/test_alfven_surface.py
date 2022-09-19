@@ -1,6 +1,7 @@
 import logging
 
 import matplotlib as mpl
+import matplotlib.lines
 import numpy as np
 import scipy.constants
 
@@ -204,6 +205,8 @@ def test_alfven_shape(request):
 
         fig, ax = plt.subplots(figsize=(9, 6))
 
+        h, l = ax.get_legend_handles_labels()
+
         for _id, _scale in enumerate(np.geomspace(1/4, 4, 5)):
             # This returns a starwinds_magnetogram.coefficients.Coefficients object.
             radial_coefficients = magnetograms.get_radial("dipole") * _scale
@@ -238,6 +241,7 @@ def test_alfven_shape(request):
                                              vmin=-bmax,
                                              vmax=bmax,
                                              base=10)
+                ax.grid(False)
                 im = ax.pcolormesh(p1, p2, fr,
                                    norm=norm,
                                    cmap='RdBu_r'
@@ -249,17 +253,19 @@ def test_alfven_shape(request):
                 # Add source surface to plot
                 pr = (px**2 + py**2 + pz**2)**.5
                 r_ss = ax.contour(p1, p2, pr, levels=[radius_source_surface], colors='black')
-                r_ss.collections[0].set_label("Source surface")
+                h += [matplotlib.lines.Line2D([], [], color=r_ss.collections[0].get_edgecolor())]
+                l += ["Source surface"]
 
             # Add Alfven surface to plot (for every iteration)
             r_a = ax.contour(p1, p2, alfven_mach_number, levels=(1,), colors=colors[_id])
-            r_a.collections[0].set_label("Alfven surface, scale=%2.3G" % _scale)
+            h += [matplotlib.lines.Line2D([], [], color=r_a.collections[0].get_edgecolor())]
+            l += ["Alfven surface, scale=%2.3G" % _scale]
 
         ax.set_aspect('equal')
         ax.set_xlabel(r'Distance $x/R_{\star}$')
         ax.set_ylabel(r'Distance $z/R_{\star}$')
 
-        plt.legend(loc="lower left")
+        plt.legend(h, l, loc="lower left")
 
         ax.text(1.0 - 0.01, 1.0 - 0.01, str(p),
                 horizontalalignment='right',
@@ -270,7 +276,6 @@ def test_alfven_shape(request):
         plt.savefig(pn.get())
 
 
-@pytest.mark.skip("This fails due to a matplotlib API change.")
 def test_alfven_shape_simple(request):
     """
     Observe how the Alfven surface moves with dipole field strength
@@ -321,7 +326,8 @@ def test_alfven_shape_simple(request):
         colors = prop_cycle.by_key()['color']
 
         fig, ax = plt.subplots(figsize=(9, 6))
-    # Add this only for the first iteration.
+    
+        # Add this only for the first iteration.
         bmin = np.min(bmag[np.where(bmag > 0)])
         bmax = np.max(bmag)
         norm = mpl.colors.SymLogNorm(linthresh=100 * bmin,
@@ -329,6 +335,7 @@ def test_alfven_shape_simple(request):
                                      vmin=-bmax,
                                      vmax=bmax,
                                      base=10)
+        # ax.grid(False)
         # im = ax.pcolormesh(p1, p2, fr,
         #                    norm=norm,
         #                    cmap='RdBu_r'
@@ -337,23 +344,24 @@ def test_alfven_shape_simple(request):
         #               fy, fz,
         #               color='gray')
 
+
         # Add source surface to plot
+        _handlers, _labels = ax.get_legend_handles_labels()
         pr = (px**2 + py**2 + pz**2)**.5
         r_ss = ax.contour(p1, p2, pr, levels=[radius_source_surface], colors='grey')
-        r_ss.collections[0].set_label("Source surface")
+        _handlers += [matplotlib.lines.Line2D([], [], color=r_ss.collections[0].get_edgecolor())]
+        _labels += ["Source surface"]
 
         # Add Alfven surface to plot (for every iteration)
         levels = (.125, .25, .5, 1, 2, 4, 8)
         r_a = ax.contour(p1, p2, alfven_mach_number, levels=levels)
-        r_a.collections[0].set_label("Alfven surface")
         for _l, _c in zip(levels, r_a.collections):
-            _c.set_label("Alfven surface l=%2.3G" % _l)
+            _handlers += [matplotlib.lines.Line2D([], [], color=_c.get_edgecolor())]
+            _labels += ["Alfven surface l=%2.3G" % _l]
 
         ax.set_aspect('equal')
         ax.set_xlabel(r'Distance $x/R_{\star}$')
         ax.set_ylabel(r'Distance $z/R_{\star}$')
-
-        plt.legend(loc="lower left")
 
         ax.text(1.0 - 0.01, 1.0 - 0.01, str(p),
                 horizontalalignment='right',
@@ -363,6 +371,7 @@ def test_alfven_shape_simple(request):
 
         ax.grid()
 
+        ax.legend(_handlers, _labels, loc="lower left")
         plt.savefig(pn.get())
 
         #
@@ -380,21 +389,21 @@ def test_alfven_shape_simple(request):
         colors = prop_cycle.by_key()['color']
 
         _min = []
-        _segments = []
+        _paths = []
         _max = []
         for _l, _c in zip(levels, r_a.collections):
-            pos = np.vstack(_c.get_segments())
+            pos = np.vstack([p.vertices for p in _c.get_paths()])
             radius = np.sum(pos**2, axis=1)**.5
             ax.plot(_l * np.ones_like(radius), radius, 'k.')
 
             _min.append(np.min(radius))
-            _segments.append(len(_c.get_segments()))
+            _paths.append(len(_c.get_paths()))
             _max.append(np.max(radius))
 
         ax.fill_between(levels, _min, _max, label="Alfven radial distance",
                         color=colors[0])
-        ax.plot(levels, _segments, 'x', label="Segment count", color=colors[1])
-        # ax.plot(levels, _max, color='black')
+        ax.plot(levels, _paths, 'x', label="Segment count", color=colors[1])
+        ax.plot(levels, _max, color='black')
         ax.grid()
         ax.set_title("Alfven surface distance from star")
         # ax.set_xscale("log")
@@ -487,6 +496,7 @@ def test_alfven_slice(request,
                                          vmax=bmax,
                                          base=10)
 
+            ax.grid(False)
             im = ax.pcolormesh(p1, p2, fr,
                                norm=norm,
                                cmap='RdBu_r'
@@ -506,6 +516,7 @@ def test_alfven_slice(request,
         elif plot_name == "B":
             norm = mpl.colors.LogNorm()
 
+            ax.grid(False)
             im = ax.pcolormesh(p1, p2, bmag,
                                norm=norm,
                                cmap='viridis')
@@ -516,6 +527,7 @@ def test_alfven_slice(request,
             norm = mpl.colors.LogNorm(vmin=1e-2,
                                       vmax=1e2)
 
+            ax.grid(False)
             im = ax.pcolormesh(p1, p2,
                                alfven_mach_number,
                                norm=norm,
@@ -524,23 +536,25 @@ def test_alfven_slice(request,
             fig.colorbar(im).set_label('Alfven number')
 
         # Add Alfven surface to plot
+        _h, _l = ax.get_legend_handles_labels()
         r_a = ax.contour(p1, p2, alfven_mach_number, levels=(1,), colors='magenta')
-        r_a.collections[0].set_label("Alfven surface")
+        _h += [matplotlib.lines.Line2D([], [], color=r_a.collections[0].get_edgecolor())]
+        _l += ["Alfven surface"]
 
         # Add source surface to plot
         pr = (px**2 + py**2 + pz**2)**.5
         r_ss = ax.contour(p1, p2, pr, levels=[radius_source_surface], colors='green')
-        r_ss.collections[0].set_label("Source surface")
+        _h += [matplotlib.lines.Line2D([], [], color=r_ss.collections[0].get_edgecolor())]
+        _l += ["Source surface"]
 
         # Add stellar surface and source surface to plot
         r_s = ax.contour(p1, p2, pr, levels=[radius_star], colors='yellow')
-        # r_s.collections[0].set_label("Stellar surface")
 
         ax.set_aspect('equal')
         ax.set_xlabel(r'Distance $x/R_{\star}$')
         ax.set_ylabel(r'Distance $z/R_{\star}$')
 
-        ax.legend(loc="lower left")
+        ax.legend(_h, _l, loc="lower left")
         ax.grid(True)
 
         ax.text(1.0 - 0.01, 1.0 - 0.01, str(p),

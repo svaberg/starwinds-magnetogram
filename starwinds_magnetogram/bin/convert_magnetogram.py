@@ -25,7 +25,7 @@ def main():
                         const=logging.DEBUG, help='generate and log detailed debug output')
     args = parser.parse_args()
 
-    logging.getLogger("stellarwinds").setLevel(args.log_level)  # Set for entire stellarwinds package.
+    logging.getLogger("starwinds_magnetogram").setLevel(args.log_level)  # Set for entire package.
 
     if args.pfss_to_zdi:
         convert_pfss_to_zdi(args.input_file, args.output_file, degree_max=args.degree_max,)

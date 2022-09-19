@@ -24,17 +24,14 @@ def main():
                         const=logging.DEBUG, help='generate and log detailed debug output')
     args = parser.parse_args()
 
-    log.setLevel(args.log_level)
-    ch = logging.StreamHandler()
-    ch.setLevel(args.log_level)
-    log.addHandler(ch)
+    logging.getLogger("starwinds_magnetogram").setLevel(args.log_level)  # Set for entire package.
 
     skip_header = args.skip_rows
     parameters = args.params
 
     base_data = np.genfromtxt(args.input_file, skip_header=skip_header)
 
-    fig, axs = plt.subplots(len(parameters), figsize=(8, 6), sharex=True)
+    _, axs = plt.subplots(len(parameters), figsize=(8, 6), sharex=True)
     plot_lsd.plot_lsd_profile(base_data, parameters=parameters)
     axs[0].set_title('Data in %s' % args.input_file)
 

@@ -11,7 +11,7 @@ This package contains basic processing tools for manipulating and visualising So
 Clone the repository with git. If this does not work get it with `curl`.
 Once the repository is cloned, install using
 ```bash
-cd stellarwinds
+cd starwinds_magnetogram
 pip install --user --editable .
 ```
 the `--user` flag is required when the user cannot install in the root. The flag will will put entry points in `~/.local/bin`, which must then be on the `$PATH`.

@@ -27,7 +27,7 @@ def main():
     parser.add_argument('-y', '--type', type=str, help='magnetogram type (zdi/pfss)', default='zdi')
     args = parser.parse_args()
 
-    logging.getLogger("stellarwinds").setLevel(args.log_level)  # Set for entire stellarwinds package.
+    logging.getLogger("starwinds_magnetogram").setLevel(args.log_level)  # Set for entire package.
 
     coefficients = reader_writer.read_magnetogram_file(args.input_file, )
 

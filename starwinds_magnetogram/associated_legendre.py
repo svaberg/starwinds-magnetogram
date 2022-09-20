@@ -19,7 +19,10 @@ def calculate_lpmn(degrees_l, orders_m, points_polar):
                                   n=max_degree,
                                   z=np.cos(points_polar[ndindex]))
         Pmn_cos_theta_result[ndindex] = a
-        Pmn_d_cos_theta_result[ndindex] = b * -np.sin(points_polar[ndindex])
+
+        # Some values of b can be infinite
+        with np.errstate(invalid='ignore'):
+            Pmn_d_cos_theta_result[ndindex] = b * -np.sin(points_polar[ndindex])
 
     Pmn_cos_theta_result = Pmn_cos_theta_result[..., orders_m, degrees_l]
     Pmn_d_cos_theta_result = Pmn_d_cos_theta_result[..., orders_m, degrees_l]

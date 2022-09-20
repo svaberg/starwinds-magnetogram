@@ -37,7 +37,7 @@ logging.getLogger('matplotlib').setLevel(logging.WARNING)
 
 # Add more rcParams here?
 plt.rcParams["figure.figsize"] = (14, 7)
-plt.rcParams["axes.grid"] = True
+# plt.rcParams["axes.grid"] = True  # This produces a warning with matplotlib >= 3.5
 
 
 default_artifact_directory = "artifacts"

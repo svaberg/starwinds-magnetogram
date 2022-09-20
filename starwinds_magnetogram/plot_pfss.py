@@ -140,7 +140,7 @@ def plot_streamtraces(coefficients, geometry=ZdiGeometry()):
     line_thicknesses = 3 * line_values / np.max(line_values)
 
     custom_lines = [Line2D([0], [0], color='k', lw=l) for l in line_thicknesses]
-    custom_strs = ["$B_\perp=%4.1f$" % x for x in line_values]
+    custom_strs = [r"$B_\perp=%4.1f$" % x for x in line_values]
     plt.legend(legend_items + custom_lines, legend_strs + custom_strs)
 
     return fig, ax

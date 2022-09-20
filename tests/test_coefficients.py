@@ -8,8 +8,8 @@ from starwinds_magnetogram import coefficients
 
 log = logging.getLogger(__name__)
 
-_defaults = (np.zeros(2), np.zeros(3, dtype=np.complex), np.zeros(6), 0j,
-             np.ones(2), np.ones(3, dtype=np.complex), np.ones(6), 1j)
+_defaults = (np.zeros(2), np.zeros(3, dtype=complex), np.zeros(6), 0j,
+             np.ones(2), np.ones(3, dtype=complex), np.ones(6), 1j)
 @pytest.mark.parametrize("default", _defaults)
 def test_methods_not_failing(default):
     data = default + 1

@@ -371,7 +371,7 @@ def test_compare_scipy(request):
     # corner_pl, corner_az = zg.corners()
     center_pl, center_az = zg.centers()
 
-    field_scipy = np.zeros_like(center_pl, dtype=np.complex)
+    field_scipy = np.zeros_like(center_pl, dtype=complex)
     for (degree_l, order_m), data in c.contents():
         field_scipy += data * sph_harm(order_m, degree_l, center_az, center_pl)
 

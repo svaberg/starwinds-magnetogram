@@ -383,8 +383,9 @@ def field_line_integral(points, coeffs, rs=1, rss=3, dir='both'):
 
         assert not np.any(np.isnan(field_xyz))
 
-        dxds_ = field_xyz / lengths
-        dxds_[:, lengths == 0] = 0  # Remove NaNs from length==0
+        with np.errstate(divide='ignore', invalid='ignore'):
+            dxds_ = field_xyz / lengths
+            dxds_[:, lengths == 0] = 0  # Remove NaNs from length==0
 
         return dxds_
 
@@ -492,7 +493,8 @@ def test_fieldlines_3d_flat_points(request):
 
     # Don't plot past source surface radius
     radial_distances = np.sum(trajectories**2, axis=1, keepdims=True)**.5
-    mask = 1/(radial_distances < rss)
+    with np.errstate(divide='ignore'):
+        mask = 1/(radial_distances < rss)
     trajectories = trajectories * mask
 
     # For coloring the lines
@@ -606,8 +608,9 @@ def test_single_line(request):
         assert not np.any(np.isnan(drpaxyz))
 
         dyds = drpaxyz[[0, 3, 4, 5]]
-        dyds = dyds / strength
-        dyds[:, strength == 0] = 0  # Remove NaNs from length==0
+        with np.errstate(divide='ignore', invalid='ignore'):
+            dyds = dyds / strength
+            dyds[:, strength == 0] = 0  # Remove NaNs from length==0
 
         # Shape should be (3, 1); remove last dimension
         return dyds[:, 0]

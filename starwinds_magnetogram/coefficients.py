@@ -218,7 +218,7 @@ def allclose(shc0,
         return False
 
     bool_coeffs = isclose(shc0, shc1, **kwargs)
-    bool_values = np.stack(v for k, v in bool_coeffs.contents())
+    bool_values = np.stack([v for k, v in bool_coeffs.contents()])
 
     return np.all(bool_values)
 

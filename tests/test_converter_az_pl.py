@@ -36,6 +36,7 @@ def test_conversion(request):
 
 
 @pytest.mark.parametrize("coeff_name", ("low", "m0", "m01", "m10", "random"))
+@pytest.mark.filterwarnings("ignore: No contour levels were found within the data range.")
 def test_alpha_conversion(coeff_name, request):
     """Test that the discretized radial field can be reconstructed as zdi components."""
     zg = geometry.ZdiGeometry(64)
@@ -126,6 +127,7 @@ def remove_m0_imaginary(coeffs):
 
 
 @pytest.mark.parametrize("coeff_name", ("low", "m0", "m01", "m10", "random"))
+@pytest.mark.filterwarnings("ignore: No contour levels were found within the data range.")
 def test_beta_conversion(coeff_name, request):
     """Test that the discretized field can be reconstructed as zdi components."""
     zg = geometry.ZdiGeometry(64)
@@ -191,6 +193,7 @@ def l_and_m(max_l):
 
 
 @pytest.mark.parametrize("degree_l, order_m", l_and_m(5))
+@pytest.mark.filterwarnings("ignore: invalid value encountered in divide")
 def test_beta_single_coeff(degree_l, order_m, request):
     """Test conversion of single coefficient"""
 
@@ -362,6 +365,7 @@ def test_gamma_00(request):
     
     
 @pytest.mark.parametrize("coeff_name", ("low", "m0", "m01", "m10", "random"))
+@pytest.mark.filterwarnings("ignore: No contour levels were found within the data range.")
 def test_gamma_conversion(coeff_name, request):
     """Test that the discretized field can be reconstructed as zdi components."""
     zg = geometry.ZdiGeometry(64)

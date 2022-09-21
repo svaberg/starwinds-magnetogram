@@ -1,5 +1,9 @@
 # The starwinds-magnetogram python package
 ![Python package](https://github.com/svaberg/starwinds-magnetogram/actions/workflows/python-package.yml/badge.svg)
+[![DOI](https://zenodo.org/badge/538081245.svg)](https://zenodo.org/badge/latestdoi/538081245)
+![GitHub release (latest SemVer)](https://img.shields.io/github/v/release/svaberg/starwinds-magnetogram?include_prereleases)
+![GitHub tag (latest SemVer)](https://img.shields.io/github/v/tag/svaberg/starwinds-magnetogram)
+
 
 This package contains basic processing tools for manipulating and visualising Solar and stellar magnetograms. These tools were originally developed during my Ph.D. at the University of Southern Queensland. Please cite 
 [Evensberget et al. 2020](https://doi.org/10.1093/mnras/stab1696)

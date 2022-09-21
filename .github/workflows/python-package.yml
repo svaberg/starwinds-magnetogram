@@ -13,6 +13,7 @@ jobs:
   build:
 
     runs-on: ubuntu-latest
+    environment: Build
     strategy:
       fail-fast: false
       matrix:
@@ -24,6 +25,11 @@ jobs:
       uses: actions/setup-python@v3
       with:
         python-version: ${{ matrix.python-version }}
+    - name: Test environment variables
+      env:
+        MY_TEST_SECRET: ${{ secrets.MY_TEST_SECRET }}
+      run: |
+        echo ${MY_TEST_SECRET}
     - name: Install dependencies
       run: |
         python -m pip install --upgrade pip
@@ -37,8 +43,16 @@ jobs:
         flake8 . --count --exit-zero --max-complexity=10 --max-line-length=127 --statistics
     - name: Install package in order to test entry points
       run: |
+        echo "Test secret: $MY_TEST_SECRET"
         # Install the package itself
         python -m pip install --user --editable .
     - name: Test with pytest
       run: |
-        pytest
+        pytest --cov=starwinds_magnetogram --cov bin --cov-report=xml:pytest-cobertura.xml
+    - name: Codacy Coverage Reporter
+      with:
+        project-token: ${{ secrets.CODACY_PROJECT_TOKEN }}
+        # api-token: ${{ secrets.CODACY_API_TOKEN }}
+        coverage-reports: pytest-cobertura.xml
+      uses: codacy/codacy-coverage-reporter-action@v1.3.0
+

@@ -3,7 +3,8 @@
 [![DOI](https://zenodo.org/badge/538081245.svg)](https://zenodo.org/badge/latestdoi/538081245)
 ![GitHub release (latest SemVer)](https://img.shields.io/github/v/release/svaberg/starwinds-magnetogram?include_prereleases)
 ![GitHub tag (latest SemVer)](https://img.shields.io/github/v/tag/svaberg/starwinds-magnetogram)
-
+[![Codacy Badge](https://app.codacy.com/project/badge/Grade/37777357a3d84e8c8f10376921e0bb41)](https://www.codacy.com/gh/svaberg/starwinds-magnetogram/dashboard?utm_source=github.com&amp;utm_medium=referral&amp;utm_content=svaberg/starwinds-magnetogram&amp;utm_campaign=Badge_Grade)
+[![Codacy Badge](https://app.codacy.com/project/badge/Coverage/37777357a3d84e8c8f10376921e0bb41)](https://www.codacy.com/gh/svaberg/starwinds-magnetogram/dashboard?utm_source=github.com&utm_medium=referral&utm_content=svaberg/starwinds-magnetogram&utm_campaign=Badge_Coverage)
 
 This package contains basic processing tools for manipulating and visualising Solar and stellar magnetograms. These tools were originally developed during my Ph.D. at the University of Southern Queensland. Please cite 
 [Evensberget et al. 2020](https://doi.org/10.1093/mnras/stab1696)

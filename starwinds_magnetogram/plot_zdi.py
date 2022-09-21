@@ -390,7 +390,7 @@ def plot_streamtraces(mgm, geometry=None, ax=None):
         line_thicknesses = 3 * line_values / np.max(line_values)
 
         legend_items += [Line2D([0], [0], color='k', lw=l) for l in line_thicknesses]
-        legend_strs += ["$B_\perp=%4.1f$" % x for x in line_values]
+        legend_strs += [r"$B_\perp=%4.1f$" % x for x in line_values]
 
     ax.legend(legend_items, legend_strs)
 

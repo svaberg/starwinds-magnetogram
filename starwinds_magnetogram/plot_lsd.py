@@ -21,7 +21,7 @@ def plot_lsd_profile(data, parameters="VNI"):
         ax = fig.get_axes()[plot_id]
         ax.errorbar(data[:, 0], data[:, row_offsets[parameter]], yerr=data[:, row_offsets[parameter] + 1], **kw)
         ax.grid(True)
-        ax.set_ylabel('Stokes $%s/I_\mathrm{c}$' % parameter)
+        ax.set_ylabel(r'Stokes $%s/I_\mathrm{c}$' % parameter)
 
     ax.set_xlabel('Doppler velocity')
     fig.subplots_adjust(hspace=.1)
@@ -128,7 +128,7 @@ def plot_lsd_stack(data_stack, name_stack, y_lim=None):
             ax.legend((name_stack[data_id],))
 
         ax.grid(True)
-        ax.set_ylabel('$V/V_\mathrm{c}$')
+        ax.set_ylabel(r'$V/V_\mathrm{c}$')
 
     #
     # Y limit options

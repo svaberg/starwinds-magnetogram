@@ -6,4 +6,5 @@ spherical-functions
 
 # For testing
 psutil
+pytest-cov
 pytest-console-scripts

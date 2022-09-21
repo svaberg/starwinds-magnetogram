@@ -246,10 +246,11 @@ def test_beta_single_coeff(degree_l, order_m, request):
     else:
         field_quotient_polar = np.zeros_like(field_polar1)
 
-    if not np.allclose(field_azimuthal0, field_azimuthal1):
-        field_quotient_azimuthal = field_azimuthal1 / field_azimuthal0
-    else:
-        field_quotient_azimuthal = np.zeros_like(field_azimuthal1)
+    with np.errstate(invalid='ignore'):
+        if not np.allclose(field_azimuthal0, field_azimuthal1):
+            field_quotient_azimuthal = field_azimuthal1 / field_azimuthal0
+        else:
+            field_quotient_azimuthal = np.zeros_like(field_azimuthal1)
 
     # with context.PlotNamer(__file__, request.node.name) as (pn, plt):
     #     from starwinds_magnetogram import plot_zdi

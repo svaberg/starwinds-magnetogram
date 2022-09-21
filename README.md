@@ -1,4 +1,6 @@
 # The starwinds-magnetogram python package
+![Python package](https://github.com/svaberg/starwinds-magnetogram/actions/workflows/python-package.yml/badge.svg)
+
 This package contains basic processing tools for manipulating and visualising Solar and stellar magnetograms.
 
 ## Features
@@ -19,7 +21,8 @@ the `--user` flag is required when the user cannot install in the root. The flag
 The `--editable` flag is only required for development. 
 
 ### Getting started
-TBW.
+  * [Magnetogram conversion shell commands](docs/Shell-commands.ipynb)
+  * [Magnetogram manipulation notebook](docs/Magnetogram-manipulation.ipynb)
 
 ## Test summary
 Generate a test summary 

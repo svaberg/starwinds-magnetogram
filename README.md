@@ -7,9 +7,9 @@
 [![Codacy Badge](https://app.codacy.com/project/badge/Coverage/37777357a3d84e8c8f10376921e0bb41)](https://www.codacy.com/gh/svaberg/starwinds-magnetogram/dashboard?utm_source=github.com&utm_medium=referral&utm_content=svaberg/starwinds-magnetogram&utm_campaign=Badge_Coverage)
 
 This package contains basic processing tools for manipulating and visualising Solar and stellar magnetograms. These tools were originally developed during my Ph.D. at the University of Southern Queensland. Please cite 
-[Evensberget et al. 2020](https://doi.org/10.1093/mnras/stab1696)
+[Evensberget et al. (2020)](https://doi.org/10.1093/mnras/stab1696)
 or 
-[Evensberget et al. 2021](https://doi.org/10.1093/mnras/stab3557) 
+[Evensberget et al. (2021)](https://doi.org/10.1093/mnras/stab3557) 
 and mention the `starwinds-magnetogram` package if you use these tools in your research. 
 
 ## Features

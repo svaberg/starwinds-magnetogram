@@ -22,11 +22,9 @@ and mention the `starwinds-magnetogram` package if you use these tools in your r
 ## Installation
 Once the repository is cloned, install using
 ```bash
-pip install --user --editable .
+pip install .
 ```
-the `--user` flag is required when the user cannot install in the root such as on an HPC. The flag will will put entry points in `~/.local/bin`, which must then be on the `$PATH`.
-
-The `--editable` flag is only required for development. 
+As usual, the `--user` flag is required when the user cannot install in the root such as on an HPC; this will put the entry points in `~/.local/bin`, which must then be on the `$PATH`.
 
 ## Getting started
   * [Magnetogram conversion shell commands](docs/Shell-commands.ipynb)
@@ -34,6 +32,16 @@ The `--editable` flag is only required for development.
 
 ## Development info
 This section may be ignored unless you want to make changes to `starwinds-magnetogram`.
+
+### Editable installation
+To make the installation editable use the `--editable` flag:
+```bash
+pip install --editable .
+```
+
+### Conda environment
+There is a conda environment file `environment.yml` in the project folder; it may be used to create a conda environment in the regular way. 
+
 ### Test summary
 To run the tests locally and generate a test summary type
 ```bash

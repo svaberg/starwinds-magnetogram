@@ -10,6 +10,7 @@ dependencies:
   - psutil
   - quaternion
   - spherical_functions
+  - numba
   # Nbstripout is used with git
   - nbstripout
   #

@@ -15,16 +15,17 @@ from . import generic_arguments
 def main():
     parser = argparse.ArgumentParser(description='Convert from ZDIPy magnetogram to WSO/Stanford PFSS magnetogram')
     
-    generic_arguments.add(parser)
-    parser.add_argument('input_file', type=str, help='input magnetogram file')
-    parser.add_argument('output_file', type=str, nargs='?', help='output magnetogram file')
-    parser.add_argument('--pfss-to-zdi', dest='pfss_to_zdi', action='store_const',
-                        const=True, default=False, help='Convert WSO magnetogram back to zdipy magnetogram')
-    parser.add_argument('--degree-max', type=int, default=None, help='Pad magnetogram with zeros up to given degree')
-    parser.add_argument('--no-header', dest='write_swmf_header', action='store_const', const=False, default=True,
-                        help='Do not create new style SWMF header when converting coefficients from ZDIPy to WSO format')
+    # generic_arguments.add(parser)
+    with generic_arguments.defaults(parser):
+        parser.add_argument('input_file', type=str, help='input magnetogram file')
+        parser.add_argument('output_file', type=str, nargs='?', help='output magnetogram file')
+        parser.add_argument('--pfss-to-zdi', dest='pfss_to_zdi', action='store_const',
+                            const=True, default=False, help='Convert WSO magnetogram back to zdipy magnetogram')
+        parser.add_argument('--degree-max', type=int, default=None, help='Pad magnetogram with zeros up to given degree')
+        parser.add_argument('--no-header', dest='write_swmf_header', action='store_const', const=False, default=True,
+                            help='Do not create new style SWMF header when converting coefficients from ZDIPy to WSO format')
 
-    args = generic_arguments.handle(parser); args.debug and breakpoint()
+    args = parser.parse_args(); args.debug and breakpoint()
 
     # Processing starts here
     if args.pfss_to_zdi:

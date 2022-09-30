@@ -11,24 +11,23 @@ from starwinds_magnetogram import converter
 from starwinds_magnetogram import zdi_magnetogram
 from starwinds_magnetogram import plot_zdi
 
+from . import generic_arguments
 
 def main():
     parser = argparse.ArgumentParser(
         description="""Plot magnetograms. 
         Plot type can be map, radial, polar, azimuthal, strength,
         energy-by-degree, energy-matrix, or energy-summary""")
-    parser.add_argument('input_file', type=str, help='input magnetogram file')
-    parser.add_argument('output_file', type=str, nargs='?', help='output image file')
-    parser.add_argument('-p', '--plot_type', type=str, help='plot type', default='map')
-    parser.add_argument('-q', '--quiet', dest='log_level', action='store_const',
-                        const=logging.WARNING, default=logging.INFO, help='only log warnings and errors')
-    parser.add_argument('-v', '--verbose', dest='log_level', action='store_const',
-                        const=logging.DEBUG, help='generate and log detailed debug output')
-    parser.add_argument('-y', '--type', type=str, help='magnetogram type (zdi/pfss)', default='zdi')
-    args = parser.parse_args()
 
-    logging.getLogger("starwinds_magnetogram").setLevel(args.log_level)  # Set for entire package.
+    with generic_arguments.defaults(parser):
+        parser.add_argument('input_file', type=str, help='input magnetogram file')
+        parser.add_argument('output_file', type=str, nargs='?', help='output image file')
+        parser.add_argument('-p', '--plot_type', type=str, help='plot type', default='map')
+        parser.add_argument('-y', '--type', type=str, help='magnetogram type (zdi/pfss)', default='zdi')
 
+    args = parser.parse_args(); args.debug and breakpoint()
+
+    # Processing starts here
     coefficients = reader_writer.read_magnetogram_file(args.input_file, )
 
     if args.type == "pfss":

@@ -6,12 +6,16 @@ from starwinds_magnetogram import reader_writer
 from starwinds_magnetogram import coefficients
 from starwinds_magnetogram import converter
 
+from . import generic_arguments
+
 #
 # Main method. Use -h for usage and help.
 #
 
 def main():
     parser = argparse.ArgumentParser(description='Convert from ZDIPy magnetogram to WSO/Stanford PFSS magnetogram')
+    
+    generic_arguments.add(parser)
     parser.add_argument('input_file', type=str, help='input magnetogram file')
     parser.add_argument('output_file', type=str, nargs='?', help='output magnetogram file')
     parser.add_argument('--pfss-to-zdi', dest='pfss_to_zdi', action='store_const',
@@ -19,14 +23,10 @@ def main():
     parser.add_argument('--degree-max', type=int, default=None, help='Pad magnetogram with zeros up to given degree')
     parser.add_argument('--no-header', dest='write_swmf_header', action='store_const', const=False, default=True,
                         help='Do not create new style SWMF header when converting coefficients from ZDIPy to WSO format')
-    parser.add_argument('-q', '--quiet', dest='log_level', action='store_const',
-                        const=logging.WARNING, default=logging.INFO, help='only log warnings and errors')
-    parser.add_argument('-v', '--verbose', dest='log_level', action='store_const',
-                        const=logging.DEBUG, help='generate and log detailed debug output')
-    args = parser.parse_args()
 
-    logging.getLogger("starwinds_magnetogram").setLevel(args.log_level)  # Set for entire package.
+    args = generic_arguments.handle(parser); args.debug and breakpoint()
 
+    # Processing starts here
     if args.pfss_to_zdi:
         convert_pfss_to_zdi(args.input_file, args.output_file, degree_max=args.degree_max,)
     else:

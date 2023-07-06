@@ -197,7 +197,7 @@ def add_contours(polar_centers, azimuth_centers, field_centers, ax, legend_str, 
 
 
 
-def add_extrema(polar_centers, azimuth_centers, field, ax, legend_str='x', markers='12'):
+def add_extrema(polar_centers, azimuth_centers, field, ax, legend_str='x', markers='12', color='k'):
     field_max_indices = np.unravel_index(np.argmax(field, axis=None), field.shape)
     field_max_polar = polar_centers[field_max_indices]
     field_max_azimuth = azimuth_centers[field_max_indices]
@@ -208,10 +208,10 @@ def add_extrema(polar_centers, azimuth_centers, field, ax, legend_str='x', marke
     field_min = field[field_min_indices]
 
     ax.plot(np.rad2deg(field_max_azimuth),
-             np.rad2deg(field_max_polar), color='k', marker=markers[0], linestyle="none", fillstyle='none',
+             np.rad2deg(field_max_polar), color=color, marker=markers[0], linestyle="none", fillstyle='none',
              label=f'Max ${legend_str}={latex_float(field_max)}$ G', markersize=2)
     ax.plot(np.rad2deg(field_min_azimuth),
-             np.rad2deg(field_min_polar), color='k', marker=markers[1], linestyle="none", fillstyle='none',
+             np.rad2deg(field_min_polar), color=color, marker=markers[1], linestyle="none", fillstyle='none',
              label=f'Min ${legend_str}={latex_float(field_min)}$ G', markersize=2)
 
     return field_min, field_max

@@ -1,0 +1,56 @@
+#### MATPLOTLIBRC FORMAT
+
+## See https://matplotlib.org/stable/tutorials/introductory/customizing.html#customizing-with-matplotlibrc-files
+## for more details on the paths which are checked for the configuration file.
+## This file (and other style files) must be encoded as utf-8.
+
+##### CONFIGURATION BEGINS HERE
+
+## ***************************************************************************
+## * LINES                                                                   *
+## ***************************************************************************
+## See https://matplotlib.org/api/artist_api.html#module-matplotlib.lines
+## for more information on line properties.
+lines.linewidth: 0.5               # line width in points
+
+
+## ***************************************************************************
+## * FONT                                                                    *
+## ***************************************************************************
+## The font properties used by `text.Text`.
+## See https://matplotlib.org/api/font_manager_api.html for more information
+## on font properties.  The 6 font properties used for font matching are
+## given below with their default values.
+##
+font.family:  serif
+font.size:    8.0
+
+
+## ***************************************************************************
+## * LaTeX                                                                   *
+## ***************************************************************************
+## For more information on LaTeX properties, see
+## https://matplotlib.org/tutorials/text/usetex.html
+text.usetex: True
+text.latex.preamble: \usepackage{newtxtext} \usepackage{newtxmath} \usepackage[T1]{fontenc} \usepackage{ae,aecompl} \usepackage{siunitx} \usepackage{amsmath} \usepackage[T1]{fontenc} \usepackage{ae,aecompl}
+
+
+## ***************************************************************************
+## * FIGURE                                                                  *
+## ***************************************************************************
+## See https://matplotlib.org/api/figure_api.html#matplotlib.figure.Figure
+figure.figsize:     3.3209, 1.0  # figure size in inches (width, height)
+figure.dpi:         600       # figure dots per inch
+
+
+## ***************************************************************************
+## * SAVING FIGURES                                                          *
+## ***************************************************************************
+## The default savefig parameters can be different from the display parameters
+## e.g., you may want a higher resolution, or to make the figure
+## background white
+### pgf parameter
+## See https://matplotlib.org/tutorials/text/pgf.html for more information.
+pgf.rcfonts: True
+pgf.preamble: \usepackage{siunitx}
+#pgf.texsystem: xelatex

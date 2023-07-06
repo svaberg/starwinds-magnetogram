@@ -29,3 +29,5 @@ artifacts
 *.pickle
 pytest-cobertura.xml
 
+artifacts
+build

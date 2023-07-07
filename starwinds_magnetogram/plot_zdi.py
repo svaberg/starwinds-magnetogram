@@ -22,8 +22,8 @@ def plot_energy_summary(zc, axs=None):
     ax = axs[0]
     ax.set_title("Total energy")
 
-    w, *_ = ax.pie([results[f'magnetogram.poloidal.energy.fraction'],
-                    results[f'magnetogram.toroidal.energy.fraction'],],
+    w, *_ = ax.pie([results['magnetogram.poloidal.energy.fraction'],
+                    results['magnetogram.toroidal.energy.fraction'],],
                        radius=2,
                        autopct='%1.0f%%',
                        pctdistance=.75,
@@ -35,7 +35,7 @@ def plot_energy_summary(zc, axs=None):
     wedges = list(w)
     wlabels = ["poloidal", "toroidal"]
 
-    w, *_ = ax.pie([results[f'magnetogram.radial.energy.fraction'],],
+    w, *_ = ax.pie([results['magnetogram.radial.energy.fraction'],],
                    radius=2,
                    autopct='%1.0f%%',
                    pctdistance=1,
@@ -48,7 +48,7 @@ def plot_energy_summary(zc, axs=None):
     wedges.extend(w)
     wlabels.append("radial")
 
-    w, *_ = ax.pie([results[f'magnetogram.total.energy.axisymmetric.fraction'],],
+    w, *_ = ax.pie([results['magnetogram.total.energy.axisymmetric.fraction'],],
                    radius=1,
                    # labels=("axisymmetric",),
                    autopct='%1.0f%%',
@@ -78,7 +78,7 @@ def plot_energy_summary(zc, axs=None):
     wedges = list(w)
     wlabels = ["dipole", "quadrupole", "octopole"]
 
-    w, *_ = ax.pie([results[f'magnetogram.total.energy.poloidal.axisymmetric.fraction'],],
+    w, *_ = ax.pie([results['magnetogram.total.energy.poloidal.axisymmetric.fraction'],],
            radius=1,
            # labels=("axisymmetric",),
            autopct='%1.0f%%',
@@ -92,7 +92,7 @@ def plot_energy_summary(zc, axs=None):
 
     ax.legend(wedges, wlabels)
 
-    if results[f'magnetogram.toroidal.energy.fraction'] != 0:
+    if results['magnetogram.toroidal.energy.fraction'] != 0:
         ax = axs[2]
         ax.set_title("Toroidal energy")
         labels = ("l1", "l2", "l3")
@@ -109,7 +109,7 @@ def plot_energy_summary(zc, axs=None):
         wedges = list(w)
         wlabels = ["$l1$", "$l2$", "$l3$"]
 
-        w, *_ = ax.pie([results[f'magnetogram.total.energy.toroidal.axisymmetric.fraction'],],
+        w, *_ = ax.pie([results['magnetogram.total.energy.toroidal.axisymmetric.fraction'],],
                radius=1,
                # labels=("axisymmetric",),
                autopct='%1.0f%%',

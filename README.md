@@ -29,6 +29,7 @@ As usual, the `--user` flag is required when the user cannot install in the root
 ## Getting started
   * [Magnetogram conversion shell commands](docs/Shell-commands.ipynb)
   * [Magnetogram manipulation notebook](docs/Magnetogram-manipulation.ipynb)
+  * [Publication ready plot of the radial field](docs/mnras-style-plot.ipynb)
 
 ## Development info
 This section may be ignored unless you want to make changes to `starwinds-magnetogram`.

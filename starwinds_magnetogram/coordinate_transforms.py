@@ -21,8 +21,8 @@ def spherical_coordinates_from_rectangular(px, py, pz):
     pp = np.arccos(np.divide(pz, pr, out=np.zeros_like(pr), where=pr != 0))
     pa = np.arctan2(py, px)
 
-    assert(np.any(np.isnan(pp)) == False)
-    assert(np.any(np.isnan(pa)) == False)
+    assert not np.any(np.isnan(pp))
+    assert not np.any(np.isnan(pa))
 
     return pr, pp, pa
 
@@ -39,9 +39,9 @@ def rectangular_coordinates_from_spherical(pr, pp, pa):
     py = pr * np.sin(pp) * np.sin(pa)
     pz = pr * np.cos(pp)
 
-    assert(np.any(np.isnan(px)) == False)
-    assert(np.any(np.isnan(py)) == False)
-    assert(np.any(np.isnan(pz)) == False)
+    assert not np.any(np.isnan(px))
+    assert not np.any(np.isnan(py))
+    assert not np.any(np.isnan(pz))
 
     return px, py, pz
 

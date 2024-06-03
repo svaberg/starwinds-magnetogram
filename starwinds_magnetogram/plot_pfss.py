@@ -9,14 +9,9 @@ from starwinds_magnetogram.geometry import ZdiGeometry
 
 
 #TODO rename this to plot_vector_field or something.
-def plot_components(coefficients, geometry=None, radius_source_surface=None, axs=None):
-    r"""
-    Plot a 2-by-3 arangement of PFSS field components at the stellar surface and
-    at the source surface.
-    :param coefficients:
-    :param geometry:
-    :param radius_source_surface:
-    :return:
+def plot_components(coefficients, *, geometry=None, radius=1, radius_source_surface=None, axs=None):
+    """
+    Plot an arangement of PFSS field components.
     """
 
     if geometry is None:
@@ -35,11 +30,11 @@ def plot_components(coefficients, geometry=None, radius_source_surface=None, axs
 
     Bs = pfss_magnetogram.evaluate_spherical(
         coefficients,
-        1, polar, azimuth,
+        radius, polar, azimuth,
         radius_star=1,
         radius_source_surface=radius_source_surface)
 
-    plots.plot_components(polar, azimuth, Bs, axs)
+    plots.plot_components(polar, azimuth, Bs, axs, radius=radius)
 
     return axs[0].figure, axs
 

@@ -577,8 +577,8 @@ def plot_uniform(ax, uniform):
 def test_single_line(request):
 
     r = 1
-    rs = 1
-    rss = 3
+    radius_star = 1
+    radius_source_surface = 3
     trange = [0, 1000]
 
     n_points = 300
@@ -598,8 +598,8 @@ def test_single_line(request):
         drpaxyz = pfss_stanford.evaluate_cartesian(
             coeffs,
             px, py, pz,
-            radius_star=rs,
-            radius_source_surface=rss)
+            radius_star=radius_star,
+            radius_source_surface=radius_source_surface)
 
         drpaxyz = np.stack(drpaxyz)
 
@@ -619,12 +619,12 @@ def test_single_line(request):
         return -1 * _dyds(t, rxyz)
     
     def _reach_rss(t, y):
-        return y[0] - rss
+        return y[0] - radius_source_surface
     _reach_rss.direction = 1  # Trigger when going from negative to positive
     _reach_rss.terminal = True
 
     def _reach_rs(t, y):
-        return y[0] - rs
+        return y[0] - radius_star
     _reach_rs.direction = -1  # Trigger when going from positive to negative
     _reach_rs.terminal = True
 

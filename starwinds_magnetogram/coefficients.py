@@ -158,6 +158,8 @@ class Coefficients(object):
 
     def truncated(self, degree_max): return truncated(self, degree_max)
 
+    def hsplit(self, indices_or_sections=None): return hsplit(self, indices_or_sections)
+
 
 def from_arrays(degrees_l,
                 orders_m,
@@ -189,10 +191,10 @@ def from_arrays(degrees_l,
     return coeffs_obj
 
 
-def noise(degree_max=15, noise_fn=numpy.random.normal, beta=0):
+def noise(degree_min=1, degree_max=15, noise_fn=numpy.random.normal, beta=0):
     coeffs = Coefficients()
 
-    for deg_l in range(1, degree_max + 1):
+    for deg_l in range(degree_min, degree_max + 1):
         for order_m in range(0, deg_l + 1):
             _noise = noise_fn(size=2)
             _c = _noise[0] + 1j * _noise[1]

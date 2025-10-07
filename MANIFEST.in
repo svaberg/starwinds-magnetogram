@@ -1,0 +1,8 @@
+# Include your main package and tests in the sdist
+graft starwinds_magnetogram
+graft tests
+
+# Exclude unneeded folders and junk
+prune .github
+prune docs
+exclude .gitignore .gitattributes requirements.txt environment.yml

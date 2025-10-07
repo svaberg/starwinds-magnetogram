@@ -1,2 +1,44 @@
 [build-system]
-requires = ["setuptools", "versioneer"]
+requires = ["setuptools>=64", "setuptools-scm>=8", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "starwinds_magnetogram"
+dynamic = ["version"]
+description = "Stellar magnetogram visualisation and manipulation"
+authors = [{ name = "Dag Evensberget", email = "dag.evensberget@gmail.com" }]
+readme = { file = "README.md", content-type = "text/markdown" }
+requires-python = ">=3.8"
+dependencies = [
+  "numpy",
+  "scipy",
+  "matplotlib>3.2",
+  "quaternion",
+  "spherical_functions",
+]
+
+[project.urls]
+Homepage = "https://github.com/svaberg/starwinds-magnetogram/"
+
+[project.optional-dependencies]
+test = [
+  "nbstripout",
+  "pytest-console-scripts",
+  "pytest",
+  "nbval",
+  "psutil",
+  "pytest-cov",
+  "codacy-coverage",
+]
+
+[project.scripts]
+sw-convert-magnetogram = "starwinds_magnetogram.bin.convert_magnetogram:main"
+sw-plot-lsd = "starwinds_magnetogram.bin.plot_lsd:main"
+sw-plot-magnetogram = "starwinds_magnetogram.bin.plot_magnetogram:main"
+
+[tool.setuptools_scm]
+write_to = "starwinds_magnetogram/_version.py"
+tag_regex = "^v(?P<version>.*)$"
+
+[tool.setuptools.packages.find]
+include = ["starwinds_magnetogram", "starwinds_magnetogram.*"]

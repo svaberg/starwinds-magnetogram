@@ -100,9 +100,16 @@ def write_magnetogram_file(coefficient_sets, file_name, degree_max=None, order_m
 
     coefficient_data_lines = []
     for coefficients in shc.hsplit(coefficient_sets):
-        coefficient_data_lines.append(["%3d  %3d  %13e  %13e" % (d, m, np.real(data), np.imag(data)) for
-                              (d, m, data) in zip(*coefficients.as_arrays(degree_l_max=degree_max,
-                                                                          order_m_min=order_min))])
+        # coefficient_data_lines.append(["%3d  %3d  %13e  %13e" % (d, m, np.real(data), np.imag(data)) for
+        #                       (d, m, data) in zip(*coefficients.as_arrays(degree_l_max=degree_max,
+        #                                                                   order_m_min=order_min))])
+        for d, m, data in zip(*coefficients.as_arrays(degree_l_max=degree_max,
+                                                            order_m_min=order_min)):
+            
+            assert len(data) == 1, "Expected single complex coefficient"
+            data = data[0]
+            coefficient_data_lines.append(["%3d  %3d  %13e  %13e" % (d, m, np.real(data), np.imag(data))])        
+
 
     if write_swmf_header:
         header_lines = create_swmf_header(file_name, len(coefficient_data_lines[0]), degree_max,

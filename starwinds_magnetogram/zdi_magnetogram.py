@@ -448,8 +448,13 @@ class ZdiMagnetogram:
             dict_['magnetogram.total.energy.poloidal.axisymmetric.fraction'] = poloidal_axisym / total_energy_poloidal
             dict_['magnetogram.total.energy.toroidal.axisymmetric.fraction'] = toroidal_axisym / total_energy_toroidal
 
-            symdipfrac = float((energy_alpha + energy_beta)[np.logical_and(self.degrees_l == 1, self.orders_m == 0)] /
-                               np.sum((energy_alpha + energy_beta)[self.degrees_l == 1]))
+            
+            symdipfrac_numerator = (energy_alpha + energy_beta)[np.logical_and(self.degrees_l == 1, self.orders_m == 0)]
+            symdipfrac_denominator = np.sum((energy_alpha + energy_beta)[self.degrees_l == 1])
+            assert len(symdipfrac_numerator) == 1
+            symdipfrac_numerator = symdipfrac_numerator[0]
+            symdipfrac = symdipfrac_numerator / symdipfrac_denominator 
+
             dict_['magnetogram.total.energy.dipole.axisymmetric.fraction'] = symdipfrac
 
             if dest is None:

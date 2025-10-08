@@ -4,7 +4,7 @@ channels:
   - defaults
 dependencies:
   - numpy
-  - scipy
+  - scipy<1.17  # Due to announced deprecation of lpmn and other functions. 
   - matplotlib
   - pip
   - psutil

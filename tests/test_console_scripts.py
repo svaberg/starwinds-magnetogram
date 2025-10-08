@@ -36,7 +36,7 @@ def test_sw_plot_magnetogram(script_runner, y_opts, p_opts, request, zdi_file, p
 
     cmd = f"sw-plot-magnetogram {file} {pn.get().replace(' ', '')} {y_opts} {p_opts}"
 
-    ret = script_runner.run(*cmd.split())
+    ret = script_runner.run(cmd.split())
     assert ret.returncode == 0, "Expected return code 0 (success)."
 
 
@@ -57,7 +57,7 @@ def test_sw_convert_magnetogram(script_runner, request, pfss_to_zdi, degree_max,
             pfss_to_zdi,
             degree_max]
 
-    ret = script_runner.run(*[a for a in args if a is not None])
+    ret = script_runner.run([a for a in args if a is not None])
     assert ret.returncode == 0, "Expected return code 0 (success)."
 
 

@@ -63,6 +63,12 @@ def map_to_positive_orders(magnetogram):
             c_pos = magnetogram.get(degree_l, + order_m)
             c_neg = magnetogram.get(degree_l, - order_m)
 
+            assert len(c_pos) == 1, "Expected single complex coefficient for positive order"
+            assert len(c_neg) == 1, "Expected single complex coefficient for negative order"
+            c_pos = c_pos[0]
+            c_neg = c_neg[0]
+
+            # import pdb; pdb.set_trace()
             r, alpha = cmath.polar(c_pos)
             s, beta  = cmath.polar(c_neg)
 

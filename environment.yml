@@ -8,7 +8,7 @@ dependencies:
   - matplotlib
   - pip
   - psutil
-  - quaternion
+  - quaternion  # Note: this refers to https://github.com/moble/quaternion
   - spherical_functions
   - numba
   # Nbstripout is used with git

@@ -127,8 +127,14 @@ def plot_streamtraces(coefficients, geometry=ZdiGeometry()):
     _bp = ax.contour(180 / np.pi * azimuth.T, 180 / np.pi * polar.T, B_polar.T, levels=[0], colors=('g',), linewidths=1)
     _ba = ax.contour(180 / np.pi * azimuth.T, 180 / np.pi * polar.T, B_azimuthal.T, levels=[0], colors=('r',), linewidths=1)
 
-    legend_items = [_br.collections[0], _bp.collections[0], _ba.collections[0]]
-    legend_strs = [r"Radial $B_r = 0$", r"Polar $B_\theta = 0$", r"Azimuth $B_\phi = 0$"]
+    try:
+        legend_items = [_br.collections[0], _bp.collections[0], _ba.collections[0]]
+        legend_strs = [r"Radial $B_r = 0$", r"Polar $B_\theta = 0$", r"Azimuth $B_\phi = 0$"]
+    except AttributeError:
+        # In modern matplotlib the above fails with
+        # AttributeError: 'QuadContourSet' object has no attribute 'collections'
+        legend_items = []
+        legend_strs = []
 
     locator = MaxNLocator(nbins=3, prune="lower")
     line_values = locator.tick_values(np.min(B_tangential_mag), np.max(B_tangential_mag))

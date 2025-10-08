@@ -8,6 +8,7 @@ import os
 import sys
 import matplotlib
 import matplotlib.pyplot as plt
+from matplotlib.backends import backend_registry, BackendFilter
 from collections import defaultdict
 
 # Append sys.path to import module
@@ -25,8 +26,8 @@ from . import conftest  # Test context
 # matplotlib.use('agg')
 #
 log.info("Using matplotlib backend \"%s\"" % matplotlib.get_backend())
-gui_env = [i for i in matplotlib.rcsetup.interactive_bk]
-non_gui_backends = matplotlib.rcsetup.non_interactive_bk
+gui_env = backend_registry.list_builtin(BackendFilter.INTERACTIVE)
+non_gui_backends = backend_registry.list_builtin(BackendFilter.NON_INTERACTIVE)
 log.debug("Non Gui backends are: %s" % non_gui_backends)
 log.debug("    Gui backends are: %s" % gui_env)
 

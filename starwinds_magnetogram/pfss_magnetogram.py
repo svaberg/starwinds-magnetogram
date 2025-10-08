@@ -89,7 +89,7 @@ def calculate_all_theta(degree_l, order_m, points_polar, scipy=True):
     assert buffered_theta_scipy.shape == buffered_theta.shape
     assert buffered_dtheta_scipy.shape == buffered_theta.shape
 
-    assert np.allclose(buffered_theta_scipy, buffered_theta)
+    assert np.allclose(buffered_theta_scipy, buffered_theta)  # TODO: This fails for some values.
     # assert np.allclose(buffered_dtheta_scipy, buffered_dtheta)
 
     # Return here.

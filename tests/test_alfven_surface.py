@@ -251,14 +251,15 @@ def test_alfven_shape(request):
                               color='gray')
 
                 # Add source surface to plot
+                ss_color='black'
                 pr = (px**2 + py**2 + pz**2)**.5
                 r_ss = ax.contour(p1, p2, pr, levels=[radius_source_surface], colors='black')
-                h += [matplotlib.lines.Line2D([], [], color=r_ss.collections[0].get_edgecolor())]
+                h += [matplotlib.lines.Line2D([], [], color=ss_color)]
                 l += ["Source surface"]
 
             # Add Alfven surface to plot (for every iteration)
             r_a = ax.contour(p1, p2, alfven_mach_number, levels=(1,), colors=colors[_id])
-            h += [matplotlib.lines.Line2D([], [], color=r_a.collections[0].get_edgecolor())]
+            h += [matplotlib.lines.Line2D([], [], color=colors[_id])]
             l += ["Alfven surface, scale=%2.3G" % _scale]
 
         ax.set_aspect('equal')
@@ -346,18 +347,19 @@ def test_alfven_shape_simple(request):
 
 
         # Add source surface to plot
+        r_ss_color='grey'
         _handlers, _labels = ax.get_legend_handles_labels()
         pr = (px**2 + py**2 + pz**2)**.5
-        r_ss = ax.contour(p1, p2, pr, levels=[radius_source_surface], colors='grey')
-        _handlers += [matplotlib.lines.Line2D([], [], color=r_ss.collections[0].get_edgecolor())]
+        r_ss = ax.contour(p1, p2, pr, levels=[radius_source_surface], colors=r_ss_color)
+        _handlers += [matplotlib.lines.Line2D([], [], color=r_ss_color)]
         _labels += ["Source surface"]
 
         # Add Alfven surface to plot (for every iteration)
         levels = (.125, .25, .5, 1, 2, 4, 8)
         r_a = ax.contour(p1, p2, alfven_mach_number, levels=levels)
-        for _l, _c in zip(levels, r_a.collections):
-            _handlers += [matplotlib.lines.Line2D([], [], color=_c.get_edgecolor())]
-            _labels += ["Alfven surface l=%2.3G" % _l]
+        cols = [r_a.cmap(r_a.norm(L)) for L in r_a.levels]
+        _handlers += [matplotlib.lines.Line2D([], [], color=c) for c in cols]
+        _labels   += [f"Alfven surface l={L:2.3G}" for L in r_a.levels]
 
         ax.set_aspect('equal')
         ax.set_xlabel(r'Distance $x/R_{\star}$')
@@ -391,14 +393,25 @@ def test_alfven_shape_simple(request):
         _min = []
         _paths = []
         _max = []
-        for _l, _c in zip(levels, r_a.collections):
-            pos = np.vstack([p.vertices for p in _c.get_paths()])
-            radius = np.sum(pos**2, axis=1)**.5
-            ax.plot(_l * np.ones_like(radius), radius, 'k.')
+        # for _l, _c in zip(levels, r_a.collections):
+        #     pos = np.vstack([p.vertices for p in _c.get_paths()])
+        #     radius = np.sum(pos**2, axis=1)**.5
+        #     ax.plot(_l * np.ones_like(radius), radius, 'k.')
 
-            _min.append(np.min(radius))
-            _paths.append(len(_c.get_paths()))
-            _max.append(np.max(radius))
+        #     _min.append(np.min(radius))
+        #     _paths.append(len(_c.get_paths()))
+        #     _max.append(np.max(radius))
+
+        for L, segs in zip(r_a.levels, r_a.allsegs):  # segs: list of (N_i,2) arrays for this level
+            if not segs:
+                _min.append(np.nan); _paths.append(0); _max.append(np.nan)
+                continue
+            pos = np.vstack(segs)                   # all vertices at this level
+            radius = np.hypot(pos[:, 0], pos[:, 1]) # sqrt(x^2 + y^2)
+            ax.plot(np.full_like(radius, L), radius, "k.")
+            _min.append(radius.min())
+            _paths.append(len(segs))
+            _max.append(radius.max())
 
         ax.fill_between(levels, _min, _max, label="Alfven radial distance",
                         color=colors[0])
@@ -538,13 +551,13 @@ def test_alfven_slice(request,
         # Add Alfven surface to plot
         _h, _l = ax.get_legend_handles_labels()
         r_a = ax.contour(p1, p2, alfven_mach_number, levels=(1,), colors='magenta')
-        _h += [matplotlib.lines.Line2D([], [], color=r_a.collections[0].get_edgecolor())]
+        _h += [matplotlib.lines.Line2D([], [], color='magenta')]
         _l += ["Alfven surface"]
 
         # Add source surface to plot
         pr = (px**2 + py**2 + pz**2)**.5
         r_ss = ax.contour(p1, p2, pr, levels=[radius_source_surface], colors='green')
-        _h += [matplotlib.lines.Line2D([], [], color=r_ss.collections[0].get_edgecolor())]
+        _h += [matplotlib.lines.Line2D([], [], color='green')]
         _l += ["Source surface"]
 
         # Add stellar surface and source surface to plot

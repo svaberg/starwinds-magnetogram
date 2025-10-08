@@ -155,18 +155,6 @@ def plot_magnetic_field(ax,
                                   # linewidths=1,
                                   colors='k',
                                   )
-
-        # Even if there is only one line, the collections array has 3 elements.
-        # At least it has in matplotlib 3.1.1 but on the HPC (currently matplotlib 2.1.2)
-        # this has only 1 element
-        try:
-            collection = zero_contour.collections[1]
-        except IndexError:
-            collection = zero_contour.collections[0]
-        finally:
-            pass
-            # For some reason this does not work anymore. TODO get it to work again.
-            # collection.set_label(f'${legend_str}=0$ G')
     else:
         zero_contour = None
 
